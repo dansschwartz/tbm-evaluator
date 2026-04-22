@@ -45,7 +45,7 @@
     try {
       const resp = await fetch(API + '/api/parent/reports?email=' + encodeURIComponent(email));
       if (!resp.ok) throw new Error('Not found');
-      const data = await resp.json();
+      const raw = await resp.json(); const data = raw.reports || raw || [];
       if (!data.length) { results.innerHTML = '<p class="empty">No reports found for this email. Please check the email address used during registration.</p>'; return; }
       let html = '<div class="results"><h3 style="margin-bottom:12px">Reports Found:</h3>';
       data.forEach(r => {
