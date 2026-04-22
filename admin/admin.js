@@ -1623,7 +1623,7 @@ async function loadEventAnalytics(eventId) {
             var topRows = data.top_performers.map(function(tp) {
                 return '<tr><td>' + tp.rank + '</td><td>' + tp.player_id + '</td><td>' + (tp.overall_score !== null ? tp.overall_score.toFixed(2) : '--') + '</td></tr>';
             }).join('');
-            topEl.innerHTML = '<table class="data-table"><thead><tr><th>Rank</th><th>Player ID</th><th>Score</th></tr></thead><tbody>' + topRows + '</tbody></table>';
+            topEl.innerHTML = '<table class="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Position</th><th>Score</th></tr></thead><tbody>' + topRows + '</tbody></table>';
         } else {
             topEl.innerHTML = '<p class="text-muted">No performer data.</p>';
         }

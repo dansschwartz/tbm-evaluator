@@ -91,10 +91,17 @@ async def event_analytics(event_id: uuid.UUID, db: AsyncSession = Depends(get_db
 
     avg_score = sum(r.overall_score for r in reports if r.overall_score) / max(len([r for r in reports if r.overall_score]), 1) if reports else None
 
-    # Top performers
+    # Top performers — resolve player names
+    player_ids = [r.player_id for r in reports[:10]]
+    players_result = await db.execute(select(Player).where(Player.id.in_(player_ids)))
+    player_map = {p.id: p for p in players_result.scalars().all()}
+    
     top = [
         {
             "player_id": str(r.player_id),
+            "player_name": f"{player_map[r.player_id].first_name} {player_map[r.player_id].last_name}" if r.player_id in player_map else "Unknown",
+            "position": player_map[r.player_id].position if r.player_id in player_map else None,
+            "age_group": player_map[r.player_id].age_group if r.player_id in player_map else None,
             "overall_score": r.overall_score,
             "rank": r.rank,
         }
