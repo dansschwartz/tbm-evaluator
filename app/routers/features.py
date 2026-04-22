@@ -919,3 +919,112 @@ async def list_templates_by_sport(
         }
         for t in templates
     ]
+
+
+# ============================================================
+# AI Narrative Preview (for coaches during scoring)
+# ============================================================
+
+@router.post("/api/scoring/ai-preview")
+async def ai_preview_for_player(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate an AI narrative for a player based on their current scores in an event.
+    Used by coaches in the scoring UI to see a live AI summary after scoring."""
+    body = await request.json()
+    event_id = body.get("event_id")
+    player_id = body.get("player_id")
+    
+    if not event_id or not player_id:
+        raise HTTPException(status_code=400, detail="event_id and player_id required")
+    
+    # Get the player
+    player = (await db.execute(select(Player).where(Player.id == player_id))).scalar_one_or_none()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    # Get the event + template
+    event = (await db.execute(
+        select(EvaluationEvent).options(selectinload(EvaluationEvent.template)).where(EvaluationEvent.id == event_id)
+    )).scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    # Get all scores for this player in this event
+    scores_result = await db.execute(
+        select(Score).where(Score.event_id == event_id, Score.player_id == player_id)
+    )
+    scores = scores_result.scalars().all()
+    
+    if not scores:
+        raise HTTPException(status_code=400, detail="No scores found for this player")
+    
+    # Average scores by skill
+    from collections import defaultdict
+    skill_totals = defaultdict(list)
+    for s in scores:
+        skill_totals[s.skill_name].append(s.score_value)
+    
+    avg_scores = {k: round(sum(v)/len(v), 2) for k, v in skill_totals.items()}
+    overall = round(sum(avg_scores.values()) / len(avg_scores), 2) if avg_scores else 0
+    
+    # Sort for strengths/weaknesses
+    sorted_skills = sorted(avg_scores.items(), key=lambda x: x[1], reverse=True)
+    strengths = [f"{s[0]} ({s[1]}/5)" for s in sorted_skills[:3]]
+    improvements = [f"{s[0]} ({s[1]}/5)" for s in sorted_skills[-3:]]
+    
+    # Get evaluator comments
+    comments = [s.comment for s in scores if s.comment and s.comment.strip()]
+    
+    # Build AI prompt
+    player_name = f"{player.first_name} {player.last_name}"
+    position = player.position or "Player"
+    age_group = player.age_group or ""
+    
+    scores_text = "\n".join(f"  - {k}: {v}/5" for k, v in sorted_skills)
+    comments_text = "\n".join(f"  - {c}" for c in comments[:10]) if comments else "  (no comments)"
+    
+    prompt = f"""You are writing a player evaluation narrative for youth sports. 
+    
+Player: {player_name}
+Age Group: {age_group}
+Position: {position}
+Event: {event.name}
+Overall Score: {overall}/5
+
+Skill Scores:
+{scores_text}
+
+Coach Comments:
+{comments_text}
+
+Write a 3-4 sentence evaluation narrative that:
+1. Uses the player's first name naturally
+2. Highlights their top strengths specifically
+3. Notes areas for development constructively and encouragingly
+4. Gives a forward-looking recommendation
+
+Keep the tone warm, professional, and encouraging — this goes to parents. Be specific about skills, not generic."""
+
+    from app.services.ai import call_openai
+    
+    try:
+        narrative = await call_openai([{"role": "user", "content": prompt}], max_tokens=250)
+    except Exception as e:
+        logger.warning("AI preview failed: %s", e)
+        # Fallback to template-based narrative
+        narrative = (
+            f"{player.first_name} scored an overall {overall}/5 in the {event.name}. "
+            f"Top strengths include {', '.join(s.split(' (')[0] for s in strengths[:2])}. "
+            f"Areas to focus on: {', '.join(s.split(' (')[0] for s in improvements[:2])}."
+        )
+    
+    return {
+        "player_name": player_name,
+        "overall_score": overall,
+        "narrative": narrative,
+        "strengths": strengths,
+        "improvements": improvements,
+        "skill_scores": avg_scores,
+    }

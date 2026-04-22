@@ -1022,3 +1022,115 @@
     }
   });
 })();
+
+// ============================================================
+// AI Narrative Preview — generates AI summary after scoring a player
+// ============================================================
+(function() {
+  // Add "Generate AI Summary" button after submit button
+  function addAIButton() {
+    var submitBtn = document.getElementById('submit-scores-btn');
+    if (!submitBtn || document.getElementById('ai-preview-btn')) return;
+    
+    var aiBtn = document.createElement('button');
+    aiBtn.id = 'ai-preview-btn';
+    aiBtn.className = 'ai-preview-btn';
+    aiBtn.innerHTML = '🤖 Generate AI Summary';
+    aiBtn.style.cssText = 'display:block;width:100%;padding:14px;margin-top:12px;background:#09A1A1;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;';
+    aiBtn.onclick = generateAIPreview;
+    submitBtn.parentNode.insertBefore(aiBtn, submitBtn.nextSibling);
+    
+    // Add result container
+    var resultDiv = document.createElement('div');
+    resultDiv.id = 'ai-preview-result';
+    resultDiv.style.cssText = 'display:none;margin-top:16px;padding:20px;background:#f0fafa;border-radius:12px;border:2px solid #09A1A1;';
+    aiBtn.parentNode.insertBefore(resultDiv, aiBtn.nextSibling);
+  }
+  
+  async function generateAIPreview() {
+    var btn = document.getElementById('ai-preview-btn');
+    var resultDiv = document.getElementById('ai-preview-result');
+    if (!btn || !resultDiv) return;
+    
+    // Get current player and event from the page state
+    var playerEl = document.querySelector('.player-card.active, .player-item.active, [data-player-id]');
+    var eventId = window._currentEventId || document.querySelector('[data-event-id]')?.dataset?.eventId;
+    var playerId = window._currentPlayerId || playerEl?.dataset?.playerId;
+    
+    // Try to get from URL or hidden fields
+    if (!eventId) {
+      var inputs = document.querySelectorAll('input[name="event_id"], [data-event]');
+      inputs.forEach(function(i) { if (i.value || i.dataset.event) eventId = i.value || i.dataset.event; });
+    }
+    if (!playerId) {
+      var inputs = document.querySelectorAll('input[name="player_id"], [data-player]');
+      inputs.forEach(function(i) { if (i.value || i.dataset.player) playerId = i.value || i.dataset.player; });
+    }
+    
+    // Fallback: try to extract from the global state object
+    if (typeof state !== 'undefined') {
+      eventId = eventId || state.currentEventId || state.eventId;
+      playerId = playerId || state.currentPlayerId || state.playerId;
+    }
+    
+    if (!eventId || !playerId) {
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = '<p style="color:#FA6E82;">Please select a player and score them first.</p>';
+      return;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '🤖 Generating...';
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<p style="color:#888;">Generating AI narrative...</p>';
+    
+    try {
+      var resp = await fetch('/api/scoring/ai-preview', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({event_id: eventId, player_id: playerId})
+      });
+      
+      if (!resp.ok) {
+        var err = await resp.json().catch(function() { return {detail: 'Error'}; });
+        throw new Error(err.detail || 'Failed to generate');
+      }
+      
+      var data = await resp.json();
+      
+      resultDiv.innerHTML = 
+        '<h3 style="margin:0 0 8px;color:#09A1A1;font-size:16px;">🤖 AI Evaluation — ' + data.player_name + '</h3>' +
+        '<p style="font-size:14px;line-height:1.6;color:#333;margin-bottom:12px;">' + data.narrative + '</p>' +
+        '<div style="display:flex;gap:16px;flex-wrap:wrap;">' +
+          '<div style="flex:1;min-width:200px;">' +
+            '<h4 style="color:#09A1A1;font-size:13px;margin-bottom:6px;">💪 Strengths</h4>' +
+            '<ul style="font-size:13px;color:#555;padding-left:16px;margin:0;">' +
+              data.strengths.map(function(s) { return '<li>' + s + '</li>'; }).join('') +
+            '</ul>' +
+          '</div>' +
+          '<div style="flex:1;min-width:200px;">' +
+            '<h4 style="color:#FA6E82;font-size:13px;margin-bottom:6px;">📈 Areas to Develop</h4>' +
+            '<ul style="font-size:13px;color:#555;padding-left:16px;margin:0;">' +
+              data.improvements.map(function(s) { return '<li>' + s + '</li>'; }).join('') +
+            '</ul>' +
+          '</div>' +
+        '</div>' +
+        '<p style="margin-top:10px;font-size:12px;color:#888;">Overall Score: ' + data.overall_score + '/5</p>';
+      
+    } catch(e) {
+      resultDiv.innerHTML = '<p style="color:#FA6E82;">⚠️ ' + e.message + '</p>';
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '🤖 Generate AI Summary';
+  }
+  
+  // Observe DOM changes to add button when scoring view appears
+  var observer = new MutationObserver(function() { addAIButton(); });
+  observer.observe(document.body, {childList: true, subtree: true});
+  
+  // Also try immediately and on load
+  addAIButton();
+  document.addEventListener('DOMContentLoaded', addAIButton);
+  setTimeout(addAIButton, 2000);
+})();
