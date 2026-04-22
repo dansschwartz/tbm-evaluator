@@ -1,3 +1,5 @@
+import sys
+
 from pydantic_settings import BaseSettings
 
 
@@ -5,6 +7,7 @@ class Settings(BaseSettings):
     database_url: str = ""
     openai_api_key: str = ""
     admin_api_key: str = "change-me"
+    cors_origins: str = "*"
 
     # SMTP
     smtp_host: str = ""
@@ -21,9 +24,14 @@ class Settings(BaseSettings):
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
-settings = Settings()
-
-if not settings.database_url:
-    raise ValueError("DATABASE_URL environment variable is required")
-if not settings.openai_api_key:
-    raise ValueError("OPENAI_API_KEY environment variable is required")
+try:
+    settings = Settings()
+    if not settings.database_url:
+        print("ERROR: DATABASE_URL environment variable is not set!", file=sys.stderr)
+        sys.exit(1)
+    if not settings.openai_api_key:
+        print("ERROR: OPENAI_API_KEY environment variable is not set!", file=sys.stderr)
+        sys.exit(1)
+except Exception as e:
+    print(f"ERROR loading settings: {e}", file=sys.stderr)
+    sys.exit(1)
