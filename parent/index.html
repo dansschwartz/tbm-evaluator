@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parent Portal — TBM Evaluator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;background:#f5f7fa;color:#333;display:flex;justify-content:center;align-items:center;min-height:100vh}
+  .container{max-width:480px;width:100%;padding:20px}
+  .card{background:#fff;border-radius:16px;padding:40px;box-shadow:0 2px 20px rgba(0,0,0,0.08);text-align:center}
+  h1{font-size:24px;font-weight:700;color:#09A1A1;margin-bottom:8px}
+  p{color:#888;font-size:14px;margin-bottom:24px}
+  input{width:100%;padding:14px 16px;border:2px solid #e0e0e0;border-radius:10px;font-size:15px;font-family:inherit;outline:none;margin-bottom:16px;transition:border .2s}
+  input:focus{border-color:#09A1A1}
+  button{width:100%;padding:14px;background:#09A1A1;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+  button:hover{background:#078888}
+  .results{text-align:left;margin-top:24px}
+  .report-card{background:#f8f9fb;border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid #eee}
+  .report-card h3{font-size:15px;margin-bottom:4px}
+  .report-card p{color:#666;font-size:13px;margin:2px 0}
+  .report-card a{color:#09A1A1;font-weight:600;text-decoration:none;font-size:13px}
+  .error{color:#FA6E82;font-size:13px;margin-top:8px}
+  .empty{color:#999;font-size:14px;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h1>📊 Parent Portal</h1>
+    <p>Enter your email to view your player's evaluation reports</p>
+    <input type="email" id="email" placeholder="Your email address" onkeydown="if(event.key==='Enter')lookup()">
+    <button onclick="lookup()">View Reports</button>
+    <div id="results"></div>
+  </div>
+</div>
+<script>
+  const API = window.location.origin;
+  async function lookup() {
+    const email = document.getElementById('email').value.trim();
+    const results = document.getElementById('results');
+    if (!email) { results.innerHTML = '<p class="error">Please enter your email</p>'; return; }
+    results.innerHTML = '<p style="color:#888;margin-top:16px">Looking up reports...</p>';
+    try {
+      const resp = await fetch(API + '/api/parent/reports?email=' + encodeURIComponent(email));
+      if (!resp.ok) throw new Error('Not found');
+      const data = await resp.json();
+      if (!data.length) { results.innerHTML = '<p class="empty">No reports found for this email. Please check the email address used during registration.</p>'; return; }
+      let html = '<div class="results"><h3 style="margin-bottom:12px">Reports Found:</h3>';
+      data.forEach(r => {
+        html += '<div class="report-card">';
+        html += '<h3>' + (r.player_name || 'Player') + '</h3>';
+        html += '<p>' + (r.event_name || '') + ' — ' + (r.event_date || '') + '</p>';
+        html += '<p>Overall Score: <strong>' + (r.overall_score ? r.overall_score.toFixed(1) : 'N/A') + '</strong>';
+        if (r.rank) html += ' | Rank: ' + r.rank + '/' + (r.total_players||'?');
+        html += '</p>';
+        if (r.report_url) html += '<a href="' + r.report_url + '" target="_blank">View Full Report →</a>';
+        html += '</div>';
+      });
+      html += '</div>';
+      results.innerHTML = html;
+    } catch(e) { results.innerHTML = '<p class="error">Could not find reports. Please try again.</p>'; }
+  }
+</script>
+</body>
+</html>
