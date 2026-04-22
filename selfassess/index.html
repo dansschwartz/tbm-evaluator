@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Self-Assessment — TBM Evaluator</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',system-ui,sans-serif;background:#f5f7fa;display:flex;justify-content:center;padding:20px}
+  .card{max-width:500px;width:100%;background:#fff;border-radius:16px;padding:32px;box-shadow:0 2px 20px rgba(0,0,0,0.08)}
+  h1{font-size:22px;color:#09A1A1;margin-bottom:16px;text-align:center}
+  p{color:#888;font-size:14px;margin-bottom:20px;text-align:center}
+  .skill{margin-bottom:16px;padding:12px;background:#f8f9fb;border-radius:8px}
+  .skill label{font-weight:600;font-size:14px;display:block;margin-bottom:6px}
+  .skill input[type=range]{width:100%}
+  .skill .val{text-align:center;font-size:18px;font-weight:700;color:#09A1A1}
+  button{width:100%;padding:14px;background:#09A1A1;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;margin-top:12px}
+  #msg{text-align:center;margin-top:12px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>⚽ Player Self-Assessment</h1>
+  <p>Rate yourself on each skill below</p>
+  <div id="skills"></div>
+  <button onclick="submit()">Submit Self-Assessment</button>
+  <div id="msg"></div>
+</div>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const eventId = params.get('event');
+  const playerId = params.get('player');
+  const API = window.location.origin;
+  let skills = [];
+
+  async function load() {
+    if (!eventId) { document.getElementById('msg').textContent = 'Missing event parameter'; return; }
+    try {
+      const resp = await fetch(API + '/api/scoring/event/' + eventId);
+      const data = await resp.json();
+      skills = data.template?.skills || [];
+      const el = document.getElementById('skills');
+      skills.forEach(s => {
+        el.innerHTML += '<div class="skill"><label>' + s.name + '</label><div class="val" id="v_'+s.name.replace(/\s/g,'_')+'">3</div><input type="range" min="1" max="5" value="3" oninput="document.getElementById(\'v_'+s.name.replace(/\s/g,'_')+'\').textContent=this.value" data-skill="'+s.name+'"></div>';
+      });
+    } catch(e) { document.getElementById('msg').textContent = 'Could not load evaluation template'; }
+  }
+
+  async function submit() {
+    const scores = {};
+    document.querySelectorAll('input[type=range]').forEach(i => { scores[i.dataset.skill] = parseInt(i.value); });
+    try {
+      const resp = await fetch(API + '/api/events/' + eventId + '/self-assess', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({player_id: playerId, scores: scores})
+      });
+      document.getElementById('msg').textContent = resp.ok ? '✅ Self-assessment submitted!' : '❌ Error submitting';
+    } catch(e) { document.getElementById('msg').textContent = '❌ Error: ' + e.message; }
+  }
+
+  load();
+</script>
+</body>
+</html>
