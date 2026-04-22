@@ -1165,3 +1165,332 @@ async def delete_voice_recording(
     flag_modified(ep, "voice_recordings")
     
     return {"message": "Recording deleted", "remaining": len(ep.voice_recordings)}
+
+
+# ============================================================
+# Position Profiles — what does an ideal player at each position look like?
+# ============================================================
+
+SOCCER_POSITION_PROFILES = {
+    "Goalkeeper": {
+        "description": "Last line of defense. Must have excellent reflexes, positioning, and communication.",
+        "ideal_scores": {
+            "Positioning / Movement": 4.5,
+            "Game Intelligence": 4.0,
+            "Coachability": 4.5,
+            "Attitude / Effort": 4.5,
+            "Tackling / Defending": 3.5,
+            "Passing Accuracy": 3.0,
+            "Speed / Acceleration": 3.0,
+        },
+        "key_traits": ["Shot stopping", "Distribution", "Communication", "Positioning", "Courage"],
+        "physical_profile": {"height": "Tall preferred", "build": "Athletic", "agility": "High"},
+    },
+    "Defender": {
+        "description": "Backbone of the team. Strong tackling, positioning, and aerial ability.",
+        "ideal_scores": {
+            "Tackling / Defending": 4.5,
+            "Positioning / Movement": 4.5,
+            "Heading": 4.0,
+            "Game Intelligence": 4.0,
+            "Speed / Acceleration": 3.5,
+            "Passing Accuracy": 3.5,
+            "Stamina / Work Rate": 4.0,
+        },
+        "key_traits": ["Tackling", "Aerial ability", "Reading the game", "Composure", "Strength"],
+        "physical_profile": {"height": "Above average", "build": "Strong", "stamina": "High"},
+    },
+    "Midfielder": {
+        "description": "Engine of the team. Controls tempo, creates chances, and links defense to attack.",
+        "ideal_scores": {
+            "Passing Accuracy": 4.5,
+            "Game Intelligence": 5.0,
+            "Ball Control / First Touch": 4.5,
+            "Stamina / Work Rate": 4.5,
+            "Positioning / Movement": 4.0,
+            "Dribbling": 4.0,
+            "Coachability": 4.0,
+        },
+        "key_traits": ["Vision", "Passing range", "Work rate", "Ball retention", "Decision making"],
+        "physical_profile": {"height": "Average", "build": "Lean/athletic", "stamina": "Very high"},
+    },
+    "Forward": {
+        "description": "Goal scorer. Clinical finishing, pace, and ability to create chances.",
+        "ideal_scores": {
+            "Shooting / Finishing": 5.0,
+            "Speed / Acceleration": 4.5,
+            "Dribbling": 4.0,
+            "Ball Control / First Touch": 4.0,
+            "Positioning / Movement": 4.5,
+            "Game Intelligence": 3.5,
+            "Heading": 3.5,
+        },
+        "key_traits": ["Clinical finishing", "Pace", "Movement in the box", "Composure", "Creativity"],
+        "physical_profile": {"height": "Varies", "build": "Athletic/fast", "acceleration": "Explosive"},
+    },
+}
+
+@router.get("/api/templates/position-profiles/{sport}")
+async def get_position_profiles(sport: str):
+    """Get ideal position profiles for a sport — what does a good striker/goalie/etc look like?"""
+    profiles = {
+        "soccer": SOCCER_POSITION_PROFILES,
+        "basketball": {
+            "Point Guard": {"description": "Floor general. Elite ball handling and court vision.", "ideal_scores": {"Ball Handling": 5.0, "Passing": 5.0, "Court Awareness": 5.0, "Speed": 4.5}, "key_traits": ["Leadership", "Vision", "Quickness"]},
+            "Shooting Guard": {"description": "Primary scorer from the perimeter.", "ideal_scores": {"Shooting": 5.0, "Ball Handling": 4.0, "Defense": 3.5, "Speed": 4.0}, "key_traits": ["Shooting range", "Scoring ability", "Athleticism"]},
+            "Small Forward": {"description": "Versatile player. Scores, defends, and rebounds.", "ideal_scores": {"Shooting": 4.0, "Defense": 4.0, "Rebounding": 3.5, "Court Awareness": 4.0}, "key_traits": ["Versatility", "Two-way play", "Athleticism"]},
+            "Power Forward": {"description": "Interior presence. Strong rebounder and post player.", "ideal_scores": {"Rebounding": 5.0, "Defense": 4.5, "Shooting": 3.0, "Vertical": 4.0}, "key_traits": ["Physicality", "Rebounding", "Post moves"]},
+            "Center": {"description": "Anchor. Shot blocking, rebounding, and interior defense.", "ideal_scores": {"Rebounding": 5.0, "Defense": 5.0, "Vertical": 4.0}, "key_traits": ["Shot blocking", "Rim protection", "Physicality"]},
+        },
+    }
+    sport_profiles = profiles.get(sport.lower())
+    if not sport_profiles:
+        raise HTTPException(status_code=404, detail=f"No position profiles for {sport}. Available: {list(profiles.keys())}")
+    return {"sport": sport, "positions": sport_profiles}
+
+
+@router.get("/api/players/{player_id}/position-fit")
+async def get_position_fit(player_id: str, db: AsyncSession = Depends(get_db)):
+    """Analyze how well a player fits each position based on their scores vs ideal profiles."""
+    player = (await db.execute(select(Player).where(Player.id == player_id))).scalar_one_or_none()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    # Get their latest report
+    report = (await db.execute(
+        select(PlayerReport).where(PlayerReport.player_id == player_id)
+        .order_by(PlayerReport.created_at.desc()).limit(1)
+    )).scalar_one_or_none()
+    
+    if not report or not report.skill_scores:
+        raise HTTPException(status_code=400, detail="No scores available for position fit analysis")
+    
+    # Compare against each position profile
+    fits = {}
+    for position, profile in SOCCER_POSITION_PROFILES.items():
+        ideal = profile["ideal_scores"]
+        total_diff = 0
+        matched_skills = 0
+        for skill, ideal_score in ideal.items():
+            actual = report.skill_scores.get(skill)
+            if actual is not None:
+                total_diff += abs(ideal_score - actual)
+                matched_skills += 1
+        
+        if matched_skills > 0:
+            avg_diff = total_diff / matched_skills
+            # Convert to a 0-100 fit score (0 diff = 100% fit, 4 diff = 0% fit)
+            fit_pct = max(0, round(100 - (avg_diff * 25), 1))
+            fits[position] = {
+                "fit_score": fit_pct,
+                "description": profile["description"],
+                "key_traits": profile["key_traits"],
+                "physical_profile": profile["physical_profile"],
+            }
+    
+    # Sort by fit score
+    sorted_fits = dict(sorted(fits.items(), key=lambda x: x[1]["fit_score"], reverse=True))
+    best_fit = list(sorted_fits.keys())[0] if sorted_fits else None
+    
+    return {
+        "player_name": f"{player.first_name} {player.last_name}",
+        "current_position": player.position,
+        "best_fit_position": best_fit,
+        "position_fits": sorted_fits,
+    }
+
+
+# ============================================================
+# Draft Settings & Advanced Team Balancing
+# ============================================================
+
+@router.patch("/api/events/{event_id}/draft-settings")
+async def update_draft_settings(event_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+    """Update draft/balancing settings for an event.
+    Settings: method (overall|positional|categorical), balance_positions (bool),
+    num_teams (int), priority_skills (list), position_requirements (dict)"""
+    body = await request.json()
+    event = (await db.execute(select(EvaluationEvent).where(EvaluationEvent.id == event_id))).scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    event.draft_settings = body
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(event, "draft_settings")
+    
+    return {"message": "Draft settings updated", "settings": body}
+
+
+@router.get("/api/events/{event_id}/draft-settings")
+async def get_draft_settings(event_id: str, db: AsyncSession = Depends(get_db)):
+    """Get current draft settings."""
+    event = (await db.execute(select(EvaluationEvent).where(EvaluationEvent.id == event_id))).scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    defaults = {
+        "method": "overall",
+        "balance_positions": True,
+        "num_teams": 3,
+        "priority_skills": [],
+        "position_requirements": {"Goalkeeper": 1, "Defender": 3, "Midfielder": 4, "Forward": 3},
+        "keep_friends_together": False,
+    }
+    settings = {**defaults, **(event.draft_settings or {})}
+    return settings
+
+
+@router.post("/api/events/{event_id}/draft/smart-balance")
+async def smart_balance_teams(event_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+    """AI-powered team balancing using draft settings.
+    Uses position requirements, skill priorities, and balancing method."""
+    event = (await db.execute(
+        select(EvaluationEvent).options(selectinload(EvaluationEvent.template))
+        .where(EvaluationEvent.id == event_id)
+    )).scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    settings = event.draft_settings or {}
+    method = settings.get("method", "overall")
+    balance_positions = settings.get("balance_positions", True)
+    num_teams = settings.get("num_teams", 3)
+    position_reqs = settings.get("position_requirements", {})
+    priority_skills = settings.get("priority_skills", [])
+    
+    # Get all reports for this event
+    reports = (await db.execute(
+        select(PlayerReport).options(selectinload(PlayerReport.player))
+        .where(PlayerReport.event_id == event_id)
+        .order_by(PlayerReport.overall_score.desc().nullslast())
+    )).scalars().all()
+    
+    if not reports:
+        raise HTTPException(status_code=400, detail="Generate reports first")
+    
+    # Get or create teams
+    teams_result = await db.execute(select(DraftTeam).where(DraftTeam.event_id == event_id))
+    teams = teams_result.scalars().all()
+    
+    if len(teams) < num_teams:
+        colors = ["#0066cc", "#cc0000", "#888888", "#009900", "#cc6600", "#6600cc"]
+        names = ["Blue", "Red", "White", "Green", "Orange", "Purple"]
+        for i in range(len(teams), num_teams):
+            team = DraftTeam(event_id=event_id, team_name=names[i % len(names)], team_color=colors[i % len(colors)])
+            db.add(team)
+        await db.flush()
+        teams_result = await db.execute(select(DraftTeam).where(DraftTeam.event_id == event_id))
+        teams = teams_result.scalars().all()
+    
+    # Clear existing picks
+    await db.execute(select(DraftPick).where(DraftPick.draft_team_id.in_([t.id for t in teams])))
+    for t in teams:
+        await db.execute(DraftPick.__table__.delete().where(DraftPick.draft_team_id == t.id))
+    
+    # Sort players based on method
+    if method == "positional" and balance_positions:
+        # Group by position, then snake draft within each group
+        position_groups = {}
+        for r in reports:
+            pos = r.player.position or "Unknown"
+            if pos not in position_groups:
+                position_groups[pos] = []
+            position_groups[pos].append(r)
+        
+        # Snake draft by position
+        team_idx = 0
+        direction = 1
+        pick_order = 0
+        
+        for pos in ["Goalkeeper", "Defender", "Midfielder", "Forward", "Unknown"]:
+            players = position_groups.get(pos, [])
+            for r in players:
+                pick = DraftPick(draft_team_id=teams[team_idx].id, player_id=r.player_id, pick_order=pick_order)
+                db.add(pick)
+                pick_order += 1
+                team_idx += direction
+                if team_idx >= num_teams:
+                    team_idx = num_teams - 1
+                    direction = -1
+                elif team_idx < 0:
+                    team_idx = 0
+                    direction = 1
+    else:
+        # Overall method — snake draft by overall score
+        team_idx = 0
+        direction = 1
+        for i, r in enumerate(reports):
+            pick = DraftPick(draft_team_id=teams[team_idx].id, player_id=r.player_id, pick_order=i)
+            db.add(pick)
+            team_idx += direction
+            if team_idx >= num_teams:
+                team_idx = num_teams - 1
+                direction = -1
+            elif team_idx < 0:
+                team_idx = 0
+                direction = 1
+    
+    await db.flush()
+    
+    # Build summary
+    team_summaries = []
+    for t in teams:
+        picks = (await db.execute(
+            select(DraftPick).options(selectinload(DraftPick.player))
+            .where(DraftPick.draft_team_id == t.id)
+        )).scalars().all()
+        
+        player_scores = []
+        positions = {}
+        for p in picks:
+            report = next((r for r in reports if r.player_id == p.player_id), None)
+            if report:
+                player_scores.append(report.overall_score or 0)
+            pos = p.player.position or "Unknown" if p.player else "Unknown"
+            positions[pos] = positions.get(pos, 0) + 1
+        
+        avg = round(sum(player_scores) / len(player_scores), 2) if player_scores else 0
+        team_summaries.append({
+            "team_name": t.team_name,
+            "team_color": t.team_color,
+            "player_count": len(picks),
+            "avg_score": avg,
+            "positions": positions,
+            "players": [{"name": f"{p.player.first_name} {p.player.last_name}" if p.player else "?", "position": p.player.position if p.player else "?"} for p in picks]
+        })
+    
+    return {
+        "method": method,
+        "num_teams": num_teams,
+        "balance_positions": balance_positions,
+        "teams": team_summaries,
+    }
+
+
+# ============================================================
+# Player Bio Details Endpoint
+# ============================================================
+
+@router.patch("/api/players/{player_id}/bio")
+async def update_player_bio(player_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+    """Update player bio/physical details.
+    Body: {height_inches, weight_lbs, dominant_foot, years_playing, school, medical_notes}"""
+    body = await request.json()
+    player = (await db.execute(select(Player).where(Player.id == player_id))).scalar_one_or_none()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    for field in ["height_inches", "weight_lbs", "dominant_foot", "years_playing", "school", "medical_notes"]:
+        if field in body:
+            setattr(player, field, body[field])
+    
+    return {
+        "id": str(player.id),
+        "name": f"{player.first_name} {player.last_name}",
+        "height_inches": player.height_inches,
+        "height_display": f"{player.height_inches // 12}'{player.height_inches % 12}\"" if player.height_inches else None,
+        "weight_lbs": player.weight_lbs,
+        "dominant_foot": player.dominant_foot,
+        "years_playing": player.years_playing,
+        "school": player.school,
+    }

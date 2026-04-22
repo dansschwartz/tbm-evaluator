@@ -60,6 +60,9 @@ class EvaluationTemplate(Base):
     created_at = Column(DateTime, server_default=func.now())
     # Feature 15: Position-based template variants
     position_overrides = Column(JSONB, nullable=True)
+    # Ideal position profiles — what scores should a good striker/goalie/etc have?
+    # Format: {"Striker": {"Shooting": 4.5, "Speed": 4.0, ...}, "Goalkeeper": {...}}
+    position_profiles = Column(JSONB, nullable=True)
 
     organization = relationship("Organization", back_populates="templates")
     events = relationship("EvaluationEvent", back_populates="template")
@@ -76,6 +79,13 @@ class Player(Base):
     age_group = Column(String(50), nullable=True)
     position = Column(String(100), nullable=True)
     jersey_number = Column(Integer, nullable=True)
+    # Bio / physical details
+    height_inches = Column(Integer, nullable=True)  # Height in inches (e.g., 58 = 4'10")
+    weight_lbs = Column(Integer, nullable=True)     # Weight in pounds
+    dominant_foot = Column(String(10), nullable=True)  # left, right, both
+    years_playing = Column(Integer, nullable=True)   # Years of experience
+    school = Column(String(255), nullable=True)
+    medical_notes = Column(Text, nullable=True)      # Allergies, conditions (private)
     parent_name = Column(String(255), nullable=True)
     parent_email = Column(String(255), nullable=True)
     parent_phone = Column(String(50), nullable=True)
@@ -107,6 +117,11 @@ class EvaluationEvent(Base):
     created_at = Column(DateTime, server_default=func.now())
     # Feature 16: Season/Year grouping
     season = Column(String(100), nullable=True)
+    # Draft/balancing settings
+    # Format: {"method": "overall"|"positional"|"categorical", "balance_positions": true/false,
+    #          "num_teams": 3, "priority_skills": ["Game Intelligence", "Coachability"],
+    #          "keep_friends_together": false, "position_requirements": {"Goalkeeper": 1, "Defender": 3}}
+    draft_settings = Column(JSONB, nullable=True)
 
     organization = relationship("Organization", back_populates="events")
     template = relationship("EvaluationTemplate", back_populates="events")
