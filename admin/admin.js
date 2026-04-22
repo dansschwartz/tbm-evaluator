@@ -1621,7 +1621,7 @@ async function loadEventAnalytics(eventId) {
         // Top performers
         if (data.top_performers && data.top_performers.length > 0) {
             var topRows = data.top_performers.map(function(tp) {
-                return '<tr><td>' + tp.rank + '</td><td>' + tp.player_id + '</td><td>' + (tp.overall_score !== null ? tp.overall_score.toFixed(2) : '--') + '</td></tr>';
+                return '<tr><td>' + tp.rank + '</td><td><strong>' + (tp.player_name || 'Unknown') + '</strong><br><small style="color:#888">' + (tp.position || '') + ' · ' + (tp.age_group || '') + '</small></td><td>' + (tp.overall_score !== null ? tp.overall_score.toFixed(2) : '--') + '</td></tr>';
             }).join('');
             topEl.innerHTML = '<table class="data-table"><thead><tr><th>Rank</th><th>Player</th><th>Position</th><th>Score</th></tr></thead><tbody>' + topRows + '</tbody></table>';
         } else {
