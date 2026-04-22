@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>TBM Evaluator - Scoring</title>
+  <link rel="stylesheet" href="scoring.css">
+</head>
+<body>
+
+  <!-- Login Screen -->
+  <div id="screen-login" class="screen active">
+    <div class="login-container">
+      <div class="logo">
+        <div class="logo-icon">TBM</div>
+        <h1>Evaluator Login</h1>
+        <p class="subtitle">Enter your 6-character access code</p>
+      </div>
+      <form id="login-form" autocomplete="off">
+        <input
+          type="text"
+          id="access-code-input"
+          maxlength="6"
+          minlength="6"
+          placeholder="ACCESS CODE"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          required
+        >
+        <button type="submit" class="btn btn-primary btn-full" id="login-btn">
+          Sign In
+        </button>
+        <div id="login-error" class="error-msg hidden"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Event Selection Screen -->
+  <div id="screen-events" class="screen">
+    <header class="top-bar">
+      <button class="btn-icon" id="logout-btn" aria-label="Logout">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+      <h2 class="top-bar-title">Select Event</h2>
+      <div class="top-bar-spacer"></div>
+    </header>
+    <div class="screen-body">
+      <div class="evaluator-badge" id="evaluator-badge"></div>
+      <div id="events-list" class="card-list"></div>
+      <div id="events-empty" class="empty-state hidden">
+        <p>No active events assigned to you.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player List Screen -->
+  <div id="screen-players" class="screen">
+    <header class="top-bar">
+      <button class="btn-icon" id="back-to-events-btn" aria-label="Back">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <h2 class="top-bar-title" id="event-title">Players</h2>
+      <button class="btn-icon" id="sync-btn" aria-label="Sync scores">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+      </button>
+    </header>
+    <div class="screen-body">
+      <div class="search-bar">
+        <input type="text" id="player-search" placeholder="Search players..." autocomplete="off">
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="scoring-progress"></div>
+        <span class="progress-label" id="progress-label">0 / 0 scored</span>
+      </div>
+      <div id="players-list" class="card-list"></div>
+    </div>
+  </div>
+
+  <!-- Scoring Form Screen -->
+  <div id="screen-scoring" class="screen">
+    <header class="top-bar">
+      <button class="btn-icon" id="back-to-players-btn" aria-label="Back">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <h2 class="top-bar-title" id="player-name-title">Player</h2>
+      <div class="top-bar-spacer"></div>
+    </header>
+    <div class="screen-body">
+      <div class="player-nav">
+        <button class="btn btn-outline btn-nav" id="prev-player-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Prev
+        </button>
+        <span class="player-counter" id="player-counter">1 / 1</span>
+        <button class="btn btn-outline btn-nav" id="next-player-btn">
+          Next
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div id="skills-form" class="skills-form"></div>
+      <button class="btn btn-primary btn-full btn-submit" id="submit-scores-btn">
+        Submit Scores
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Loading overlay -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="spinner"></div>
+  </div>
+
+  <script src="scoring.js"></script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TBM Evaluator Admin</title>
+    <link rel="stylesheet" href="/admin/static/admin.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-logo">TBM</div>
+                <div class="brand-text">Evaluator Admin</div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-section="overview">
+                    <span class="nav-icon">&#9632;</span>
+                    <span class="nav-label">Overview</span>
+                </a>
+                <a href="#" class="nav-item" data-section="organizations">
+                    <span class="nav-icon">&#9960;</span>
+                    <span class="nav-label">Organizations</span>
+                </a>
+                <a href="#" class="nav-item" data-section="templates">
+                    <span class="nav-icon">&#9881;</span>
+                    <span class="nav-label">Templates</span>
+                </a>
+                <a href="#" class="nav-item" data-section="events">
+                    <span class="nav-icon">&#9733;</span>
+                    <span class="nav-label">Events</span>
+                </a>
+                <a href="#" class="nav-item" data-section="players">
+                    <span class="nav-icon">&#9823;</span>
+                    <span class="nav-label">Players</span>
+                </a>
+                <a href="#" class="nav-item" data-section="reports">
+                    <span class="nav-icon">&#9998;</span>
+                    <span class="nav-label">Reports</span>
+                </a>
+                <a href="#" class="nav-item" data-section="draft">
+                    <span class="nav-icon">&#9878;</span>
+                    <span class="nav-label">Draft</span>
+                </a>
+                <a href="#" class="nav-item" data-section="analytics">
+                    <span class="nav-icon">&#9636;</span>
+                    <span class="nav-label">Analytics</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-sm btn-outline" id="btn-change-key">Change API Key</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <button class="menu-toggle" id="menu-toggle">&#9776;</button>
+                <h1 class="page-title" id="page-title">Overview</h1>
+                <div class="header-actions">
+                    <span class="org-selector-label">Organization:</span>
+                    <select id="global-org-select" class="form-select form-select-sm">
+                        <option value="">-- Select Org --</option>
+                    </select>
+                </div>
+            </header>
+
+            <div class="content-area" id="content-area">
+                <!-- Overview Section -->
+                <section class="section" id="section-overview">
+                    <div class="stats-grid" id="overview-stats"></div>
+                    <div class="card" id="overview-recent-events">
+                        <div class="card-header"><h3>Recent Events</h3></div>
+                        <div class="card-body" id="overview-events-body">
+                            <p class="text-muted">Select an organization to view data.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Organizations Section -->
+                <section class="section hidden" id="section-organizations">
+                    <div class="section-toolbar">
+                        <h2>Organizations</h2>
+                        <button class="btn btn-primary" id="btn-create-org">+ New Organization</button>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table" id="orgs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Slug</th>
+                                        <th>Sport</th>
+                                        <th>Contact</th>
+                                        <th>API Key</th>
+                                        <th>Active</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orgs-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Templates Section -->
+                <section class="section hidden" id="section-templates">
+                    <div class="section-toolbar">
+                        <h2>Evaluation Templates</h2>
+                        <button class="btn btn-primary" id="btn-create-template">+ New Template</button>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table" id="templates-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Sport</th>
+                                        <th>Skills</th>
+                                        <th>Categories</th>
+                                        <th>Default</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="templates-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Events Section -->
+                <section class="section hidden" id="section-events">
+                    <div class="section-toolbar">
+                        <h2>Events</h2>
+                        <button class="btn btn-primary" id="btn-create-event">+ New Event</button>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table" id="events-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Date</th>
+                                        <th>Location</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="events-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Players Section -->
+                <section class="section hidden" id="section-players">
+                    <div class="section-toolbar">
+                        <h2>Players</h2>
+                        <div class="toolbar-actions">
+                            <input type="text" class="form-input form-input-sm" id="player-search" placeholder="Search players...">
+                            <select class="form-select form-select-sm" id="player-age-filter">
+                                <option value="">All Age Groups</option>
+                            </select>
+                            <select class="form-select form-select-sm" id="player-active-filter">
+                                <option value="">All</option>
+                                <option value="true" selected>Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                            <button class="btn btn-primary" id="btn-create-player">+ New Player</button>
+                            <button class="btn btn-secondary" id="btn-bulk-import">Bulk Import</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table" id="players-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Name</th>
+                                        <th>Age Group</th>
+                                        <th>Position</th>
+                                        <th>Parent Email</th>
+                                        <th>Active</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="players-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reports Section -->
+                <section class="section hidden" id="section-reports">
+                    <div class="section-toolbar">
+                        <h2>Reports</h2>
+                        <div class="toolbar-actions">
+                            <select class="form-select" id="reports-event-select">
+                                <option value="">-- Select Event --</option>
+                            </select>
+                            <button class="btn btn-primary" id="btn-generate-reports">Generate Reports</button>
+                            <button class="btn btn-coral" id="btn-send-reports">Send to Parents</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table" id="reports-table">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Player</th>
+                                        <th>Overall Score</th>
+                                        <th>Sent</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reports-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Draft Section -->
+                <section class="section hidden" id="section-draft">
+                    <div class="section-toolbar">
+                        <h2>Draft</h2>
+                        <div class="toolbar-actions">
+                            <select class="form-select" id="draft-event-select">
+                                <option value="">-- Select Event --</option>
+                            </select>
+                            <button class="btn btn-primary" id="btn-setup-teams">Setup Teams</button>
+                            <button class="btn btn-secondary" id="btn-auto-balance">Auto-Balance</button>
+                            <button class="btn btn-outline" id="btn-export-draft">Export</button>
+                        </div>
+                    </div>
+                    <div class="draft-layout">
+                        <div class="card draft-available">
+                            <div class="card-header"><h3>Available Players</h3></div>
+                            <div class="card-body" id="draft-available-body">
+                                <p class="text-muted">Select an event to begin drafting.</p>
+                            </div>
+                        </div>
+                        <div class="draft-teams" id="draft-teams-container">
+                            <!-- Teams rendered dynamically -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Analytics Section -->
+                <section class="section hidden" id="section-analytics">
+                    <div class="section-toolbar">
+                        <h2>Analytics</h2>
+                        <div class="toolbar-actions">
+                            <select class="form-select" id="analytics-event-select">
+                                <option value="">-- Org-level Analytics --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="stats-grid" id="analytics-stats"></div>
+                    <div class="analytics-charts">
+                        <div class="card">
+                            <div class="card-header"><h3>Score Distribution</h3></div>
+                            <div class="card-body" id="analytics-distribution"></div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3>Skill Averages</h3></div>
+                            <div class="card-body" id="analytics-skills"></div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3>Top Performers</h3></div>
+                            <div class="card-body" id="analytics-top"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay hidden" id="modal-overlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">Modal</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer" id="modal-footer"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay hidden" id="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="/admin/static/admin.js"></script>
+</body>
+</html>
