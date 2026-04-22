@@ -1028,3 +1028,140 @@ Keep the tone warm, professional, and encouraging — this goes to parents. Be s
         "improvements": improvements,
         "skill_scores": avg_scores,
     }
+
+
+# ============================================================
+# Voice Recordings for Player Reports
+# ============================================================
+
+@router.post("/api/events/{event_id}/players/{player_id}/recordings")
+async def add_voice_recording(
+    event_id: str,
+    player_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Add a voice recording to a player's event evaluation.
+    Body: {audio_data: base64_string, duration_seconds: float, label: string, evaluator_name: string}
+    Multiple recordings can be saved per player — each is a separate entry."""
+    body = await request.json()
+    audio_data = body.get("audio_data")
+    if not audio_data:
+        raise HTTPException(status_code=400, detail="audio_data (base64) is required")
+    
+    # Find the EventPlayer record
+    ep = (await db.execute(
+        select(EventPlayer).where(
+            EventPlayer.event_id == event_id,
+            EventPlayer.player_id == player_id,
+        )
+    )).scalar_one_or_none()
+    
+    if not ep:
+        raise HTTPException(status_code=404, detail="Player not found in this event")
+    
+    # Build recording entry
+    import uuid as _uuid
+    recording = {
+        "id": str(_uuid.uuid4()),
+        "audio_data": audio_data,
+        "duration_seconds": body.get("duration_seconds", 0),
+        "label": body.get("label", f"Recording {len(ep.voice_recordings or []) + 1}"),
+        "evaluator_name": body.get("evaluator_name", "Coach"),
+        "recorded_at": datetime.utcnow().isoformat(),
+    }
+    
+    # Append to existing recordings
+    current = list(ep.voice_recordings or [])
+    current.append(recording)
+    ep.voice_recordings = current
+    
+    # Force SQLAlchemy to detect the change on JSONB
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(ep, "voice_recordings")
+    
+    return {"id": recording["id"], "total_recordings": len(current), "message": "Recording saved"}
+
+
+@router.get("/api/events/{event_id}/players/{player_id}/recordings")
+async def get_voice_recordings(
+    event_id: str,
+    player_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all voice recordings for a player in an event."""
+    ep = (await db.execute(
+        select(EventPlayer).where(
+            EventPlayer.event_id == event_id,
+            EventPlayer.player_id == player_id,
+        )
+    )).scalar_one_or_none()
+    
+    if not ep:
+        raise HTTPException(status_code=404, detail="Player not found in this event")
+    
+    recordings = ep.voice_recordings or []
+    # Return without the full audio_data for listing (it's large)
+    summary = [
+        {
+            "id": r["id"],
+            "label": r.get("label", ""),
+            "duration_seconds": r.get("duration_seconds", 0),
+            "evaluator_name": r.get("evaluator_name", ""),
+            "recorded_at": r.get("recorded_at", ""),
+        }
+        for r in recordings
+    ]
+    return {"recordings": summary, "total": len(recordings)}
+
+
+@router.get("/api/events/{event_id}/players/{player_id}/recordings/{recording_id}")
+async def get_single_recording(
+    event_id: str,
+    player_id: str,
+    recording_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a single recording including audio data."""
+    ep = (await db.execute(
+        select(EventPlayer).where(
+            EventPlayer.event_id == event_id,
+            EventPlayer.player_id == player_id,
+        )
+    )).scalar_one_or_none()
+    
+    if not ep:
+        raise HTTPException(status_code=404, detail="Player not found in this event")
+    
+    for r in (ep.voice_recordings or []):
+        if r["id"] == recording_id:
+            return r
+    
+    raise HTTPException(status_code=404, detail="Recording not found")
+
+
+@router.delete("/api/events/{event_id}/players/{player_id}/recordings/{recording_id}")
+async def delete_voice_recording(
+    event_id: str,
+    player_id: str,
+    recording_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a single recording."""
+    ep = (await db.execute(
+        select(EventPlayer).where(
+            EventPlayer.event_id == event_id,
+            EventPlayer.player_id == player_id,
+        )
+    )).scalar_one_or_none()
+    
+    if not ep:
+        raise HTTPException(status_code=404, detail="Player not found in this event")
+    
+    current = list(ep.voice_recordings or [])
+    ep.voice_recordings = [r for r in current if r["id"] != recording_id]
+    
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(ep, "voice_recordings")
+    
+    return {"message": "Recording deleted", "remaining": len(ep.voice_recordings)}

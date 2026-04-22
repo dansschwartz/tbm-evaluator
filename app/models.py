@@ -129,6 +129,8 @@ class EventPlayer(Base):
     checked_in_at = Column(DateTime, nullable=True)
     # Feature 9: General notes per player per event
     general_notes = Column(Text, nullable=True)
+    # Voice recordings — array of {id, audio_data (base64), duration_seconds, label, recorded_at, evaluator_name}
+    voice_recordings = Column(JSONB, nullable=True, default=list)
     # Feature 12: Self-assessment data
     self_assessment = Column(JSONB, nullable=True)
 

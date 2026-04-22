@@ -1134,3 +1134,201 @@
   document.addEventListener('DOMContentLoaded', addAIButton);
   setTimeout(addAIButton, 2000);
 })();
+
+// ============================================================
+// Voice Recording — coach can record audio notes per player
+// ============================================================
+(function() {
+  var mediaRecorder = null;
+  var audioChunks = [];
+  var recordingStartTime = null;
+  var isRecording = false;
+  var timerInterval = null;
+  
+  function addRecordingUI() {
+    var submitBtn = document.getElementById('submit-scores-btn');
+    if (!submitBtn || document.getElementById('voice-rec-section')) return;
+    
+    var section = document.createElement('div');
+    section.id = 'voice-rec-section';
+    section.style.cssText = 'margin-top:20px;padding:16px;background:#fff;border-radius:12px;border:2px solid #e0e0e0;';
+    section.innerHTML = 
+      '<h3 style="margin:0 0 12px;font-size:15px;color:#333;">🎙️ Voice Notes</h3>' +
+      '<p style="font-size:12px;color:#888;margin-bottom:12px;">Record audio feedback for this player. Each recording is saved separately to their report.</p>' +
+      '<div id="rec-controls" style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">' +
+        '<button id="rec-start-btn" onclick="window._startRecording()" style="padding:12px 20px;background:#c41e3a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">🔴 Record</button>' +
+        '<span id="rec-timer" style="font-size:18px;font-weight:700;color:#333;display:none;">0:00</span>' +
+        '<button id="rec-stop-btn" onclick="window._stopRecording()" style="padding:12px 20px;background:#555;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;display:none;">⬛ Stop & Save</button>' +
+      '</div>' +
+      '<div id="rec-status" style="font-size:13px;color:#888;margin-bottom:8px;"></div>' +
+      '<input type="text" id="rec-label" placeholder="Label (e.g., Dribbling feedback, General notes)" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:12px;font-family:inherit;">' +
+      '<div id="rec-list" style="margin-top:8px;"></div>';
+    
+    submitBtn.parentNode.insertBefore(section, submitBtn);
+    
+    // Load existing recordings
+    loadRecordings();
+  }
+  
+  window._startRecording = async function() {
+    try {
+      var stream = await navigator.mediaDevices.getUserMedia({audio: true});
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      
+      mediaRecorder.ondataavailable = function(e) {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+      
+      mediaRecorder.onstop = async function() {
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        var blob = new Blob(audioChunks, {type: 'audio/webm'});
+        var duration = (Date.now() - recordingStartTime) / 1000;
+        await saveRecording(blob, duration);
+      };
+      
+      mediaRecorder.start();
+      isRecording = true;
+      recordingStartTime = Date.now();
+      
+      document.getElementById('rec-start-btn').style.display = 'none';
+      document.getElementById('rec-stop-btn').style.display = 'inline-block';
+      document.getElementById('rec-timer').style.display = 'inline';
+      document.getElementById('rec-status').textContent = '🔴 Recording...';
+      document.getElementById('rec-status').style.color = '#c41e3a';
+      
+      // Update timer
+      timerInterval = setInterval(function() {
+        var elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+        var mins = Math.floor(elapsed / 60);
+        var secs = elapsed % 60;
+        document.getElementById('rec-timer').textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
+      }, 1000);
+      
+    } catch(e) {
+      document.getElementById('rec-status').textContent = '❌ Microphone access denied. Please allow microphone in your browser settings.';
+      document.getElementById('rec-status').style.color = '#c41e3a';
+    }
+  };
+  
+  window._stopRecording = function() {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      isRecording = false;
+      clearInterval(timerInterval);
+      
+      document.getElementById('rec-start-btn').style.display = 'inline-block';
+      document.getElementById('rec-stop-btn').style.display = 'none';
+      document.getElementById('rec-timer').style.display = 'none';
+      document.getElementById('rec-status').textContent = '💾 Saving...';
+      document.getElementById('rec-status').style.color = '#09A1A1';
+    }
+  };
+  
+  async function saveRecording(blob, durationSec) {
+    var reader = new FileReader();
+    reader.onloadend = async function() {
+      var base64 = reader.result.split(',')[1];
+      var label = document.getElementById('rec-label').value.trim() || ('Recording ' + new Date().toLocaleTimeString());
+      
+      var eventId = window._currentEventId || (typeof state !== 'undefined' ? state.currentEventId : null);
+      var playerId = window._currentPlayerId || (typeof state !== 'undefined' ? state.currentPlayerId : null);
+      var evalName = (typeof state !== 'undefined' && state.evaluator) ? state.evaluator.name : 'Coach';
+      
+      if (!eventId || !playerId) {
+        document.getElementById('rec-status').textContent = '❌ Please select a player first';
+        return;
+      }
+      
+      try {
+        var resp = await fetch('/api/events/' + eventId + '/players/' + playerId + '/recordings', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            audio_data: base64,
+            duration_seconds: Math.round(durationSec),
+            label: label,
+            evaluator_name: evalName
+          })
+        });
+        
+        if (resp.ok) {
+          var data = await resp.json();
+          document.getElementById('rec-status').textContent = '✅ Saved! (' + data.total_recordings + ' recording' + (data.total_recordings > 1 ? 's' : '') + ' total)';
+          document.getElementById('rec-status').style.color = '#09A1A1';
+          document.getElementById('rec-label').value = '';
+          loadRecordings();
+        } else {
+          document.getElementById('rec-status').textContent = '❌ Failed to save';
+          document.getElementById('rec-status').style.color = '#c41e3a';
+        }
+      } catch(e) {
+        document.getElementById('rec-status').textContent = '❌ Error: ' + e.message;
+      }
+    };
+    reader.readAsDataURL(blob);
+  }
+  
+  async function loadRecordings() {
+    var eventId = window._currentEventId || (typeof state !== 'undefined' ? state.currentEventId : null);
+    var playerId = window._currentPlayerId || (typeof state !== 'undefined' ? state.currentPlayerId : null);
+    var listEl = document.getElementById('rec-list');
+    if (!listEl || !eventId || !playerId) return;
+    
+    try {
+      var resp = await fetch('/api/events/' + eventId + '/players/' + playerId + '/recordings');
+      if (!resp.ok) return;
+      var data = await resp.json();
+      
+      if (data.recordings.length === 0) {
+        listEl.innerHTML = '<p style="font-size:12px;color:#aaa;">No recordings yet</p>';
+        return;
+      }
+      
+      listEl.innerHTML = data.recordings.map(function(r) {
+        var mins = Math.floor(r.duration_seconds / 60);
+        var secs = r.duration_seconds % 60;
+        var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px;background:#f8f9fa;border-radius:8px;margin-bottom:6px;">' +
+          '<button onclick="window._playRecording(\'' + r.id + '\')" style="background:#09A1A1;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;">▶</button>' +
+          '<div style="flex:1;">' +
+            '<div style="font-size:13px;font-weight:600;">' + (r.label || 'Recording') + '</div>' +
+            '<div style="font-size:11px;color:#888;">' + r.evaluator_name + ' · ' + timeStr + ' · ' + new Date(r.recorded_at).toLocaleDateString() + '</div>' +
+          '</div>' +
+          '<button onclick="window._deleteRecording(\'' + r.id + '\')" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:16px;">🗑️</button>' +
+        '</div>';
+      }).join('');
+    } catch(e) { /* ignore */ }
+  }
+  
+  window._playRecording = async function(recordingId) {
+    var eventId = window._currentEventId || (typeof state !== 'undefined' ? state.currentEventId : null);
+    var playerId = window._currentPlayerId || (typeof state !== 'undefined' ? state.currentPlayerId : null);
+    if (!eventId || !playerId) return;
+    
+    try {
+      var resp = await fetch('/api/events/' + eventId + '/players/' + playerId + '/recordings/' + recordingId);
+      if (!resp.ok) return;
+      var data = await resp.json();
+      var audio = new Audio('data:audio/webm;base64,' + data.audio_data);
+      audio.play();
+    } catch(e) { console.error('Playback error:', e); }
+  };
+  
+  window._deleteRecording = async function(recordingId) {
+    if (!confirm('Delete this recording?')) return;
+    var eventId = window._currentEventId || (typeof state !== 'undefined' ? state.currentEventId : null);
+    var playerId = window._currentPlayerId || (typeof state !== 'undefined' ? state.currentPlayerId : null);
+    if (!eventId || !playerId) return;
+    
+    await fetch('/api/events/' + eventId + '/players/' + playerId + '/recordings/' + recordingId, {method: 'DELETE'});
+    loadRecordings();
+  };
+  
+  // Watch for player changes and re-add UI
+  var recObserver = new MutationObserver(function() { addRecordingUI(); });
+  recObserver.observe(document.body, {childList: true, subtree: true});
+  addRecordingUI();
+  document.addEventListener('DOMContentLoaded', addRecordingUI);
+  setTimeout(addRecordingUI, 2000);
+})();

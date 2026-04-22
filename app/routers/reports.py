@@ -316,4 +316,10 @@ async def get_public_report(report_id: uuid.UUID, db: AsyncSession = Depends(get
         "previous_reports": previous_reports,
         "self_assessment": self_assessment,
         "template": template_data,
+        # Voice recordings (without audio_data for listing — use individual endpoint to play)
+        "voice_recordings": [
+            {"id": r["id"], "label": r.get("label",""), "duration_seconds": r.get("duration_seconds",0),
+             "evaluator_name": r.get("evaluator_name",""), "recorded_at": r.get("recorded_at","")}
+            for r in (ep.voice_recordings or [])
+        ] if ep else [],
     }
