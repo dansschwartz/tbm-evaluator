@@ -37,6 +37,8 @@ class Organization(Base):
     settings = Column(JSONB, default=dict)
     created_at = Column(DateTime, server_default=func.now())
     active = Column(Boolean, default=True)
+    # Feature 17: Webhook notifications
+    webhook_url = Column(String(500), nullable=True)
 
     templates = relationship("EvaluationTemplate", back_populates="organization", cascade="all, delete-orphan")
     players = relationship("Player", back_populates="organization", cascade="all, delete-orphan")
@@ -56,6 +58,8 @@ class EvaluationTemplate(Base):
     categories = Column(JSONB, default=list)
     is_default = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
+    # Feature 15: Position-based template variants
+    position_overrides = Column(JSONB, nullable=True)
 
     organization = relationship("Organization", back_populates="templates")
     events = relationship("EvaluationEvent", back_populates="template")
@@ -101,6 +105,8 @@ class EvaluationEvent(Base):
     status = Column(String(50), default="draft")
     settings = Column(JSONB, default=dict)
     created_at = Column(DateTime, server_default=func.now())
+    # Feature 16: Season/Year grouping
+    season = Column(String(100), nullable=True)
 
     organization = relationship("Organization", back_populates="events")
     template = relationship("EvaluationTemplate", back_populates="events")
@@ -119,6 +125,12 @@ class EventPlayer(Base):
     checked_in = Column(Boolean, default=False)
     bib_number = Column(Integer, nullable=True)
     assigned_group = Column(String(100), nullable=True)
+    # Feature 1: QR check-in timestamp
+    checked_in_at = Column(DateTime, nullable=True)
+    # Feature 9: General notes per player per event
+    general_notes = Column(Text, nullable=True)
+    # Feature 12: Self-assessment data
+    self_assessment = Column(JSONB, nullable=True)
 
     event = relationship("EvaluationEvent", back_populates="event_players")
     player = relationship("Player", back_populates="event_players")
@@ -164,6 +176,8 @@ class PlayerReport(Base):
     player_id = Column(UUID(as_uuid=True), ForeignKey("players.id", ondelete="CASCADE"), nullable=False)
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
     overall_score = Column(Float, nullable=True)
+    # Feature 10: explicit weighted score
+    weighted_overall_score = Column(Float, nullable=True)
     skill_scores = Column(JSONB, default=dict)
     rank = Column(Integer, nullable=True)
     total_players = Column(Integer, nullable=True)
@@ -171,6 +185,8 @@ class PlayerReport(Base):
     ai_strengths = Column(JSONB, default=list)
     ai_improvements = Column(JSONB, default=list)
     ai_recommendation = Column(Text, nullable=True)
+    # Feature 22: AI progress narrative
+    ai_progress_narrative = Column(Text, nullable=True)
     report_url = Column(String(500), nullable=True)
     sent_to_parent = Column(Boolean, default=False)
     sent_at = Column(DateTime, nullable=True)
@@ -204,3 +220,16 @@ class DraftPick(Base):
 
     team = relationship("DraftTeam", back_populates="picks")
     player = relationship("Player", back_populates="draft_picks")
+
+
+# Feature 25: API auth tokens
+class APIToken(Base):
+    __tablename__ = "api_tokens"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    token = Column(String(255), nullable=False, unique=True, index=True)
+    name = Column(String(255), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    expires_at = Column(DateTime, nullable=True)
+    active = Column(Boolean, default=True)

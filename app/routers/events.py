@@ -23,12 +23,13 @@ async def create_event(org_id: uuid.UUID, data: EventCreate, db: AsyncSession = 
 
 
 @router.get("/api/organizations/{org_id}/events", response_model=list[EventResponse], dependencies=[Depends(verify_admin_key)])
-async def list_events(org_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(EvaluationEvent)
-        .where(EvaluationEvent.organization_id == org_id)
-        .order_by(EvaluationEvent.event_date.desc().nullslast())
-    )
+async def list_events(org_id: uuid.UUID, season: str = None, db: AsyncSession = Depends(get_db)):
+    """List events for an organization, optionally filtered by season."""
+    query = select(EvaluationEvent).where(EvaluationEvent.organization_id == org_id)
+    if season:
+        query = query.where(EvaluationEvent.season == season)
+    query = query.order_by(EvaluationEvent.event_date.desc().nullslast())
+    result = await db.execute(query)
     return result.scalars().all()
 
 
@@ -131,5 +132,7 @@ async def check_in_player(event_id: uuid.UUID, player_id: uuid.UUID, db: AsyncSe
     if not ep:
         raise HTTPException(status_code=404, detail="Player not in event")
     ep.checked_in = True
+    from datetime import datetime
+    ep.checked_in_at = datetime.utcnow()
     await db.flush()
-    return {"status": "checked_in"}
+    return {"status": "checked_in", "checked_in_at": ep.checked_in_at.isoformat()}

@@ -68,6 +68,14 @@
       </button>
     </header>
     <div class="screen-body">
+      <!-- Feature 7: Offline indicator -->
+      <div id="offline-indicator" class="offline-indicator hidden"></div>
+      <!-- Tab bar: Players / Check-In -->
+      <div class="tab-bar" id="tab-bar">
+        <button class="tab-btn active" data-tab="players">Players</button>
+        <button class="tab-btn" data-tab="checkin">Check-In</button>
+        <button class="tab-btn" data-tab="voice">Voice</button>
+      </div>
       <div class="search-bar">
         <input type="text" id="player-search" placeholder="Search players..." autocomplete="off">
       </div>
@@ -75,7 +83,26 @@
         <div class="progress-bar" id="scoring-progress"></div>
         <span class="progress-label" id="progress-label">0 / 0 scored</span>
       </div>
-      <div id="players-list" class="card-list"></div>
+      <!-- Players tab -->
+      <div id="tab-players" class="tab-content active">
+        <div id="players-list" class="card-list"></div>
+      </div>
+      <!-- Check-In tab (Feature 1) -->
+      <div id="tab-checkin" class="tab-content">
+        <div id="checkin-list" class="card-list"></div>
+      </div>
+      <!-- Voice tab (Feature 23) -->
+      <div id="tab-voice" class="tab-content">
+        <div class="voice-container">
+          <p style="color:#666;margin-bottom:12px">Speak or type natural language scores. Example: "Marcus dribbling 4, passing 2, great attitude"</p>
+          <textarea id="voice-input" class="voice-textarea" rows="4" placeholder="Type or use voice-to-text..."></textarea>
+          <div class="voice-actions">
+            <button class="btn btn-outline" id="voice-record-btn">Start Voice</button>
+            <button class="btn btn-primary" id="voice-parse-btn">Parse Scores</button>
+          </div>
+          <div id="voice-results" class="voice-results hidden"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -89,6 +116,8 @@
       <div class="top-bar-spacer"></div>
     </header>
     <div class="screen-body">
+      <!-- Player photo + info (Feature 8) -->
+      <div class="scoring-player-header" id="scoring-player-header"></div>
       <div class="player-nav">
         <button class="btn btn-outline btn-nav" id="prev-player-btn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -101,6 +130,11 @@
         </button>
       </div>
       <div id="skills-form" class="skills-form"></div>
+      <!-- Feature 9: General notes -->
+      <div class="general-notes-section">
+        <h4 style="margin:0 0 8px;color:#333">General Notes</h4>
+        <textarea id="general-notes-input" class="general-notes-textarea" placeholder="Overall impressions, attitude, coachability notes..." rows="3"></textarea>
+      </div>
       <button class="btn btn-primary btn-full btn-submit" id="submit-scores-btn">
         Submit Scores
       </button>

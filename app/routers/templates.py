@@ -75,6 +75,7 @@ async def create_template(org_id: uuid.UUID, data: TemplateCreate, db: AsyncSess
         skills=[s.model_dump() for s in data.skills],
         categories=data.categories,
         is_default=data.is_default,
+        position_overrides=data.position_overrides,
     )
     db.add(template)
     await db.flush()

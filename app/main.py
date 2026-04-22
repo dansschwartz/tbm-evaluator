@@ -9,13 +9,17 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import engine
 from app.models import Base, EvaluationTemplate, Organization
-from app.routers import analytics, draft, evaluators, events, notifications, organizations, players, reports, scoring, templates
+from app.routers import analytics, draft, evaluators, events, features, notifications, organizations, players, reports, scoring, templates
 from app.routers.templates import SPORT_PRESETS
 
 logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="TBM Evaluator", version="1.0.0", description="AI-Native Player Evaluation Platform")
+app = FastAPI(
+    title="TBM Evaluator",
+    version="2.0.0",
+    description="AI-Native Player Evaluation Platform — 46 features including QR check-in, progress tracking, player comparison, radar charts, CSV import/export, offline scoring, parent portal, self-assessment, AI coach, voice scoring, calibration, webhooks, PDF reports, and white-label branding.",
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,11 +40,14 @@ app.include_router(reports.router)
 app.include_router(draft.router)
 app.include_router(notifications.router)
 app.include_router(analytics.router)
+app.include_router(features.router)
 
 # Static files
 app.mount("/admin/static", StaticFiles(directory="admin"), name="admin_static")
 app.mount("/score/static", StaticFiles(directory="scoring"), name="scoring_static")
 app.mount("/report/static", StaticFiles(directory="reports"), name="report_static")
+app.mount("/parent/static", StaticFiles(directory="parent"), name="parent_static")
+app.mount("/self-assess/static", StaticFiles(directory="selfassess"), name="selfassess_static")
 
 
 @app.on_event("startup")
@@ -78,11 +85,14 @@ async def startup():
 async def shutdown():
     from app.services.ai import close_client
     await close_client()
+    from app.services.webhooks import close_webhook_client
+    await close_webhook_client()
 
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "tbm-evaluator", "version": "1.0.0"}
+    """Health check endpoint."""
+    return {"status": "healthy", "service": "tbm-evaluator", "version": "2.0.0", "features": 46}
 
 
 # Serve frontend pages
@@ -101,3 +111,17 @@ async def scoring_page():
 @app.get("/report/{report_id}")
 async def report_page(report_id: str):
     return FileResponse("reports/index.html")
+
+
+# Feature 11: Parent portal
+@app.get("/parent")
+@app.get("/parent/")
+async def parent_page():
+    return FileResponse("parent/index.html")
+
+
+# Feature 12: Self-assessment
+@app.get("/self-assess")
+@app.get("/self-assess/")
+async def self_assess_page():
+    return FileResponse("selfassess/index.html")

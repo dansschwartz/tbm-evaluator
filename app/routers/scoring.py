@@ -89,9 +89,11 @@ async def get_scoring_data(event_id: uuid.UUID, db: AsyncSession = Depends(get_d
                 "age_group": ep.player.age_group,
                 "position": ep.player.position,
                 "jersey_number": ep.player.jersey_number,
+                "photo_url": ep.player.photo_url,
                 "bib_number": ep.bib_number,
                 "checked_in": ep.checked_in,
                 "assigned_group": ep.assigned_group,
+                "general_notes": ep.general_notes,
             }
             for ep in event_players
             if ep.player

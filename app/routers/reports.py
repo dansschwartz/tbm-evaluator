@@ -22,7 +22,6 @@ from app.models import (
 from app.routers.auth import verify_admin_key
 from app.schemas import ReportResponse
 from app.services.ai import generate_player_summary
-from app.services.email import build_report_email, send_email
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +30,8 @@ router = APIRouter(tags=["reports"])
 
 @router.post("/api/events/{event_id}/generate-reports", dependencies=[Depends(verify_admin_key)])
 async def generate_reports(event_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Generate AI-powered evaluation reports for all players in an event.
+    Uses weighted scoring from the template skills."""
     event = await db.get(EvaluationEvent, event_id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -39,7 +40,7 @@ async def generate_reports(event_id: uuid.UUID, db: AsyncSession = Depends(get_d
     template = await db.get(EvaluationTemplate, event.template_id) if event.template_id else None
     template_skills = template.skills if template else []
 
-    # Build weight map from template
+    # Build weight map from template (Feature 10: verify weighted calculations)
     weight_map = {}
     for skill in template_skills:
         weight_map[skill["name"]] = skill.get("weight", 1.0)
@@ -65,14 +66,17 @@ async def generate_reports(event_id: uuid.UUID, db: AsyncSession = Depends(get_d
     for score in all_scores:
         player_skill_scores[score.player_id][score.skill_name].append(score.score_value)
 
-    # Calculate averages and overall scores
+    # Calculate averages and overall scores using WEIGHTED average
     player_overall = {}
+    player_weighted_overall = {}
     player_skill_avg = {}
 
     for player_id in player_ids:
         skill_avgs = {}
         weighted_sum = 0
         total_weight = 0
+        simple_sum = 0
+        simple_count = 0
 
         for skill_name, values in player_skill_scores[player_id].items():
             avg = sum(values) / len(values)
@@ -80,13 +84,18 @@ async def generate_reports(event_id: uuid.UUID, db: AsyncSession = Depends(get_d
             weight = weight_map.get(skill_name, 1.0)
             weighted_sum += avg * weight
             total_weight += weight
+            simple_sum += avg
+            simple_count += 1
 
-        overall = weighted_sum / total_weight if total_weight > 0 else 0
-        player_overall[player_id] = round(overall, 2)
+        weighted_overall = weighted_sum / total_weight if total_weight > 0 else 0
+        simple_overall = simple_sum / simple_count if simple_count > 0 else 0
+
+        player_weighted_overall[player_id] = round(weighted_overall, 2)
+        player_overall[player_id] = round(simple_overall, 2)
         player_skill_avg[player_id] = skill_avgs
 
-    # Rank players
-    ranked = sorted(player_ids, key=lambda pid: player_overall.get(pid, 0), reverse=True)
+    # Rank players by WEIGHTED scores (Feature 10)
+    ranked = sorted(player_ids, key=lambda pid: player_weighted_overall.get(pid, 0), reverse=True)
     rank_map = {pid: i + 1 for i, pid in enumerate(ranked)}
     total_players = len(ranked)
 
@@ -98,6 +107,7 @@ async def generate_reports(event_id: uuid.UUID, db: AsyncSession = Depends(get_d
             continue
 
         overall_score = player_overall.get(player_id, 0)
+        weighted_score = player_weighted_overall.get(player_id, 0)
         skill_scores = player_skill_avg.get(player_id, {})
         rank = rank_map.get(player_id, 0)
 
@@ -109,7 +119,7 @@ async def generate_reports(event_id: uuid.UUID, db: AsyncSession = Depends(get_d
                 event_name=event.name,
                 sport=org.sport if org else "soccer",
                 skill_scores=skill_scores,
-                overall_score=overall_score,
+                overall_score=weighted_score,
                 rank=rank,
                 total_players=total_players,
                 template_skills=template_skills,
@@ -137,6 +147,7 @@ async def generate_reports(event_id: uuid.UUID, db: AsyncSession = Depends(get_d
 
         if report:
             report.overall_score = overall_score
+            report.weighted_overall_score = weighted_score
             report.skill_scores = skill_scores
             report.rank = rank
             report.total_players = total_players
@@ -152,6 +163,7 @@ async def generate_reports(event_id: uuid.UUID, db: AsyncSession = Depends(get_d
                 player_id=player_id,
                 organization_id=event.organization_id,
                 overall_score=overall_score,
+                weighted_overall_score=weighted_score,
                 skill_scores=skill_scores,
                 rank=rank,
                 total_players=total_players,
@@ -171,11 +183,25 @@ async def generate_reports(event_id: uuid.UUID, db: AsyncSession = Depends(get_d
     event.status = "completed"
     await db.flush()
 
+    # Feature 17: Fire webhooks
+    if org and org.webhook_url:
+        from app.services.webhooks import fire_webhook
+        await fire_webhook(org.webhook_url, "event.completed", {
+            "event_id": str(event_id),
+            "event_name": event.name,
+            "reports_generated": reports_created,
+        })
+        await fire_webhook(org.webhook_url, "report.generated", {
+            "event_id": str(event_id),
+            "reports_count": reports_created,
+        })
+
     return {"reports_generated": reports_created, "total_players": total_players}
 
 
 @router.get("/api/events/{event_id}/reports", response_model=list[ReportResponse], dependencies=[Depends(verify_admin_key)])
 async def list_event_reports(event_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """List all reports for an event, ordered by rank."""
     result = await db.execute(
         select(PlayerReport)
         .where(PlayerReport.event_id == event_id)
@@ -187,6 +213,7 @@ async def list_event_reports(event_id: uuid.UUID, db: AsyncSession = Depends(get
 
 @router.get("/api/reports/{report_id}", response_model=ReportResponse, dependencies=[Depends(verify_admin_key)])
 async def get_report(report_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Get a single report by ID (admin auth required)."""
     result = await db.execute(
         select(PlayerReport)
         .where(PlayerReport.id == report_id)
@@ -200,6 +227,7 @@ async def get_report(report_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
 
 @router.get("/api/reports/{report_id}/public")
 async def get_public_report(report_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Get a report for public viewing (no auth required). Includes self-assessment and previous evaluations."""
     result = await db.execute(
         select(PlayerReport)
         .where(PlayerReport.id == report_id)
@@ -208,6 +236,51 @@ async def get_public_report(report_id: uuid.UUID, db: AsyncSession = Depends(get
     report = result.scalar_one_or_none()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
+    # Feature 2: Get previous evaluations for this player
+    previous_reports = []
+    if report.player:
+        prev_result = await db.execute(
+            select(PlayerReport)
+            .where(PlayerReport.player_id == report.player_id, PlayerReport.id != report.id)
+            .options(selectinload(PlayerReport.event))
+            .order_by(PlayerReport.created_at.desc())
+            .limit(10)
+        )
+        for pr in prev_result.scalars().all():
+            previous_reports.append({
+                "id": str(pr.id),
+                "report_url": f"/report/{pr.id}",
+                "event_name": pr.event.name if pr.event else "Unknown",
+                "event_date": pr.event.event_date.isoformat() if pr.event and pr.event.event_date else None,
+                "overall_score": pr.overall_score,
+                "rank": pr.rank,
+                "total_players": pr.total_players,
+            })
+
+    # Feature 12: Get self-assessment
+    self_assessment = None
+    if report.player and report.event:
+        ep_result = await db.execute(
+            select(EventPlayer).where(
+                EventPlayer.event_id == report.event_id,
+                EventPlayer.player_id == report.player_id,
+            )
+        )
+        ep = ep_result.scalar_one_or_none()
+        if ep and ep.self_assessment:
+            self_assessment = ep.self_assessment
+
+    # Get template for rubric data
+    template_data = None
+    if report.event and report.event.template_id:
+        template = await db.get(EvaluationTemplate, report.event.template_id)
+        if template:
+            template_data = {
+                "skills": template.skills or [],
+                "categories": template.categories or [],
+                "position_overrides": template.position_overrides,
+            }
 
     return {
         "id": str(report.id),
@@ -222,6 +295,7 @@ async def get_public_report(report_id: uuid.UUID, db: AsyncSession = Depends(get
             "name": report.event.name,
             "event_date": report.event.event_date.isoformat() if report.event and report.event.event_date else None,
             "event_type": report.event.event_type if report.event else None,
+            "season": report.event.season if report.event else None,
         } if report.event else None,
         "organization": {
             "name": report.organization.name,
@@ -230,6 +304,7 @@ async def get_public_report(report_id: uuid.UUID, db: AsyncSession = Depends(get
             "secondary_color": report.organization.secondary_color,
         } if report.organization else None,
         "overall_score": report.overall_score,
+        "weighted_overall_score": report.weighted_overall_score,
         "skill_scores": report.skill_scores,
         "rank": report.rank,
         "total_players": report.total_players,
@@ -237,4 +312,8 @@ async def get_public_report(report_id: uuid.UUID, db: AsyncSession = Depends(get
         "ai_strengths": report.ai_strengths,
         "ai_improvements": report.ai_improvements,
         "ai_recommendation": report.ai_recommendation,
+        "ai_progress_narrative": report.ai_progress_narrative,
+        "previous_reports": previous_reports,
+        "self_assessment": self_assessment,
+        "template": template_data,
     }

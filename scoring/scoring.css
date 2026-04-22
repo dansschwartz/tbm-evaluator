@@ -875,3 +875,180 @@ input[type="range"]::-moz-range-thumb {
     max-width: 280px;
   }
 }
+
+/* ========== Feature: Offline Indicator ========== */
+.offline-indicator {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.offline-indicator.offline { background: #fde8ec; color: #e74c3c; }
+.offline-indicator.pending { background: #fef5e8; color: #e0a85e; }
+.offline-indicator.synced { background: #e0f5f5; color: #078585; }
+
+/* ========== Tab Bar ========== */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.tab-btn {
+  flex: 1;
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+.tab-btn.active { color: var(--teal); border-bottom-color: var(--teal); background: var(--teal-light); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ========== Check-In Card ========== */
+.card-checkin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: default;
+}
+.checkin-badge { font-size: 0.875rem; font-weight: 600; }
+.checkin-badge.checked { color: var(--success); }
+.btn-sm { min-height: 36px; padding: 8px 16px; font-size: 0.875rem; }
+
+/* ========== Player Avatar Image ========== */
+.player-avatar-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* ========== Scoring Player Header ========== */
+.scoring-player-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--teal-light);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+.scoring-player-photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.scoring-player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.scoring-player-info strong { font-size: 1rem; color: var(--text-primary); }
+.scoring-player-info span { font-size: 0.8125rem; color: var(--text-secondary); }
+
+/* ========== Rubric Tooltip ========== */
+.rubric-toggle {
+  background: none;
+  border: none;
+  color: var(--steel-blue);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  text-decoration: underline;
+}
+.rubric-tooltip {
+  display: none;
+  background: var(--steel-blue-light);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.rubric-tooltip.open { display: block; }
+.rubric-item {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+/* ========== Timer ========== */
+.timer-container { text-align: center; }
+.timer-display {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--teal);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 8px;
+}
+.timer-buttons { display: flex; gap: 8px; justify-content: center; margin-bottom: 8px; }
+.btn-timer-start, .btn-timer-reset { min-height: 44px; padding: 10px 24px; }
+.timer-manual { margin-top: 8px; }
+.timer-manual input {
+  width: 100%;
+  max-width: 200px;
+  padding: 8px 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  text-align: center;
+}
+
+/* ========== General Notes ========== */
+.general-notes-section {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.general-notes-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  resize: vertical;
+}
+.general-notes-textarea:focus { outline: none; border-color: var(--teal); }
+
+/* ========== Voice Input ========== */
+.voice-container { padding: 16px; background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); }
+.voice-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 12px;
+}
+.voice-textarea:focus { outline: none; border-color: var(--teal); }
+.voice-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+.voice-results { margin-top: 12px; }
+.voice-result-card {
+  background: var(--teal-light);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+}
+.voice-result-card ul { padding-left: 20px; margin: 8px 0; }
+.voice-result-card li { margin-bottom: 4px; }
