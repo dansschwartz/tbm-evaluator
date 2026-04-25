@@ -105,7 +105,8 @@ document.getElementById('modal-overlay').addEventListener('click', function(e) {
 // ---- NAVIGATION ----
 const navItems = document.querySelectorAll('.nav-item');
 const sections = ['overview', 'organizations', 'templates', 'events', 'players', 'reports', 'draft', 'analytics',
-    'ops-overview', 'ops-seasons', 'ops-teams', 'ops-fields', 'ops-schedule', 'ops-coaches', 'ops-comms', 'ops-attendance', 'ops-documents', 'ops-import', 'ops-ai'];
+    'ops-overview', 'ops-seasons', 'ops-teams', 'ops-fields', 'ops-schedule', 'ops-coaches', 'ops-comms', 'ops-attendance', 'ops-documents', 'ops-import', 'ops-ai',
+    'intel-health', 'intel-assessment', 'intel-development', 'intel-competition', 'intel-compliance'];
 
 const SECTION_TITLES = {
     'overview': 'Overview', 'organizations': 'Organizations', 'templates': 'Templates',
@@ -114,6 +115,9 @@ const SECTION_TITLES = {
     'ops-fields': 'Fields & Facilities', 'ops-schedule': 'Schedule', 'ops-coaches': 'Coaches & Staff',
     'ops-comms': 'Communications', 'ops-attendance': 'Attendance', 'ops-documents': 'Documents',
     'ops-import': 'PlayMetrics Import', 'ops-ai': 'AI Assistant',
+    'intel-health': 'Club Intelligence', 'intel-assessment': 'Best Practices',
+    'intel-development': 'Player Development', 'intel-competition': 'Competition',
+    'intel-compliance': 'Compliance',
 };
 
 function navigateTo(section) {
@@ -152,6 +156,12 @@ function navigateTo(section) {
     else if (section === 'ops-documents') loadOpsDocuments(orgId);
     else if (section === 'ops-import') loadOpsImport(orgId);
     else if (section === 'ops-ai') { /* AI assistant is static but needs org context */ }
+    // Intelligence sections
+    else if (section === 'intel-health') loadIntelHealth(orgId);
+    else if (section === 'intel-assessment') loadIntelAssessment(orgId);
+    else if (section === 'intel-development') loadIntelDevelopment(orgId);
+    else if (section === 'intel-competition') loadIntelCompetition(orgId);
+    else if (section === 'intel-compliance') loadIntelCompliance(orgId);
 }
 
 navItems.forEach(function(item) {
@@ -3179,6 +3189,533 @@ function esc(str) {
     div.textContent = String(str);
     return div.innerHTML;
 }
+
+// ===================================================================
+// INTELLIGENCE — Club Health Score
+// ===================================================================
+
+async function loadIntelHealth(orgId) {
+    if (!orgId) return;
+    // Load existing health score
+    try {
+        var hs = await api('GET', '/api/organizations/' + orgId + '/health-score');
+        renderHealthScore(hs);
+    } catch (e) {
+        document.getElementById('health-score-stats').innerHTML = '<div class="stat-card"><div class="stat-value">--</div><div class="stat-label">Health Score</div></div>';
+        document.getElementById('health-breakdown-body').innerHTML = '<p class="text-muted">No health score yet. Click "Generate Health Score" to start.</p>';
+    }
+    // Load lifecycle
+    try {
+        var lc = await api('GET', '/api/organizations/' + orgId + '/lifecycle');
+        var phaseNames = {1:'Startup',2:'Growth',3:'Established',4:'Mature',5:'Model Club'};
+        var phaseName = lc.phase_name || phaseNames[lc.overall_phase] || 'Unknown';
+        var dots = '';
+        for (var i = 1; i <= 5; i++) {
+            dots += '<span style="display:inline-block;width:32px;height:32px;border-radius:50%;margin:0 4px;line-height:32px;text-align:center;font-weight:700;color:#fff;background:' + (i <= lc.overall_phase ? '#09A1A1' : '#ddd') + ';">' + i + '</span>';
+        }
+        document.getElementById('lifecycle-body').innerHTML = '<div style="text-align:center;margin-bottom:12px;">' + dots + '</div><div style="text-align:center;font-size:20px;font-weight:700;">Phase ' + lc.overall_phase + ': ' + phaseName + '</div><p style="margin-top:12px;">' + (lc.ai_analysis || '') + '</p>';
+    } catch (e) {
+        document.getElementById('lifecycle-body').innerHTML = '<p class="text-muted">Could not load lifecycle data.</p>';
+    }
+    // Load financial dashboard
+    try {
+        var fin = await api('GET', '/api/organizations/' + orgId + '/financial-dashboard');
+        var finHtml = '<div class="stats-grid" style="margin-bottom:16px;">';
+        finHtml += '<div class="stat-card"><div class="stat-value">$' + (fin.total_revenue||0).toLocaleString() + '</div><div class="stat-label">Total Revenue</div></div>';
+        finHtml += '<div class="stat-card"><div class="stat-value">' + (fin.total_players||0) + '</div><div class="stat-label">Players in Programs</div></div>';
+        finHtml += '<div class="stat-card"><div class="stat-value">$' + (fin.cost_per_player||0) + '</div><div class="stat-label">Avg Cost/Player</div></div>';
+        finHtml += '<div class="stat-card"><div class="stat-value">' + (fin.financial_aid?.pct_of_total||0) + '%</div><div class="stat-label">Financial Aid %</div></div>';
+        finHtml += '</div>';
+        finHtml += '<table class="data-table"><thead><tr><th>Program</th><th>Players</th><th>Fee</th><th>Revenue</th><th>Aid Eligible</th></tr></thead><tbody>';
+        for (var pname in fin.revenue_by_program) {
+            var p = fin.revenue_by_program[pname];
+            finHtml += '<tr><td>' + pname + '</td><td>' + p.player_count + '</td><td>$' + (p.fee||0) + '</td><td>$' + (p.revenue||0).toLocaleString() + '</td><td>' + (p.financial_aid_eligible ? 'Yes' : 'No') + '</td></tr>';
+        }
+        finHtml += '</tbody></table>';
+        document.getElementById('financial-dashboard-body').innerHTML = finHtml;
+    } catch (e) {
+        document.getElementById('financial-dashboard-body').innerHTML = '<p class="text-muted">No financial data available.</p>';
+    }
+    // Load forecast
+    try {
+        var forecasts = await api('GET', '/api/organizations/' + orgId + '/forecasts');
+        if (forecasts.length > 0) {
+            var f = forecasts[0];
+            var fHtml = '<p style="margin-bottom:12px;"><strong>' + f.season + '</strong></p>';
+            fHtml += '<table class="data-table"><thead><tr><th>Program</th><th>Current</th><th>Predicted</th><th>Capacity</th><th>Fill %</th><th>Trend</th></tr></thead><tbody>';
+            for (var prog in f.forecast_data) {
+                var fd = f.forecast_data[prog];
+                var trendBadge = fd.trend === 'growing' ? '<span style="color:#16a34a;">Growing</span>' : fd.trend === 'declining' ? '<span style="color:#dc2626;">Declining</span>' : '<span style="color:#6b7280;">Stable</span>';
+                fHtml += '<tr><td>' + prog + '</td><td>' + fd.current_count + '</td><td>' + fd.predicted_count + '</td><td>' + fd.capacity + '</td><td>' + fd.fill_rate + '%</td><td>' + trendBadge + '</td></tr>';
+            }
+            fHtml += '</tbody></table>';
+            if (f.ai_narrative) fHtml += '<div style="margin-top:12px;padding:12px;background:#f0f9ff;border-left:3px solid #09A1A1;border-radius:4px;">' + f.ai_narrative + '</div>';
+            document.getElementById('forecast-body').innerHTML = fHtml;
+        } else {
+            document.getElementById('forecast-body').innerHTML = '<p class="text-muted">No forecasts yet.</p><button class="btn btn-secondary btn-sm" onclick="generateForecast()">Generate Forecast</button>';
+        }
+    } catch (e) {
+        document.getElementById('forecast-body').innerHTML = '<p class="text-muted">No forecast data.</p>';
+    }
+    // Load reports
+    try {
+        var reports = await api('GET', '/api/organizations/' + orgId + '/reports');
+        var rHtml = '';
+        if (reports.length === 0) {
+            rHtml = '<p class="text-muted">No reports generated yet.</p>';
+        } else {
+            rHtml = '<table class="data-table"><thead><tr><th>Season</th><th>Type</th><th>Date</th><th>Summary</th></tr></thead><tbody>';
+            for (var ri = 0; ri < reports.length; ri++) {
+                var rr = reports[ri];
+                rHtml += '<tr><td>' + rr.season + '</td><td>' + rr.report_type + '</td><td>' + new Date(rr.generated_at).toLocaleDateString() + '</td><td style="max-width:400px;white-space:normal;">' + (rr.ai_executive_summary || '').substring(0, 200) + '...</td></tr>';
+            }
+            rHtml += '</tbody></table>';
+        }
+        document.getElementById('reports-list-body').innerHTML = rHtml;
+    } catch (e) {}
+    // Load parent engagement
+    try {
+        var eng = await api('GET', '/api/organizations/' + orgId + '/parent-engagement');
+        if (eng.length > 0) {
+            var healthy = eng.filter(function(e){return e.risk_level==='healthy'}).length;
+            var watch = eng.filter(function(e){return e.risk_level==='watch'}).length;
+            var atRisk = eng.filter(function(e){return e.risk_level==='at_risk'}).length;
+            document.getElementById('engagement-results').innerHTML = '<div class="stats-grid"><div class="stat-card"><div class="stat-value" style="color:#16a34a;">' + healthy + '</div><div class="stat-label">Healthy</div></div><div class="stat-card"><div class="stat-value" style="color:#f59e0b;">' + watch + '</div><div class="stat-label">Watch</div></div><div class="stat-card"><div class="stat-value" style="color:#dc2626;">' + atRisk + '</div><div class="stat-label">At Risk</div></div></div>';
+        }
+    } catch (e) {}
+}
+
+function renderHealthScore(hs) {
+    var score = hs.score || 0;
+    var color = score >= 70 ? '#16a34a' : score >= 50 ? '#f59e0b' : '#dc2626';
+    document.getElementById('health-score-stats').innerHTML =
+        '<div class="stat-card" style="grid-column:span 2;text-align:center;"><div style="font-size:64px;font-weight:800;color:' + color + ';">' + score.toFixed(1) + '</div><div class="stat-label" style="font-size:16px;">Club Health Score / 100</div></div>';
+
+    // Breakdown bars
+    var bd = hs.breakdown || {};
+    var labels = {retention_rate:'Retention Rate',coach_ratio:'Coach Ratio',financial_aid_pct:'Financial Aid',gender_equity:'Gender Equity',fill_rate:'Fill Rate',development_progression:'Development',parent_satisfaction:'Parent Satisfaction'};
+    var weights = {retention_rate:20,coach_ratio:15,financial_aid_pct:10,gender_equity:15,fill_rate:15,development_progression:15,parent_satisfaction:10};
+    var bdHtml = '';
+    for (var key in labels) {
+        var val = bd[key] || 0;
+        var barColor = val >= 70 ? '#16a34a' : val >= 50 ? '#f59e0b' : '#dc2626';
+        bdHtml += '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-weight:600;font-size:13px;">' + labels[key] + ' (w:' + weights[key] + '%)</span><span style="font-weight:700;">' + val.toFixed(1) + '</span></div><div style="background:#e5e7eb;border-radius:4px;height:16px;overflow:hidden;"><div style="width:' + val + '%;height:100%;background:' + barColor + ';border-radius:4px;transition:width 0.5s;"></div></div></div>';
+    }
+    document.getElementById('health-breakdown-body').innerHTML = bdHtml;
+
+    // Benchmarks comparison
+    var benchmarks = hs.benchmarks || {};
+    var allAvg = benchmarks.all_clubs_avg || {};
+    var top10 = benchmarks.top_10_pct || {};
+    var bmHtml = '<table class="data-table"><thead><tr><th>Factor</th><th>You</th><th>All Clubs</th><th>Top 10%</th></tr></thead><tbody>';
+    var factorMap = {retention_rate:'overall',coach_ratio:'overall',financial_aid_pct:'overall',gender_equity:'overall',fill_rate:'overall',development_progression:'overall',parent_satisfaction:'overall'};
+    for (var k in labels) {
+        bmHtml += '<tr><td>' + labels[k] + '</td><td style="font-weight:700;">' + (bd[k]||0).toFixed(1) + '</td><td>' + (allAvg.overall||50) + '</td><td>' + (top10.overall||81) + '</td></tr>';
+    }
+    bmHtml += '<tr style="font-weight:700;background:#f0f9ff;"><td>Overall</td><td>' + score.toFixed(1) + '</td><td>' + (allAvg.overall||50) + '</td><td>' + (top10.overall||81) + '</td></tr>';
+    bmHtml += '</tbody></table>';
+    document.getElementById('health-benchmarks-body').innerHTML = bmHtml;
+
+    // AI narrative
+    if (hs.ai_narrative) {
+        document.getElementById('health-ai-narrative').innerHTML = '<div style="white-space:pre-wrap;">' + hs.ai_narrative + '</div>';
+    }
+}
+
+document.getElementById('btn-generate-health').addEventListener('click', async function() {
+    var orgId = requireOrg(); if (!orgId) return;
+    showLoading();
+    try {
+        var hs = await api('POST', '/api/organizations/' + orgId + '/health-score/generate');
+        renderHealthScore(hs);
+        toast('Health score generated!');
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+    hideLoading();
+});
+
+document.getElementById('btn-generate-report').addEventListener('click', async function() {
+    var orgId = requireOrg(); if (!orgId) return;
+    var reportType = document.getElementById('report-type-select').value;
+    var season = document.getElementById('report-season-input').value;
+    if (!season) { toast('Enter a season name', 'warning'); return; }
+    showLoading();
+    try {
+        var r = await api('POST', '/api/organizations/' + orgId + '/reports/generate', {report_type: reportType, season: season});
+        toast('Report generated!');
+        loadIntelHealth(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+    hideLoading();
+});
+
+document.getElementById('btn-calc-engagement').addEventListener('click', async function() {
+    var orgId = requireOrg(); if (!orgId) return;
+    showLoading();
+    try {
+        var result = await api('POST', '/api/organizations/' + orgId + '/parent-engagement/calculate');
+        toast('Engagement calculated for ' + result.total_families + ' families');
+        loadIntelHealth(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+    hideLoading();
+});
+
+async function generateForecast() {
+    var orgId = requireOrg(); if (!orgId) return;
+    showLoading();
+    try {
+        await api('POST', '/api/organizations/' + orgId + '/forecasts/registration');
+        toast('Forecast generated!');
+        loadIntelHealth(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+    hideLoading();
+}
+
+
+// ===================================================================
+// INTELLIGENCE — Best Practice Assessment
+// ===================================================================
+
+async function loadIntelAssessment(orgId) {
+    if (!orgId) return;
+    try {
+        var assessments = await api('GET', '/api/organizations/' + orgId + '/assessments');
+        var tbody = document.getElementById('assessments-table-body');
+        if (assessments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No assessments yet. Submit one to begin.</td></tr>';
+        } else {
+            tbody.innerHTML = assessments.map(function(a) {
+                return '<tr><td>' + a.respondent_name + '</td><td><span class="badge">' + a.respondent_role + '</span></td><td>' + (a.completed_at ? new Date(a.completed_at).toLocaleDateString() : '') + '</td></tr>';
+            }).join('');
+        }
+    } catch (e) {}
+    document.getElementById('assessment-report-area').style.display = 'none';
+}
+
+document.getElementById('btn-new-assessment').addEventListener('click', function() {
+    var questions = '';
+    for (var i = 1; i <= 60; i++) {
+        questions += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><label style="min-width:40px;font-weight:600;">Q' + i + '</label><input type="range" min="0" max="100" value="50" class="assess-slider" data-q="Q' + i + '" style="flex:1;"><span class="assess-val" style="min-width:30px;text-align:right;">50</span></div>';
+    }
+    var formHtml = '<div style="margin-bottom:12px;"><label style="font-weight:600;">Respondent Name</label><input type="text" id="assess-name" class="form-input" placeholder="Your name"></div>' +
+        '<div style="margin-bottom:12px;"><label style="font-weight:600;">Role</label><select id="assess-role" class="form-select"><option value="leader">Leader</option><option value="staff">Staff</option><option value="coach">Coach</option><option value="customer">Customer (Parent)</option></select></div>' +
+        '<div style="max-height:400px;overflow-y:auto;padding:8px;border:1px solid #e5e7eb;border-radius:8px;">' + questions + '</div>';
+
+    openModal('IYSL Best Practice Assessment (60 Questions)', formHtml,
+        '<button class="btn btn-primary" id="btn-submit-assessment">Submit Assessment</button>');
+
+    // Wire up sliders
+    document.querySelectorAll('.assess-slider').forEach(function(slider) {
+        slider.addEventListener('input', function() {
+            this.nextElementSibling.textContent = this.value;
+        });
+    });
+
+    document.getElementById('btn-submit-assessment').addEventListener('click', async function() {
+        var name = document.getElementById('assess-name').value;
+        var role = document.getElementById('assess-role').value;
+        if (!name) { toast('Enter your name', 'warning'); return; }
+        var responses = {};
+        document.querySelectorAll('.assess-slider').forEach(function(s) {
+            responses[s.getAttribute('data-q')] = parseInt(s.value);
+        });
+        var orgId = requireOrg(); if (!orgId) return;
+        showLoading();
+        try {
+            await api('POST', '/api/organizations/' + orgId + '/assessments', {respondent_name: name, respondent_role: role, responses: responses});
+            toast('Assessment submitted!');
+            closeModal();
+            loadIntelAssessment(orgId);
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+        hideLoading();
+    });
+});
+
+document.getElementById('btn-view-assessment-report').addEventListener('click', async function() {
+    var orgId = requireOrg(); if (!orgId) return;
+    showLoading();
+    try {
+        var report = await api('GET', '/api/organizations/' + orgId + '/assessments/report');
+        document.getElementById('assessment-report-area').style.display = 'block';
+
+        // Department scores with radar-like bars
+        var deptHtml = '<div style="text-align:center;font-size:24px;font-weight:700;margin-bottom:16px;">' + report.overall_score + '<span style="font-size:14px;color:#6b7280;">/100 Overall</span></div>';
+        var depts = report.department_scores;
+        var benchAll = report.benchmarks.all_clubs_avg;
+        var benchTop = report.benchmarks.top_10_pct;
+        for (var dept in depts) {
+            var val = depts[dept];
+            var barColor = val >= 70 ? '#16a34a' : val >= 50 ? '#f59e0b' : '#dc2626';
+            deptHtml += '<div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:13px;"><span style="font-weight:600;">' + dept + '</span><span>' + val + '</span></div>';
+            deptHtml += '<div style="position:relative;background:#e5e7eb;border-radius:4px;height:20px;overflow:visible;">';
+            deptHtml += '<div style="width:' + val + '%;height:100%;background:' + barColor + ';border-radius:4px;"></div>';
+            deptHtml += '<div style="position:absolute;left:' + (benchAll[dept]||50) + '%;top:0;height:100%;border-left:2px dashed #6b7280;" title="All Clubs: ' + (benchAll[dept]||50) + '"></div>';
+            deptHtml += '<div style="position:absolute;left:' + (benchTop[dept]||80) + '%;top:0;height:100%;border-left:2px solid #09A1A1;" title="Top 10%: ' + (benchTop[dept]||80) + '"></div>';
+            deptHtml += '</div></div>';
+        }
+        deptHtml += '<div style="margin-top:8px;font-size:11px;color:#6b7280;"><span style="border-left:2px dashed #6b7280;padding-left:4px;margin-right:12px;">All Clubs Avg</span><span style="border-left:2px solid #09A1A1;padding-left:4px;">Top 10%</span></div>';
+        document.getElementById('dept-scores-body').innerHTML = deptHtml;
+
+        // Gap analysis
+        var gap = report.gap_analysis;
+        var gapHtml = '<table class="data-table"><thead><tr><th>Department</th><th>Current</th><th>Gap to 100%</th><th>vs All Clubs</th><th>vs Top 10%</th></tr></thead><tbody>';
+        for (var gd in gap) {
+            var g = gap[gd];
+            var vsAll = g.vs_all_clubs >= 0 ? '<span style="color:#16a34a;">+' + g.vs_all_clubs + '</span>' : '<span style="color:#dc2626;">' + g.vs_all_clubs + '</span>';
+            var vsTop = g.vs_top_10 >= 0 ? '<span style="color:#16a34a;">+' + g.vs_top_10 + '</span>' : '<span style="color:#dc2626;">' + g.vs_top_10 + '</span>';
+            gapHtml += '<tr><td>' + gd + '</td><td style="font-weight:700;">' + g.current + '</td><td>' + g.gap + '</td><td>' + vsAll + '</td><td>' + vsTop + '</td></tr>';
+        }
+        gapHtml += '</tbody></table>';
+        document.getElementById('gap-analysis-body').innerHTML = gapHtml;
+
+        // Role scores
+        var roles = report.role_scores;
+        var roleAvg = report.benchmarks.all_clubs_role_avg || {};
+        var roleTop = report.benchmarks.top_10_role_avg || {};
+        var roleHtml = '<table class="data-table"><thead><tr><th>Role</th><th>Score</th><th>All Clubs</th><th>Top 10%</th></tr></thead><tbody>';
+        for (var rl in roles) {
+            roleHtml += '<tr><td>' + rl + '</td><td style="font-weight:700;">' + roles[rl] + '</td><td>' + (roleAvg[rl]||'--') + '</td><td>' + (roleTop[rl]||'--') + '</td></tr>';
+        }
+        roleHtml += '</tbody></table>';
+        document.getElementById('role-scores-body').innerHTML = roleHtml;
+
+        // Stakeholder
+        var stakeholders = report.stakeholder_perceptions;
+        var sHtml = '';
+        for (var sk in stakeholders) {
+            var sv = stakeholders[sk];
+            var sColor = sv >= 70 ? '#16a34a' : sv >= 50 ? '#f59e0b' : '#dc2626';
+            sHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="min-width:100px;font-weight:600;font-size:13px;">' + sk + '</span><div style="flex:1;background:#e5e7eb;border-radius:4px;height:14px;"><div style="width:' + sv + '%;height:100%;background:' + sColor + ';border-radius:4px;"></div></div><span style="font-weight:700;min-width:30px;">' + sv + '</span></div>';
+        }
+        document.getElementById('stakeholder-body').innerHTML = sHtml || '<p class="text-muted">No stakeholder data.</p>';
+
+        // AI recommendations
+        document.getElementById('assessment-ai-body').innerHTML = '<div style="white-space:pre-wrap;">' + (report.ai_recommendations || '') + '</div>';
+
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+    hideLoading();
+});
+
+
+// ===================================================================
+// INTELLIGENCE — Player Development
+// ===================================================================
+
+async function loadIntelDevelopment(orgId) {
+    if (!orgId) return;
+    try {
+        var summary = await api('GET', '/api/organizations/' + orgId + '/development-paths/summary');
+        var levels = summary.development_levels || ['Tots','Rec','Pre-Travel','Select','Travel','Academy'];
+        var counts = summary.by_level || {};
+
+        // Visual pathway
+        var pathHtml = '<div style="display:flex;align-items:center;justify-content:center;gap:4px;margin:24px 0;">';
+        var colors = ['#93c5fd','#60a5fa','#3b82f6','#2563eb','#1d4ed8','#1e3a8a'];
+        for (var li = 0; li < levels.length; li++) {
+            var cnt = counts[levels[li]] || 0;
+            pathHtml += '<div style="text-align:center;"><div style="width:80px;height:80px;border-radius:50%;background:' + colors[li] + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;margin:0 auto;">' + cnt + '</div><div style="font-size:12px;font-weight:600;margin-top:4px;">' + levels[li] + '</div></div>';
+            if (li < levels.length - 1) pathHtml += '<div style="font-size:20px;color:#9ca3af;">&rarr;</div>';
+        }
+        pathHtml += '</div><div style="text-align:center;color:#6b7280;font-size:13px;">Total tracked: ' + summary.total_tracked + ' players</div>';
+        document.getElementById('dev-pathway-visual').innerHTML = pathHtml;
+    } catch (e) {
+        document.getElementById('dev-pathway-visual').innerHTML = '<p class="text-muted">No development data yet. Run AI predictions to build pathways.</p>';
+    }
+}
+
+document.getElementById('btn-ai-predict-dev').addEventListener('click', async function() {
+    var orgId = requireOrg(); if (!orgId) return;
+    showLoading();
+    try {
+        var result = await api('POST', '/api/organizations/' + orgId + '/development-paths/ai-predict');
+        var predictions = result.predictions || [];
+        var cardsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">';
+        for (var pi = 0; pi < predictions.length; pi++) {
+            var p = predictions[pi];
+            var likColor = p.advancement_likelihood === 'likely' ? '#16a34a' : p.advancement_likelihood === 'developing' ? '#f59e0b' : '#dc2626';
+            var likLabel = p.advancement_likelihood === 'likely' ? 'Likely to Advance' : p.advancement_likelihood === 'developing' ? 'Developing' : 'Needs Support';
+            cardsHtml += '<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;"><div style="font-weight:700;">' + p.player_name + '</div><div style="font-size:12px;color:#6b7280;">' + (p.age_group||'') + '</div>';
+            cardsHtml += '<div style="margin:8px 0;"><span style="background:#e0f2fe;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600;">' + p.current_level + '</span> &rarr; <span style="background:#f0fdf4;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600;">' + p.predicted_next_level + '</span></div>';
+            cardsHtml += '<div style="color:' + likColor + ';font-weight:600;font-size:13px;">' + likLabel + '</div>';
+            if (p.latest_score) cardsHtml += '<div style="font-size:12px;color:#6b7280;">Score: ' + p.latest_score.toFixed(2) + '</div>';
+            cardsHtml += '</div>';
+        }
+        cardsHtml += '</div>';
+        document.getElementById('dev-cards-body').innerHTML = cardsHtml;
+        toast('Predictions generated for ' + predictions.length + ' players');
+        loadIntelDevelopment(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+    hideLoading();
+});
+
+
+// ===================================================================
+// INTELLIGENCE — Competition
+// ===================================================================
+
+async function loadIntelCompetition(orgId) {
+    if (!orgId) return;
+    // Load standings
+    try {
+        var standings = await api('GET', '/api/organizations/' + orgId + '/competition/standings');
+        var tbody = document.getElementById('standings-table-body');
+        if (standings.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No match results yet.</td></tr>';
+        } else {
+            tbody.innerHTML = standings.map(function(s) {
+                return '<tr><td style="font-weight:600;">' + s.team_name + '</td><td>' + s.matches + '</td><td>' + s.wins + '</td><td>' + s.draws + '</td><td>' + s.losses + '</td><td>' + s.goals_for + '</td><td>' + s.goals_against + '</td><td>' + s.goal_difference + '</td><td style="font-weight:700;">' + s.points + '</td></tr>';
+            }).join('');
+        }
+    } catch (e) {}
+    // Load stats
+    try {
+        var stats = await api('GET', '/api/organizations/' + orgId + '/competition/stats');
+        document.getElementById('competition-stats-bar').innerHTML =
+            '<div class="stat-card"><div class="stat-value">' + (stats.total_matches||0) + '</div><div class="stat-label">Total Matches</div></div>';
+
+        var gsHtml = '';
+        if (stats.top_scorers && stats.top_scorers.length > 0) {
+            gsHtml += '<h4 style="margin-bottom:8px;">Top Scorers</h4><table class="data-table"><thead><tr><th>Player</th><th>Goals</th></tr></thead><tbody>';
+            stats.top_scorers.forEach(function(ts) { gsHtml += '<tr><td>' + ts.name + '</td><td style="font-weight:700;">' + ts.goals + '</td></tr>'; });
+            gsHtml += '</tbody></table>';
+        }
+        if (stats.top_assists && stats.top_assists.length > 0) {
+            gsHtml += '<h4 style="margin:12px 0 8px;">Top Assists</h4><table class="data-table"><thead><tr><th>Player</th><th>Assists</th></tr></thead><tbody>';
+            stats.top_assists.forEach(function(ta) { gsHtml += '<tr><td>' + ta.name + '</td><td style="font-weight:700;">' + ta.assists + '</td></tr>'; });
+            gsHtml += '</tbody></table>';
+        }
+        document.getElementById('goal-stats-body').innerHTML = gsHtml || '<p class="text-muted">No stats yet.</p>';
+    } catch (e) {}
+}
+
+document.getElementById('btn-add-match').addEventListener('click', async function() {
+    var orgId = requireOrg(); if (!orgId) return;
+    // Load teams for selector
+    var teams = [];
+    try { teams = await api('GET', '/api/organizations/' + orgId + '/teams'); } catch(e){}
+    var teamOpts = teams.map(function(t){ return '<option value="' + t.id + '">' + t.name + '</option>'; }).join('');
+
+    var formHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        '<div><label style="font-weight:600;">Team</label><select id="match-team" class="form-select">' + teamOpts + '</select></div>' +
+        '<div><label style="font-weight:600;">Opponent</label><input type="text" id="match-opponent" class="form-input" placeholder="Opponent name"></div>' +
+        '<div><label style="font-weight:600;">Date</label><input type="date" id="match-date" class="form-input"></div>' +
+        '<div><label style="font-weight:600;">Result</label><select id="match-result" class="form-select"><option value="win">Win</option><option value="loss">Loss</option><option value="draw">Draw</option></select></div>' +
+        '<div><label style="font-weight:600;">Score For</label><input type="number" id="match-score-for" class="form-input" value="0" min="0"></div>' +
+        '<div><label style="font-weight:600;">Score Against</label><input type="number" id="match-score-against" class="form-input" value="0" min="0"></div>' +
+        '<div><label style="font-weight:600;">League</label><input type="text" id="match-league" class="form-input" placeholder="e.g., IYSL Division 1"></div>' +
+        '<div><label style="font-weight:600;">Notes</label><input type="text" id="match-notes" class="form-input" placeholder="Optional notes"></div>' +
+        '</div>';
+
+    openModal('Enter Match Result', formHtml, '<button class="btn btn-primary" id="btn-save-match">Save Result</button>');
+
+    document.getElementById('btn-save-match').addEventListener('click', async function() {
+        showLoading();
+        try {
+            await api('POST', '/api/organizations/' + orgId + '/competition/results', {
+                team_id: document.getElementById('match-team').value,
+                opponent_name: document.getElementById('match-opponent').value,
+                match_date: document.getElementById('match-date').value,
+                result: document.getElementById('match-result').value,
+                score_for: parseInt(document.getElementById('match-score-for').value) || 0,
+                score_against: parseInt(document.getElementById('match-score-against').value) || 0,
+                league: document.getElementById('match-league').value,
+                notes: document.getElementById('match-notes').value,
+                goal_scorers: [], assists: []
+            });
+            toast('Match result saved!');
+            closeModal();
+            loadIntelCompetition(orgId);
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+        hideLoading();
+    });
+});
+
+
+// ===================================================================
+// INTELLIGENCE — Compliance
+// ===================================================================
+
+async function loadIntelCompliance(orgId) {
+    if (!orgId) return;
+    try {
+        var data = await api('GET', '/api/organizations/' + orgId + '/compliance');
+        var pct = data.compliance_pct || 0;
+        var pctColor = pct >= 80 ? '#16a34a' : pct >= 60 ? '#f59e0b' : '#dc2626';
+
+        document.getElementById('compliance-stats-bar').innerHTML =
+            '<div class="stat-card"><div class="stat-value" style="color:' + pctColor + ';">' + pct + '%</div><div class="stat-label">Overall Compliance</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + data.total_people + '</div><div class="stat-label">Total Items</div></div>' +
+            '<div class="stat-card"><div class="stat-value" style="color:#16a34a;">' + data.compliant_count + '</div><div class="stat-label">Compliant</div></div>' +
+            '<div class="stat-card"><div class="stat-value" style="color:#f59e0b;">' + data.expiring_count + '</div><div class="stat-label">Expiring</div></div>' +
+            '<div class="stat-card"><div class="stat-value" style="color:#dc2626;">' + data.expired_count + '</div><div class="stat-label">Expired</div></div>' +
+            '<div class="stat-card"><div class="stat-value" style="color:#dc2626;">' + data.missing_count + '</div><div class="stat-label">Missing</div></div>';
+
+        var items = data.items || [];
+        var tbody = document.getElementById('compliance-table-body');
+        if (items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No compliance items. Add items to track.</td></tr>';
+        } else {
+            tbody.innerHTML = items.map(function(i) {
+                var statusColor = i.status === 'compliant' ? '#16a34a' : i.status === 'expiring' ? '#f59e0b' : '#dc2626';
+                return '<tr><td style="font-weight:600;">' + i.person_name + '</td><td>' + i.person_role + '</td><td>' + i.item_type.replace(/_/g,' ') + '</td><td><span style="color:' + statusColor + ';font-weight:600;">' + i.status.toUpperCase() + '</span></td><td>' + (i.expiry_date || '--') + '</td><td>' + (i.notes || '') + '</td></tr>';
+            }).join('');
+        }
+    } catch (e) {
+        document.getElementById('compliance-stats-bar').innerHTML = '';
+        document.getElementById('compliance-table-body').innerHTML = '<tr><td colspan="6" class="text-center text-muted">No compliance data.</td></tr>';
+    }
+}
+
+document.getElementById('btn-add-compliance').addEventListener('click', function() {
+    var formHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        '<div><label style="font-weight:600;">Person Name</label><input type="text" id="comp-person" class="form-input" placeholder="Name"></div>' +
+        '<div><label style="font-weight:600;">Role</label><input type="text" id="comp-role" class="form-input" placeholder="e.g., coach, volunteer"></div>' +
+        '<div><label style="font-weight:600;">Type</label><select id="comp-type" class="form-select"><option value="background_check">Background Check</option><option value="safesport">SafeSport</option><option value="insurance">Insurance</option><option value="concussion_training">Concussion Training</option><option value="first_aid">First Aid</option></select></div>' +
+        '<div><label style="font-weight:600;">Status</label><select id="comp-status" class="form-select"><option value="compliant">Compliant</option><option value="expiring">Expiring</option><option value="expired">Expired</option><option value="missing">Missing</option></select></div>' +
+        '<div><label style="font-weight:600;">Expiry Date</label><input type="date" id="comp-expiry" class="form-input"></div>' +
+        '<div><label style="font-weight:600;">Notes</label><input type="text" id="comp-notes" class="form-input" placeholder="Optional notes"></div>' +
+        '</div>';
+
+    openModal('Add Compliance Item', formHtml, '<button class="btn btn-primary" id="btn-save-compliance">Save</button>');
+
+    document.getElementById('btn-save-compliance').addEventListener('click', async function() {
+        var orgId = requireOrg(); if (!orgId) return;
+        showLoading();
+        try {
+            await api('POST', '/api/organizations/' + orgId + '/compliance/items', {
+                person_name: document.getElementById('comp-person').value,
+                person_role: document.getElementById('comp-role').value,
+                item_type: document.getElementById('comp-type').value,
+                status: document.getElementById('comp-status').value,
+                expiry_date: document.getElementById('comp-expiry').value || null,
+                notes: document.getElementById('comp-notes').value || null
+            });
+            toast('Compliance item added!');
+            closeModal();
+            loadIntelCompliance(orgId);
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+        hideLoading();
+    });
+});
+
+document.getElementById('btn-expiring-compliance').addEventListener('click', async function() {
+    var orgId = requireOrg(); if (!orgId) return;
+    showLoading();
+    try {
+        var items = await api('GET', '/api/organizations/' + orgId + '/compliance/expiring');
+        if (items.length === 0) {
+            toast('No items expiring within 30 days!');
+        } else {
+            var html = '<table class="data-table"><thead><tr><th>Person</th><th>Type</th><th>Expires</th><th>Days Left</th></tr></thead><tbody>';
+            items.forEach(function(i) {
+                var urgency = i.days_until_expiry <= 7 ? 'color:#dc2626;font-weight:700;' : i.days_until_expiry <= 14 ? 'color:#f59e0b;font-weight:600;' : '';
+                html += '<tr><td>' + i.person_name + '</td><td>' + i.item_type.replace(/_/g,' ') + '</td><td>' + i.expiry_date + '</td><td style="' + urgency + '">' + i.days_until_expiry + ' days</td></tr>';
+            });
+            html += '</tbody></table>';
+            openModal('Expiring Compliance Items (Next 30 Days)', html, '');
+        }
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+    hideLoading();
+});
+
 
 // ===================================================================
 // INIT

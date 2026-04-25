@@ -17,6 +17,7 @@ from app.routers import (
     # TBM Operations modules
     imports, fields, seasons, teams, schedules, ai_ops,
     communications, coaches, attendance, ops_analytics, documents,
+    intelligence,
 )
 from app.routers.templates import SPORT_PRESETS
 
@@ -25,8 +26,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="TBM Operations — AI-Native Sports Club Platform",
-    version="3.0.0",
-    description="AI-Native Sports Club Operating System — 70+ features including player evaluation, scoring, reports, drafting, PlayMetrics import, field management, season/program management, team management, scheduling engine, AI operations assistant, communication center, coach management, attendance tracking, analytics dashboard, and document vault.",
+    version="4.0.0",
+    description="AI-Native Sports Club Operating System — 100+ features including player evaluation, scoring, reports, drafting, PlayMetrics import, field management, season/program management, team management, scheduling engine, AI operations assistant, communication center, coach management, attendance tracking, analytics dashboard, document vault, Club Health Score, IYSL Best Practice Assessment, Club Lifecycle Predictor, Player Development Pathways, Registration Forecasting, Parent Engagement, Financial Dashboard, Seasonal Reports, Competition Intelligence, and Compliance Dashboard.",
 )
 
 app.add_middleware(
@@ -62,6 +63,9 @@ app.include_router(coaches.router)
 app.include_router(attendance.router)
 app.include_router(ops_analytics.router)
 app.include_router(documents.router)
+
+# Intelligence & Benchmarking
+app.include_router(intelligence.router)
 
 # Static files
 app.mount("/admin/static", StaticFiles(directory="admin"), name="admin_static")
@@ -152,7 +156,7 @@ async def shutdown():
 @app.get("/health")
 async def health():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "tbm-operations", "version": "3.0.0", "features": 70}
+    return {"status": "healthy", "service": "tbm-operations", "version": "4.0.0", "features": 100}
 
 
 # Serve frontend pages

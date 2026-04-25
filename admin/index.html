@@ -98,6 +98,30 @@
                     <i data-lucide="bot" class="nav-icon-lucide"></i>
                     <span class="nav-label">AI Assistant</span>
                 </a>
+
+                <div class="nav-divider" style="border-top:1px solid rgba(255,255,255,0.1);margin:12px 16px;"></div>
+                <div style="padding:4px 16px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);">Intelligence</div>
+
+                <a href="#" class="nav-item" data-section="intel-health">
+                    <i data-lucide="heart-pulse" class="nav-icon-lucide"></i>
+                    <span class="nav-label">Intelligence</span>
+                </a>
+                <a href="#" class="nav-item" data-section="intel-assessment">
+                    <i data-lucide="clipboard-check" class="nav-icon-lucide"></i>
+                    <span class="nav-label">Best Practices</span>
+                </a>
+                <a href="#" class="nav-item" data-section="intel-development">
+                    <i data-lucide="trending-up" class="nav-icon-lucide"></i>
+                    <span class="nav-label">Development</span>
+                </a>
+                <a href="#" class="nav-item" data-section="intel-competition">
+                    <i data-lucide="swords" class="nav-icon-lucide"></i>
+                    <span class="nav-label">Competition</span>
+                </a>
+                <a href="#" class="nav-item" data-section="intel-compliance">
+                    <i data-lucide="shield-check" class="nav-icon-lucide"></i>
+                    <span class="nav-label">Compliance</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <button class="btn btn-sm btn-outline" id="btn-change-key">Change API Key</button>
@@ -604,6 +628,206 @@
                                     <tr><th>Date</th><th>Type</th><th>Rows</th><th>Imported</th><th>Status</th></tr>
                                 </thead>
                                 <tbody id="imports-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================ -->
+                <!-- INTELLIGENCE SECTIONS                        -->
+                <!-- ============================================ -->
+
+                <!-- Intelligence / Club Health Score -->
+                <section class="section hidden" id="section-intel-health">
+                    <div class="section-toolbar">
+                        <h2>Club Intelligence</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-primary" id="btn-generate-health"><i data-lucide="refresh-cw" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Generate Health Score</button>
+                        </div>
+                    </div>
+                    <div class="stats-grid" id="health-score-stats"></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+                        <div class="card">
+                            <div class="card-header"><h3>Health Score Breakdown</h3></div>
+                            <div class="card-body" id="health-breakdown-body">
+                                <p class="text-muted">Generate a health score to see the breakdown.</p>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3>Benchmarks: You vs All Clubs vs Top 10%</h3></div>
+                            <div class="card-body" id="health-benchmarks-body">
+                                <p class="text-muted">Generate a health score to compare benchmarks.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>AI Narrative</h3></div>
+                        <div class="card-body" id="health-ai-narrative" style="background:linear-gradient(135deg,#f0f9ff,#e8f5e9);border-left:4px solid #09A1A1;">
+                            <p class="text-muted">AI analysis will appear here after generating a health score.</p>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Club Lifecycle Phase</h3></div>
+                        <div class="card-body" id="lifecycle-body">
+                            <p class="text-muted">Loading lifecycle data...</p>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Financial Dashboard</h3></div>
+                        <div class="card-body" id="financial-dashboard-body">
+                            <p class="text-muted">Loading financial data...</p>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Registration Forecast</h3></div>
+                        <div class="card-body" id="forecast-body">
+                            <p class="text-muted">Loading forecast...</p>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header">
+                            <h3>Seasonal Reports</h3>
+                        </div>
+                        <div class="card-body" id="season-reports-body">
+                            <div style="display:flex;gap:8px;margin-bottom:16px;">
+                                <select class="form-select form-select-sm" id="report-type-select">
+                                    <option value="monthly">Monthly</option>
+                                    <option value="seasonal">Seasonal</option>
+                                    <option value="annual">Annual</option>
+                                </select>
+                                <input type="text" class="form-input form-input-sm" id="report-season-input" placeholder="e.g., Spring 2026" value="Spring 2026">
+                                <button class="btn btn-primary btn-sm" id="btn-generate-report"><i data-lucide="file-text" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Generate Report</button>
+                            </div>
+                            <div id="reports-list-body"></div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Parent Engagement</h3></div>
+                        <div class="card-body" id="parent-engagement-body">
+                            <button class="btn btn-secondary btn-sm" id="btn-calc-engagement" style="margin-bottom:12px;">Calculate Engagement Scores</button>
+                            <div id="engagement-results"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Best Practices Assessment -->
+                <section class="section hidden" id="section-intel-assessment">
+                    <div class="section-toolbar">
+                        <h2>IYSL Best Practice Assessment</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-primary" id="btn-new-assessment">+ Submit Assessment</button>
+                            <button class="btn btn-secondary" id="btn-view-assessment-report"><i data-lucide="bar-chart-3" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> View Report</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>Submitted Assessments</h3></div>
+                        <div class="card-body">
+                            <table class="data-table" id="assessments-table">
+                                <thead>
+                                    <tr><th>Respondent</th><th>Role</th><th>Completed</th></tr>
+                                </thead>
+                                <tbody id="assessments-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="assessment-report-area" style="display:none;margin-top:16px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div class="card">
+                                <div class="card-header"><h3>Department Scores</h3></div>
+                                <div class="card-body" id="dept-scores-body"></div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header"><h3>Gap Analysis</h3></div>
+                                <div class="card-body" id="gap-analysis-body"></div>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+                            <div class="card">
+                                <div class="card-header"><h3>Role Performance</h3></div>
+                                <div class="card-body" id="role-scores-body"></div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header"><h3>Stakeholder Perceptions</h3></div>
+                                <div class="card-body" id="stakeholder-body"></div>
+                            </div>
+                        </div>
+                        <div class="card" style="margin-top:16px;">
+                            <div class="card-header"><h3>AI Improvement Recommendations</h3></div>
+                            <div class="card-body" id="assessment-ai-body" style="background:linear-gradient(135deg,#f0f9ff,#e8f5e9);border-left:4px solid #09A1A1;"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Development Pathways -->
+                <section class="section hidden" id="section-intel-development">
+                    <div class="section-toolbar">
+                        <h2>Player Development Pathways</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-primary" id="btn-ai-predict-dev"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Predict All</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>Development Pathway: Tots &rarr; Rec &rarr; Pre-Travel &rarr; Select &rarr; Travel &rarr; Academy</h3></div>
+                        <div class="card-body" id="dev-pathway-visual">
+                            <p class="text-muted">Loading development pathway...</p>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Player Development Cards</h3></div>
+                        <div class="card-body" id="dev-cards-body">
+                            <p class="text-muted">Run AI predictions to see player cards.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Competition -->
+                <section class="section hidden" id="section-intel-competition">
+                    <div class="section-toolbar">
+                        <h2>Competition & League Intelligence</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-primary" id="btn-add-match">+ Enter Match Result</button>
+                        </div>
+                    </div>
+                    <div class="stats-grid" id="competition-stats-bar"></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+                        <div class="card">
+                            <div class="card-header"><h3>League Standings</h3></div>
+                            <div class="card-body">
+                                <table class="data-table" id="standings-table">
+                                    <thead>
+                                        <tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
+                                    </thead>
+                                    <tbody id="standings-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3>Goal Stats Leaderboard</h3></div>
+                            <div class="card-body" id="goal-stats-body">
+                                <p class="text-muted">No match data yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Compliance -->
+                <section class="section hidden" id="section-intel-compliance">
+                    <div class="section-toolbar">
+                        <h2>Compliance Dashboard</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-primary" id="btn-add-compliance">+ Add Compliance Item</button>
+                            <button class="btn btn-coral" id="btn-expiring-compliance"><i data-lucide="alert-triangle" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Expiring Soon</button>
+                        </div>
+                    </div>
+                    <div class="stats-grid" id="compliance-stats-bar"></div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Compliance Items</h3></div>
+                        <div class="card-body">
+                            <table class="data-table" id="compliance-table">
+                                <thead>
+                                    <tr><th>Person</th><th>Role</th><th>Type</th><th>Status</th><th>Expires</th><th>Notes</th></tr>
+                                </thead>
+                                <tbody id="compliance-table-body"></tbody>
                             </table>
                         </div>
                     </div>

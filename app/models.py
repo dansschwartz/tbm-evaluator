@@ -493,6 +493,132 @@ class AttendanceRecord(Base):
     team = relationship("Team", back_populates="attendance_records")
 
 
+# ============================================================
+# INTELLIGENCE & BENCHMARKING — Version 4.0
+# ============================================================
+
+class ClubHealthScore(Base):
+    __tablename__ = "club_health_scores"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    score = Column(Float, nullable=False)  # 0-100
+    breakdown = Column(JSONB, default=dict)  # {retention_rate, coach_ratio, financial_aid_pct, gender_equity, fill_rate, development_progression, parent_satisfaction}
+    benchmarks = Column(JSONB, default=dict)  # {all_clubs_avg, top_10_pct}
+    ai_narrative = Column(Text, nullable=True)
+    generated_at = Column(DateTime, server_default=func.now())
+
+
+class BestPracticeAssessment(Base):
+    __tablename__ = "best_practice_assessments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    respondent_name = Column(String(255), nullable=False)
+    respondent_role = Column(String(50), nullable=False)  # leader/staff/coach/customer
+    responses = Column(JSONB, default=dict)  # {Q1: 60, Q2: 80, ...Q60: 40}
+    completed_at = Column(DateTime, server_default=func.now())
+
+
+class ClubLifecycleScore(Base):
+    __tablename__ = "club_lifecycle_scores"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    overall_phase = Column(Integer, nullable=False)  # 1-5
+    factor_scores = Column(JSONB, default=dict)  # 10 factors with phase ratings
+    ai_analysis = Column(Text, nullable=True)
+    generated_at = Column(DateTime, server_default=func.now())
+
+
+class PlayerDevelopmentPath(Base):
+    __tablename__ = "player_development_paths"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    player_id = Column(UUID(as_uuid=True), ForeignKey("players.id", ondelete="CASCADE"), nullable=False)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    path_entries = Column(JSONB, default=list)  # [{season, program, level, age_group, evaluation_score, date}]
+    current_level = Column(String(100), nullable=True)
+    predicted_next_level = Column(String(100), nullable=True)
+    ai_prediction = Column(Text, nullable=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    player = relationship("Player")
+
+
+class RegistrationForecast(Base):
+    __tablename__ = "registration_forecasts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    season = Column(String(100), nullable=False)
+    forecast_data = Column(JSONB, default=dict)  # {program: {predicted_count, confidence, trend}}
+    ai_narrative = Column(Text, nullable=True)
+    generated_at = Column(DateTime, server_default=func.now())
+
+
+class ParentEngagement(Base):
+    __tablename__ = "parent_engagements"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    player_id = Column(UUID(as_uuid=True), ForeignKey("players.id", ondelete="CASCADE"), nullable=False)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    engagement_score = Column(Float, nullable=False)  # 0-100
+    factors = Column(JSONB, default=dict)  # {email_opens, event_attendance, volunteer_hours, survey_responses, payment_timeliness}
+    risk_level = Column(String(20), nullable=False, default="healthy")  # healthy/watch/at_risk
+    ai_notes = Column(Text, nullable=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    player = relationship("Player")
+
+
+class SeasonReport(Base):
+    __tablename__ = "season_reports"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    season = Column(String(100), nullable=False)
+    report_type = Column(String(20), nullable=False)  # monthly/seasonal/annual
+    content = Column(JSONB, default=dict)
+    ai_executive_summary = Column(Text, nullable=True)
+    generated_at = Column(DateTime, server_default=func.now())
+
+
+class CompetitionResult(Base):
+    __tablename__ = "competition_results"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
+    opponent_name = Column(String(255), nullable=False)
+    league = Column(String(255), nullable=True)
+    match_date = Column(Date, nullable=False)
+    result = Column(String(10), nullable=False)  # win/loss/draw
+    score_for = Column(Integer, default=0)
+    score_against = Column(Integer, default=0)
+    goal_scorers = Column(JSONB, default=list)  # [{player_id, player_name, count}]
+    assists = Column(JSONB, default=list)  # [{player_id, player_name, count}]
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    team = relationship("Team")
+
+
+class ComplianceItem(Base):
+    __tablename__ = "compliance_items"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    item_type = Column(String(50), nullable=False)  # background_check/safesport/insurance/concussion_training/first_aid
+    person_name = Column(String(255), nullable=False)
+    person_role = Column(String(50), nullable=False)
+    status = Column(String(20), nullable=False, default="missing")  # compliant/expiring/expired/missing
+    expiry_date = Column(Date, nullable=True)
+    document_id = Column(UUID(as_uuid=True), ForeignKey("player_documents.id", ondelete="SET NULL"), nullable=True)
+    notes = Column(Text, nullable=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
 # Module 11: Document Vault
 class PlayerDocument(Base):
     __tablename__ = "player_documents"
