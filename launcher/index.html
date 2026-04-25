@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiny But Mighty — Platform</title>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',system-ui,sans-serif; background:#f5f7fa; min-height:100vh; display:flex; flex-direction:column; }
+  
+  .header { background:#fff; border-bottom:1px solid #e8eaed; padding:20px 40px; display:flex; align-items:center; gap:16px; }
+  .logo { width:44px; height:44px; background:linear-gradient(135deg,#09A1A1,#5484A4); border-radius:12px; display:flex; align-items:center; justify-content:center; }
+  .logo svg { stroke:white; }
+  .header h1 { font-size:22px; font-weight:800; color:#1a1a2e; }
+  .header p { font-size:13px; color:#888; margin-left:auto; }
+  
+  .main { flex:1; display:flex; align-items:center; justify-content:center; padding:40px; }
+  
+  .apps-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; max-width:900px; width:100%; }
+  
+  .app-card {
+    background:#fff;
+    border-radius:16px;
+    padding:32px;
+    text-align:center;
+    border:2px solid #e8eaed;
+    cursor:pointer;
+    transition:all 0.2s;
+    text-decoration:none;
+    color:inherit;
+    position:relative;
+    overflow:hidden;
+  }
+  .app-card:hover { border-color:#09A1A1; transform:translateY(-4px); box-shadow:0 8px 30px rgba(9,161,161,0.15); }
+  .app-card.active { border-color:#09A1A1; }
+  .app-card.coming-soon { opacity:0.5; cursor:default; }
+  .app-card.coming-soon:hover { transform:none; box-shadow:none; border-color:#e8eaed; }
+  
+  .app-icon {
+    width:64px; height:64px;
+    border-radius:16px;
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 16px;
+  }
+  .app-icon i { width:32px; height:32px; }
+  
+  .app-card h2 { font-size:18px; font-weight:700; margin-bottom:6px; color:#1a1a2e; }
+  .app-card p { font-size:13px; color:#888; line-height:1.5; }
+  
+  .app-badge {
+    position:absolute; top:12px; right:12px;
+    background:#09A1A1; color:#fff;
+    font-size:10px; font-weight:700;
+    padding:3px 10px; border-radius:12px;
+    text-transform:uppercase; letter-spacing:0.5px;
+  }
+  .app-badge.soon { background:#ACC0D3; }
+  
+  .footer { text-align:center; padding:20px; font-size:11px; color:#aaa; }
+  
+  /* Color themes per app */
+  .app-finance .app-icon { background:#e8f5e9; color:#2e7d32; }
+  .app-operations .app-icon { background:#e0f7fa; color:#09A1A1; }
+  .app-marketing .app-icon { background:#fce4ec; color:#c62828; }
+  .app-fundraising .app-icon { background:#fff3e0; color:#e65100; }
+  .app-hr .app-icon { background:#e8eaf6; color:#283593; }
+  .app-impact .app-icon { background:#f3e5f5; color:#6a1b9a; }
+  
+  @media (max-width:768px) { .apps-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+  <div>
+    <h1>Tiny But Mighty</h1>
+  </div>
+  <p>Select an application to get started</p>
+</div>
+
+<div class="main">
+  <div class="apps-grid">
+    
+    <a href="#" class="app-card app-finance coming-soon">
+      <span class="app-badge soon">Coming Soon</span>
+      <div class="app-icon"><i data-lucide="dollar-sign"></i></div>
+      <h2>Finance</h2>
+      <p>Budgets, revenue, grants & expenses. Daily cash position, monthly variance, annual reporting.</p>
+    </a>
+    
+    <a href="/admin" class="app-card app-operations active">
+      <span class="app-badge">Live</span>
+      <div class="app-icon"><i data-lucide="settings"></i></div>
+      <h2>Operations</h2>
+      <p>Players, families, programs & delivery. Evaluations, teams, fields, scheduling, AI intelligence.</p>
+    </a>
+    
+    <a href="#" class="app-card app-marketing coming-soon">
+      <span class="app-badge soon">Coming Soon</span>
+      <div class="app-icon"><i data-lucide="megaphone"></i></div>
+      <h2>Marketing & Comms</h2>
+      <p>Membership drives, communications & brand. Email campaigns, social media, chatbot support.</p>
+    </a>
+    
+    <a href="#" class="app-card app-fundraising coming-soon">
+      <span class="app-badge soon">Coming Soon</span>
+      <div class="app-icon"><i data-lucide="heart-handshake"></i></div>
+      <h2>Fundraising</h2>
+      <p>Campaigns, donors & appeals. Grant tracking, sponsorship management, donation processing.</p>
+    </a>
+    
+    <a href="#" class="app-card app-hr coming-soon">
+      <span class="app-badge soon">Coming Soon</span>
+      <div class="app-icon"><i data-lucide="users"></i></div>
+      <h2>HR & Volunteers</h2>
+      <p>Staff, volunteers & rosters. Certifications, scheduling, background checks, recognition.</p>
+    </a>
+    
+    <a href="#" class="app-card app-impact coming-soon">
+      <span class="app-badge soon">Coming Soon</span>
+      <div class="app-icon"><i data-lucide="bar-chart-3"></i></div>
+      <h2>Impact Reports</h2>
+      <p>Outcomes, metrics & board reporting. IYSL benchmarks, health scores, seasonal analysis.</p>
+    </a>
+    
+  </div>
+</div>
+
+<div class="footer">
+  Tiny But Mighty Platform v1.0 — AI-native tools for not-for-profit organizations
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

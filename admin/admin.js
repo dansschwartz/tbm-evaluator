@@ -12,6 +12,26 @@ const CONFIG = {
 };
 
 // Prompt for admin key on first visit
+
+// Simple markdown-to-HTML renderer for AI output
+function renderMd(text) {
+    if (!text) return '';
+    var s = text
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')  // escape HTML
+        .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')  // bold italic
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // bold
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')  // italic
+        .replace(/^### (.*?)$/gm, '<h4 style="margin:12px 0 6px;font-size:14px;color:#333;">$1</h4>')  // h3
+        .replace(/^## (.*?)$/gm, '<h3 style="margin:16px 0 8px;font-size:16px;color:#333;">$1</h3>')  // h2
+        .replace(/^# (.*?)$/gm, '<h2 style="margin:20px 0 10px;font-size:18px;color:#333;">$1</h2>')  // h1
+        .replace(/^- (.*?)$/gm, '<li style="margin:2px 0;margin-left:16px;">$1</li>')  // list items
+        .replace(/^\d+\. (.*?)$/gm, '<li style="margin:2px 0;margin-left:16px;">$1</li>')  // numbered lists
+        .replace(/((?:<li[^>]*>.*?<\/li>\s*)+)/g, '<ul style="padding-left:4px;margin:8px 0;">$1</ul>')  // wrap lists
+        .replace(/\n\n/g, '</p><p style="margin:8px 0;">')  // paragraphs
+        .replace(/\n/g, '<br>');  // line breaks
+    return '<div style="font-size:14px;line-height:1.6;color:#333;"><p style="margin:8px 0;">' + s + '</p></div>';
+}
+
 (function initKey() {
     if (!CONFIG.adminKey) {
         promptAdminKey();
@@ -1282,7 +1302,7 @@ async function viewReport(reportId) {
             (r.ai_summary ? '<div style="margin-bottom:12px"><strong>AI Summary:</strong><p style="margin-top:4px">' + esc(r.ai_summary) + '</p></div>' : '') +
             (r.ai_strengths && r.ai_strengths.length > 0 ? '<div style="margin-bottom:12px"><strong>Strengths:</strong><ul>' + r.ai_strengths.map(function(s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></div>' : '') +
             (r.ai_improvements && r.ai_improvements.length > 0 ? '<div style="margin-bottom:12px"><strong>Areas for Improvement:</strong><ul>' + r.ai_improvements.map(function(s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></div>' : '') +
-            (r.ai_recommendation ? '<div style="margin-bottom:12px"><strong>Recommendation:</strong><p style="margin-top:4px">' + esc(r.ai_recommendation) + '</p></div>' : '') +
+            (r.ai_recommendation ? '<div style="margin-bottom:12px"><strong>Recommendation:</strong><p style="margin-top:4px">' + r.ai_recommendation + '</p></div>' : '') +
             (skillRows ? '<h4 style="margin-top:12px">Skill Scores</h4><table class="data-table"><thead><tr><th>Skill</th><th>Score</th></tr></thead><tbody>' + skillRows + '</tbody></table>' : ''),
             '<button class="btn btn-outline" onclick="closeModal()">Close</button>'
         );
@@ -3004,7 +3024,7 @@ async function draftAiEmail() {
         });
         resultDiv.innerHTML = '<div style="background:white;padding:16px;border-radius:8px;border:1px solid #ddd;">' +
             '<p><strong>Subject:</strong> ' + esc(result.subject) + '</p><hr style="margin:8px 0;">' +
-            '<div style="white-space:pre-wrap;">' + esc(result.body) + '</div></div>' +
+            '<div style=";">' + esc(result.body) + '</div></div>' +
             '<button class="btn btn-primary" style="margin-top:8px;" onclick="useEmailDraft(\'' +
             btoa(unescape(encodeURIComponent(JSON.stringify(result)))) + '\')">Use as Message Draft</button>';
     } catch (e) { resultDiv.innerHTML = '<p style="color:red;">Error: ' + esc(e && e.message ? e.message : String(e)) + '</p>'; }
@@ -3044,7 +3064,7 @@ async function aiFieldAllocation() {
         });
         resultDiv.querySelector('.card-body').innerHTML =
             '<strong style="color:#09A1A1;">AI Field Allocation Recommendation</strong><br><br>' +
-            '<div style="white-space:pre-wrap;">' + esc(result.answer || 'No recommendation available.') + '</div>';
+            '<div style=";">' + esc(result.answer || 'No recommendation available.') + '</div>';
     } catch (e) {
         resultDiv.querySelector('.card-body').innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>';
     }
@@ -3112,7 +3132,7 @@ async function aiRosterSuggest() {
         });
         resultDiv.querySelector('.card-body').innerHTML =
             '<strong style="color:#09A1A1;">AI Roster Suggestions</strong><br><br>' +
-            '<div style="white-space:pre-wrap;">' + esc(result.answer || 'No suggestions available.') + '</div>';
+            '<div style=";">' + esc(result.answer || 'No suggestions available.') + '</div>';
     } catch (e) {
         resultDiv.querySelector('.card-body').innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>';
     }
@@ -3131,7 +3151,7 @@ async function aiAttendanceInsights() {
         });
         resultDiv.querySelector('.card-body').innerHTML =
             '<strong style="color:#09A1A1;">AI Attendance Insights</strong><br><br>' +
-            '<div style="white-space:pre-wrap;">' + esc(result.answer || 'No insights available.') + '</div>';
+            '<div style=";">' + esc(result.answer || 'No insights available.') + '</div>';
     } catch (e) {
         resultDiv.querySelector('.card-body').innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>';
     }
@@ -3150,7 +3170,7 @@ async function aiAnalyticsInsights() {
         });
         resultDiv.querySelector('.card-body').innerHTML =
             '<strong style="color:#09A1A1;">AI Analytics Insights</strong><br><br>' +
-            '<div style="white-space:pre-wrap;">' + esc(result.answer || 'No insights available.') + '</div>';
+            '<div style=";">' + esc(result.answer || 'No insights available.') + '</div>';
     } catch (e) {
         resultDiv.querySelector('.card-body').innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>';
     }
@@ -3170,7 +3190,7 @@ async function aiCleanData() {
         });
         resultDiv.innerHTML = '<div style="padding:12px;background:linear-gradient(135deg,#f0f9ff,#e8f5e9);border-left:4px solid #09A1A1;border-radius:6px;">' +
             '<strong style="color:#09A1A1;">AI Data Quality Report</strong><br><br>' +
-            '<div style="white-space:pre-wrap;">' + esc(result.answer || 'No issues found.') + '</div></div>';
+            '<div style=";">' + esc(result.answer || 'No issues found.') + '</div></div>';
     } catch (e) {
         resultDiv.innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>';
     }
@@ -3213,7 +3233,7 @@ async function loadIntelHealth(orgId) {
         for (var i = 1; i <= 5; i++) {
             dots += '<span style="display:inline-block;width:32px;height:32px;border-radius:50%;margin:0 4px;line-height:32px;text-align:center;font-weight:700;color:#fff;background:' + (i <= lc.overall_phase ? '#09A1A1' : '#ddd') + ';">' + i + '</span>';
         }
-        document.getElementById('lifecycle-body').innerHTML = '<div style="text-align:center;margin-bottom:12px;">' + dots + '</div><div style="text-align:center;font-size:20px;font-weight:700;">Phase ' + lc.overall_phase + ': ' + phaseName + '</div><p style="margin-top:12px;">' + (lc.ai_analysis || '') + '</p>';
+        document.getElementById('lifecycle-body').innerHTML = '<div style="text-align:center;margin-bottom:12px;">' + dots + '</div><div style="text-align:center;font-size:20px;font-weight:700;">Phase ' + lc.overall_phase + ': ' + phaseName + '</div><p style="margin-top:12px;">' + renderMd(lc.ai_analysis || '');
     } catch (e) {
         document.getElementById('lifecycle-body').innerHTML = '<p class="text-muted">Could not load lifecycle data.</p>';
     }
@@ -3249,7 +3269,7 @@ async function loadIntelHealth(orgId) {
                 fHtml += '<tr><td>' + prog + '</td><td>' + fd.current_count + '</td><td>' + fd.predicted_count + '</td><td>' + fd.capacity + '</td><td>' + fd.fill_rate + '%</td><td>' + trendBadge + '</td></tr>';
             }
             fHtml += '</tbody></table>';
-            if (f.ai_narrative) fHtml += '<div style="margin-top:12px;padding:12px;background:#f0f9ff;border-left:3px solid #09A1A1;border-radius:4px;">' + f.ai_narrative + '</div>';
+            if (f.ai_narrative) fHtml += '<div style="margin-top:12px;padding:12px;background:#f0f9ff;border-left:3px solid #09A1A1;border-radius:4px;">' + renderMd(f.ai_narrative || '') + '</div>';
             document.getElementById('forecast-body').innerHTML = fHtml;
         } else {
             document.getElementById('forecast-body').innerHTML = '<p class="text-muted">No forecasts yet.</p><button class="btn btn-secondary btn-sm" onclick="generateForecast()">Generate Forecast</button>';
@@ -3318,7 +3338,7 @@ function renderHealthScore(hs) {
 
     // AI narrative
     if (hs.ai_narrative) {
-        document.getElementById('health-ai-narrative').innerHTML = '<div style="white-space:pre-wrap;">' + hs.ai_narrative + '</div>';
+        document.getElementById('health-ai-narrative').innerHTML = renderMd(hs.ai_narrative || '');
     }
 }
 
@@ -3488,7 +3508,7 @@ document.getElementById('btn-view-assessment-report').addEventListener('click', 
         document.getElementById('stakeholder-body').innerHTML = sHtml || '<p class="text-muted">No stakeholder data.</p>';
 
         // AI recommendations
-        document.getElementById('assessment-ai-body').innerHTML = '<div style="white-space:pre-wrap;">' + (report.ai_recommendations || '') + '</div>';
+        document.getElementById('assessment-ai-body').innerHTML = renderMd(report.ai_recommendations || '');
 
     } catch (e) { toast('Error: ' + e.message, 'error'); }
     hideLoading();

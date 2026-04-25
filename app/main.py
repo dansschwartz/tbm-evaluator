@@ -68,6 +68,7 @@ app.include_router(documents.router)
 app.include_router(intelligence.router)
 
 # Static files
+app.mount("/launcher/static", StaticFiles(directory="launcher"), name="launcher_static")
 app.mount("/admin/static", StaticFiles(directory="admin"), name="admin_static")
 app.mount("/score/static", StaticFiles(directory="scoring"), name="scoring_static")
 app.mount("/report/static", StaticFiles(directory="reports"), name="report_static")
@@ -160,6 +161,10 @@ async def health():
 
 
 # Serve frontend pages
+@app.get("/")
+async def launcher_page():
+    return FileResponse("launcher/index.html")
+
 @app.get("/admin")
 @app.get("/admin/")
 async def admin_page():
