@@ -467,7 +467,7 @@
     section.className = 'report-section';
     section.style.cssText = 'margin-top:24px;padding:20px;background:#f8f9fb;border-radius:12px;';
     
-    var html = '<h3 style="margin:0 0 12px;font-size:16px;color:#333;">🎙️ Coach Voice Notes</h3>';
+    var html = '<h3 style="margin:0 0 12px;font-size:16px;color:#333;"><i data-lucide="mic" class="icon-inline"></i> Coach Voice Notes</h3>';
     html += '<div style="display:flex;flex-direction:column;gap:8px;">';
     
     data.voice_recordings.forEach(function(r) {
@@ -479,7 +479,7 @@
       html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fff;border-radius:8px;border:1px solid #eee;">' +
         '<button onclick="playReportRecording(\'' + data.id + '\',\'' + 
         (data.event ? data.event.name : '') + '\',\'' + r.id + '\')" ' +
-        'style="background:#09A1A1;color:#fff;border:none;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:14px;flex-shrink:0;">▶</button>' +
+        'style="background:#09A1A1;color:#fff;border:none;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:14px;flex-shrink:0;"><i data-lucide="play" class="icon-inline"></i></button>' +
         '<div style="flex:1;">' +
           '<div style="font-size:14px;font-weight:600;color:#333;">' + (r.label || 'Voice Note') + '</div>' +
           '<div style="font-size:12px;color:#888;">' + r.evaluator_name + ' · ' + timeStr + (dateStr ? ' · ' + dateStr : '') + '</div>' +

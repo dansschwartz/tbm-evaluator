@@ -1035,7 +1035,7 @@
     var aiBtn = document.createElement('button');
     aiBtn.id = 'ai-preview-btn';
     aiBtn.className = 'ai-preview-btn';
-    aiBtn.innerHTML = '🤖 Generate AI Summary';
+    aiBtn.innerHTML = '<i data-lucide="bot" class="icon-inline"></i> Generate AI Summary';
     aiBtn.style.cssText = 'display:block;width:100%;padding:14px;margin-top:12px;background:#09A1A1;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;';
     aiBtn.onclick = generateAIPreview;
     submitBtn.parentNode.insertBefore(aiBtn, submitBtn.nextSibling);
@@ -1080,7 +1080,7 @@
     }
     
     btn.disabled = true;
-    btn.innerHTML = '🤖 Generating...';
+    btn.innerHTML = '<i data-lucide="bot" class="icon-inline"></i> Generating...';
     resultDiv.style.display = 'block';
     resultDiv.innerHTML = '<p style="color:#888;">Generating AI narrative...</p>';
     
@@ -1099,17 +1099,17 @@
       var data = await resp.json();
       
       resultDiv.innerHTML = 
-        '<h3 style="margin:0 0 8px;color:#09A1A1;font-size:16px;">🤖 AI Evaluation — ' + data.player_name + '</h3>' +
+        '<h3 style="margin:0 0 8px;color:#09A1A1;font-size:16px;"><i data-lucide="bot" class="icon-inline"></i> AI Evaluation — ' + data.player_name + '</h3>' +
         '<p style="font-size:14px;line-height:1.6;color:#333;margin-bottom:12px;">' + data.narrative + '</p>' +
         '<div style="display:flex;gap:16px;flex-wrap:wrap;">' +
           '<div style="flex:1;min-width:200px;">' +
-            '<h4 style="color:#09A1A1;font-size:13px;margin-bottom:6px;">💪 Strengths</h4>' +
+            '<h4 style="color:#09A1A1;font-size:13px;margin-bottom:6px;"><i data-lucide="zap" class="icon-inline"></i> Strengths</h4>' +
             '<ul style="font-size:13px;color:#555;padding-left:16px;margin:0;">' +
               data.strengths.map(function(s) { return '<li>' + s + '</li>'; }).join('') +
             '</ul>' +
           '</div>' +
           '<div style="flex:1;min-width:200px;">' +
-            '<h4 style="color:#FA6E82;font-size:13px;margin-bottom:6px;">📈 Areas to Develop</h4>' +
+            '<h4 style="color:#FA6E82;font-size:13px;margin-bottom:6px;"><i data-lucide="trending-up" class="icon-inline"></i> Areas to Develop</h4>' +
             '<ul style="font-size:13px;color:#555;padding-left:16px;margin:0;">' +
               data.improvements.map(function(s) { return '<li>' + s + '</li>'; }).join('') +
             '</ul>' +
@@ -1118,11 +1118,11 @@
         '<p style="margin-top:10px;font-size:12px;color:#888;">Overall Score: ' + data.overall_score + '/5</p>';
       
     } catch(e) {
-      resultDiv.innerHTML = '<p style="color:#FA6E82;">⚠️ ' + e.message + '</p>';
+      resultDiv.innerHTML = '<p style="color:#FA6E82;"><i data-lucide="alert-triangle" class="icon-inline" style="color:currentColor;"></i> ' + e.message + '</p>';
     }
     
     btn.disabled = false;
-    btn.innerHTML = '🤖 Generate AI Summary';
+    btn.innerHTML = '<i data-lucide="bot" class="icon-inline"></i> Generate AI Summary';
   }
   
   // Observe DOM changes to add button when scoring view appears
@@ -1153,12 +1153,12 @@
     section.id = 'voice-rec-section';
     section.style.cssText = 'margin-top:20px;padding:16px;background:#fff;border-radius:12px;border:2px solid #e0e0e0;';
     section.innerHTML = 
-      '<h3 style="margin:0 0 12px;font-size:15px;color:#333;">🎙️ Voice Notes</h3>' +
+      '<h3 style="margin:0 0 12px;font-size:15px;color:#333;"><i data-lucide="mic" class="icon-inline"></i> Voice Notes</h3>' +
       '<p style="font-size:12px;color:#888;margin-bottom:12px;">Record audio feedback for this player. Each recording is saved separately to their report.</p>' +
       '<div id="rec-controls" style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">' +
-        '<button id="rec-start-btn" onclick="window._startRecording()" style="padding:12px 20px;background:#c41e3a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">🔴 Record</button>' +
+        '<button id="rec-start-btn" onclick="window._startRecording()" style="padding:12px 20px;background:#c41e3a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;"><i data-lucide="circle" class="icon-inline" style="color:currentColor;"></i> Record</button>' +
         '<span id="rec-timer" style="font-size:18px;font-weight:700;color:#333;display:none;">0:00</span>' +
-        '<button id="rec-stop-btn" onclick="window._stopRecording()" style="padding:12px 20px;background:#555;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;display:none;">⬛ Stop & Save</button>' +
+        '<button id="rec-stop-btn" onclick="window._stopRecording()" style="padding:12px 20px;background:#555;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;display:none;"><i data-lucide="square" class="icon-inline"></i> Stop & Save</button>' +
       '</div>' +
       '<div id="rec-status" style="font-size:13px;color:#888;margin-bottom:8px;"></div>' +
       '<input type="text" id="rec-label" placeholder="Label (e.g., Dribbling feedback, General notes)" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:12px;font-family:inherit;">' +
@@ -1194,7 +1194,7 @@
       document.getElementById('rec-start-btn').style.display = 'none';
       document.getElementById('rec-stop-btn').style.display = 'inline-block';
       document.getElementById('rec-timer').style.display = 'inline';
-      document.getElementById('rec-status').textContent = '🔴 Recording...';
+      document.getElementById('rec-status').textContent = '<i data-lucide="circle" class="icon-inline" style="color:currentColor;"></i> Recording...';
       document.getElementById('rec-status').style.color = '#c41e3a';
       
       // Update timer
@@ -1206,7 +1206,7 @@
       }, 1000);
       
     } catch(e) {
-      document.getElementById('rec-status').textContent = '❌ Microphone access denied. Please allow microphone in your browser settings.';
+      document.getElementById('rec-status').textContent = '<i data-lucide="x-circle" class="icon-inline" style="color:currentColor;"></i> Microphone access denied. Please allow microphone in your browser settings.';
       document.getElementById('rec-status').style.color = '#c41e3a';
     }
   };
@@ -1220,7 +1220,7 @@
       document.getElementById('rec-start-btn').style.display = 'inline-block';
       document.getElementById('rec-stop-btn').style.display = 'none';
       document.getElementById('rec-timer').style.display = 'none';
-      document.getElementById('rec-status').textContent = '💾 Saving...';
+      document.getElementById('rec-status').textContent = '<i data-lucide="save" class="icon-inline"></i> Saving...';
       document.getElementById('rec-status').style.color = '#09A1A1';
     }
   };
@@ -1236,7 +1236,7 @@
       var evalName = (typeof state !== 'undefined' && state.evaluator) ? state.evaluator.name : 'Coach';
       
       if (!eventId || !playerId) {
-        document.getElementById('rec-status').textContent = '❌ Please select a player first';
+        document.getElementById('rec-status').textContent = '<i data-lucide="x-circle" class="icon-inline" style="color:currentColor;"></i> Please select a player first';
         return;
       }
       
@@ -1254,16 +1254,16 @@
         
         if (resp.ok) {
           var data = await resp.json();
-          document.getElementById('rec-status').textContent = '✅ Saved! (' + data.total_recordings + ' recording' + (data.total_recordings > 1 ? 's' : '') + ' total)';
+          document.getElementById('rec-status').textContent = '<i data-lucide="check-circle-2" class="icon-inline" style="color:currentColor;"></i> Saved! (' + data.total_recordings + ' recording' + (data.total_recordings > 1 ? 's' : '') + ' total)';
           document.getElementById('rec-status').style.color = '#09A1A1';
           document.getElementById('rec-label').value = '';
           loadRecordings();
         } else {
-          document.getElementById('rec-status').textContent = '❌ Failed to save';
+          document.getElementById('rec-status').textContent = '<i data-lucide="x-circle" class="icon-inline" style="color:currentColor;"></i> Failed to save';
           document.getElementById('rec-status').style.color = '#c41e3a';
         }
       } catch(e) {
-        document.getElementById('rec-status').textContent = '❌ Error: ' + e.message;
+        document.getElementById('rec-status').textContent = '<i data-lucide="x-circle" class="icon-inline" style="color:currentColor;"></i> Error: ' + e.message;
       }
     };
     reader.readAsDataURL(blob);
@@ -1290,12 +1290,12 @@
         var secs = r.duration_seconds % 60;
         var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
         return '<div style="display:flex;align-items:center;gap:10px;padding:8px;background:#f8f9fa;border-radius:8px;margin-bottom:6px;">' +
-          '<button onclick="window._playRecording(\'' + r.id + '\')" style="background:#09A1A1;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;">▶</button>' +
+          '<button onclick="window._playRecording(\'' + r.id + '\')" style="background:#09A1A1;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;"><i data-lucide="play" class="icon-inline"></i></button>' +
           '<div style="flex:1;">' +
             '<div style="font-size:13px;font-weight:600;">' + (r.label || 'Recording') + '</div>' +
             '<div style="font-size:11px;color:#888;">' + r.evaluator_name + ' · ' + timeStr + ' · ' + new Date(r.recorded_at).toLocaleDateString() + '</div>' +
           '</div>' +
-          '<button onclick="window._deleteRecording(\'' + r.id + '\')" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:16px;">🗑️</button>' +
+          '<button onclick="window._deleteRecording(\'' + r.id + '\')" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:16px;"><i data-lucide="trash-2" class="icon-inline"></i></button>' +
         '</div>';
       }).join('');
     } catch(e) { /* ignore */ }

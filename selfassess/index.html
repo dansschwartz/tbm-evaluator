@@ -55,8 +55,8 @@
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({player_id: playerId, scores: scores})
       });
-      document.getElementById('msg').textContent = resp.ok ? '✅ Self-assessment submitted!' : '❌ Error submitting';
-    } catch(e) { document.getElementById('msg').textContent = '❌ Error: ' + e.message; }
+      document.getElementById('msg').textContent = resp.ok ? '<i data-lucide="check-circle-2" class="icon-inline" style="color:currentColor;"></i> Self-assessment submitted!' : '<i data-lucide="x-circle" class="icon-inline" style="color:currentColor;"></i> Error submitting';
+    } catch(e) { document.getElementById('msg').textContent = '<i data-lucide="x-circle" class="icon-inline" style="color:currentColor;"></i> Error: ' + e.message; }
   }
 
   load();
