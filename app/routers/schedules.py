@@ -48,6 +48,176 @@ async def list_schedule_entries(
     return [ScheduleEntryResponse.model_validate(e) for e in result.scalars().all()]
 
 
+@router.get("/api/organizations/{org_id}/schedules/calendar")
+async def schedule_calendar(org_id: uuid.UUID, start: str, end: str, db: AsyncSession = Depends(get_db)):
+    """Full calendar for a date range."""
+    start_dt = datetime.fromisoformat(f"{start}T00:00:00")
+    end_dt = datetime.fromisoformat(f"{end}T23:59:59")
+
+    result = await db.execute(
+        select(ScheduleEntry).where(
+            ScheduleEntry.org_id == org_id,
+            ScheduleEntry.start_time >= start_dt,
+            ScheduleEntry.start_time <= end_dt,
+        ).order_by(ScheduleEntry.start_time)
+    )
+    entries = result.scalars().all()
+
+    calendar = []
+    for entry in entries:
+        team_name = None
+        opponent_name = None
+        field_name = None
+
+        if entry.team_id:
+            team = (await db.execute(select(Team).where(Team.id == entry.team_id))).scalars().first()
+            team_name = team.name if team else None
+        if entry.opponent_team_id:
+            opp = (await db.execute(select(Team).where(Team.id == entry.opponent_team_id))).scalars().first()
+            opponent_name = opp.name if opp else None
+        if entry.field_id:
+            field = (await db.execute(select(Field).where(Field.id == entry.field_id))).scalars().first()
+            field_name = field.name if field else None
+
+        calendar.append({
+            **ScheduleEntryResponse.model_validate(entry).model_dump(),
+            "team_name": team_name,
+            "opponent_name": opponent_name,
+            "field_name": field_name,
+        })
+
+    return calendar
+
+
+# --- Conflict Detection ---
+
+
+@router.get("/api/organizations/{org_id}/schedules/conflicts")
+async def detect_conflicts(org_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Detect scheduling conflicts."""
+    entries = (await db.execute(
+        select(ScheduleEntry).where(
+            ScheduleEntry.org_id == org_id,
+            ScheduleEntry.status == "scheduled",
+        ).order_by(ScheduleEntry.start_time)
+    )).scalars().all()
+
+    conflicts = []
+
+    for i in range(len(entries)):
+        for j in range(i + 1, len(entries)):
+            a, b = entries[i], entries[j]
+
+            # Time overlap check
+            if a.start_time < b.end_time and a.end_time > b.start_time:
+                # Same field?
+                if a.field_id and a.field_id == b.field_id:
+                    conflicts.append({
+                        "type": "field_double_booking",
+                        "entry_a": str(a.id),
+                        "entry_b": str(b.id),
+                        "title_a": a.title,
+                        "title_b": b.title,
+                        "time": str(a.start_time),
+                    })
+
+                # Same team?
+                if a.team_id and (a.team_id == b.team_id or a.team_id == b.opponent_team_id):
+                    conflicts.append({
+                        "type": "team_double_booking",
+                        "entry_a": str(a.id),
+                        "entry_b": str(b.id),
+                        "title_a": a.title,
+                        "title_b": b.title,
+                        "time": str(a.start_time),
+                    })
+
+    return {"conflicts": conflicts, "total": len(conflicts)}
+
+
+# --- Validate Schedule ---
+
+
+@router.get("/api/organizations/{org_id}/schedules/validate")
+async def validate_schedule(org_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Validate entire schedule: check for field double-bookings and team same-day conflicts."""
+    entries = (await db.execute(
+        select(ScheduleEntry).where(
+            ScheduleEntry.org_id == org_id,
+            ScheduleEntry.status == "scheduled",
+        ).order_by(ScheduleEntry.start_time)
+    )).scalars().all()
+
+    conflicts = []
+
+    for i in range(len(entries)):
+        for j in range(i + 1, len(entries)):
+            a, b = entries[i], entries[j]
+
+            # Time overlap check
+            if a.start_time < b.end_time and a.end_time > b.start_time:
+                # Field double-booking
+                if a.field_id and a.field_id == b.field_id:
+                    conflicts.append({
+                        "type": "field_double_booking",
+                        "severity": "critical",
+                        "entry_a_id": str(a.id),
+                        "entry_b_id": str(b.id),
+                        "title_a": a.title,
+                        "title_b": b.title,
+                        "field_id": str(a.field_id),
+                        "time": str(a.start_time),
+                        "message": f"Field conflict: '{a.title}' and '{b.title}' overlap on the same field at {a.start_time}",
+                    })
+
+                # Team double-booking (same team in overlapping entries)
+                teams_a = {a.team_id, a.opponent_team_id} - {None}
+                teams_b = {b.team_id, b.opponent_team_id} - {None}
+                shared = teams_a & teams_b
+                if shared:
+                    conflicts.append({
+                        "type": "team_double_booking",
+                        "severity": "critical",
+                        "entry_a_id": str(a.id),
+                        "entry_b_id": str(b.id),
+                        "title_a": a.title,
+                        "title_b": b.title,
+                        "time": str(a.start_time),
+                        "message": f"Team conflict: '{a.title}' and '{b.title}' share a team in overlapping time slots",
+                    })
+
+            # Same-day team check (even non-overlapping — warn about team playing twice)
+            if a.start_time.date() == b.start_time.date() and a.entry_type == "game" and b.entry_type == "game":
+                teams_a = {a.team_id, a.opponent_team_id} - {None}
+                teams_b = {b.team_id, b.opponent_team_id} - {None}
+                shared = teams_a & teams_b
+                if shared and not (a.start_time < b.end_time and a.end_time > b.start_time):
+                    conflicts.append({
+                        "type": "team_same_day",
+                        "severity": "warning",
+                        "entry_a_id": str(a.id),
+                        "entry_b_id": str(b.id),
+                        "title_a": a.title,
+                        "title_b": b.title,
+                        "time": str(a.start_time.date()),
+                        "message": f"Same-day warning: A team plays in both '{a.title}' and '{b.title}' on {a.start_time.date()}",
+                    })
+
+    valid = len([c for c in conflicts if c["severity"] == "critical"]) == 0
+
+    return {
+        "valid": valid,
+        "total_entries": len(entries),
+        "total_conflicts": len(conflicts),
+        "critical": len([c for c in conflicts if c["severity"] == "critical"]),
+        "warnings": len([c for c in conflicts if c["severity"] == "warning"]),
+        "conflicts": conflicts,
+    }
+
+
+# --- Weather Cancel ---
+
+
 @router.get("/api/organizations/{org_id}/schedules/{entry_id}", response_model=ScheduleEntryResponse)
 async def get_schedule_entry(org_id: uuid.UUID, entry_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     entry = (await db.execute(
@@ -273,170 +443,6 @@ async def generate_practice_schedule(org_id: uuid.UUID, req: GeneratePracticesRe
 
 
 # --- Calendar View ---
-@router.get("/api/organizations/{org_id}/schedules/calendar")
-async def schedule_calendar(org_id: uuid.UUID, start: str, end: str, db: AsyncSession = Depends(get_db)):
-    """Full calendar for a date range."""
-    start_dt = datetime.fromisoformat(f"{start}T00:00:00")
-    end_dt = datetime.fromisoformat(f"{end}T23:59:59")
-
-    result = await db.execute(
-        select(ScheduleEntry).where(
-            ScheduleEntry.org_id == org_id,
-            ScheduleEntry.start_time >= start_dt,
-            ScheduleEntry.start_time <= end_dt,
-        ).order_by(ScheduleEntry.start_time)
-    )
-    entries = result.scalars().all()
-
-    calendar = []
-    for entry in entries:
-        team_name = None
-        opponent_name = None
-        field_name = None
-
-        if entry.team_id:
-            team = (await db.execute(select(Team).where(Team.id == entry.team_id))).scalars().first()
-            team_name = team.name if team else None
-        if entry.opponent_team_id:
-            opp = (await db.execute(select(Team).where(Team.id == entry.opponent_team_id))).scalars().first()
-            opponent_name = opp.name if opp else None
-        if entry.field_id:
-            field = (await db.execute(select(Field).where(Field.id == entry.field_id))).scalars().first()
-            field_name = field.name if field else None
-
-        calendar.append({
-            **ScheduleEntryResponse.model_validate(entry).model_dump(),
-            "team_name": team_name,
-            "opponent_name": opponent_name,
-            "field_name": field_name,
-        })
-
-    return calendar
-
-
-# --- Conflict Detection ---
-@router.get("/api/organizations/{org_id}/schedules/conflicts")
-async def detect_conflicts(org_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    """Detect scheduling conflicts."""
-    entries = (await db.execute(
-        select(ScheduleEntry).where(
-            ScheduleEntry.org_id == org_id,
-            ScheduleEntry.status == "scheduled",
-        ).order_by(ScheduleEntry.start_time)
-    )).scalars().all()
-
-    conflicts = []
-
-    for i in range(len(entries)):
-        for j in range(i + 1, len(entries)):
-            a, b = entries[i], entries[j]
-
-            # Time overlap check
-            if a.start_time < b.end_time and a.end_time > b.start_time:
-                # Same field?
-                if a.field_id and a.field_id == b.field_id:
-                    conflicts.append({
-                        "type": "field_double_booking",
-                        "entry_a": str(a.id),
-                        "entry_b": str(b.id),
-                        "title_a": a.title,
-                        "title_b": b.title,
-                        "time": str(a.start_time),
-                    })
-
-                # Same team?
-                if a.team_id and (a.team_id == b.team_id or a.team_id == b.opponent_team_id):
-                    conflicts.append({
-                        "type": "team_double_booking",
-                        "entry_a": str(a.id),
-                        "entry_b": str(b.id),
-                        "title_a": a.title,
-                        "title_b": b.title,
-                        "time": str(a.start_time),
-                    })
-
-    return {"conflicts": conflicts, "total": len(conflicts)}
-
-
-# --- Validate Schedule ---
-@router.get("/api/organizations/{org_id}/schedules/validate")
-async def validate_schedule(org_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    """Validate entire schedule: check for field double-bookings and team same-day conflicts."""
-    entries = (await db.execute(
-        select(ScheduleEntry).where(
-            ScheduleEntry.org_id == org_id,
-            ScheduleEntry.status == "scheduled",
-        ).order_by(ScheduleEntry.start_time)
-    )).scalars().all()
-
-    conflicts = []
-
-    for i in range(len(entries)):
-        for j in range(i + 1, len(entries)):
-            a, b = entries[i], entries[j]
-
-            # Time overlap check
-            if a.start_time < b.end_time and a.end_time > b.start_time:
-                # Field double-booking
-                if a.field_id and a.field_id == b.field_id:
-                    conflicts.append({
-                        "type": "field_double_booking",
-                        "severity": "critical",
-                        "entry_a_id": str(a.id),
-                        "entry_b_id": str(b.id),
-                        "title_a": a.title,
-                        "title_b": b.title,
-                        "field_id": str(a.field_id),
-                        "time": str(a.start_time),
-                        "message": f"Field conflict: '{a.title}' and '{b.title}' overlap on the same field at {a.start_time}",
-                    })
-
-                # Team double-booking (same team in overlapping entries)
-                teams_a = {a.team_id, a.opponent_team_id} - {None}
-                teams_b = {b.team_id, b.opponent_team_id} - {None}
-                shared = teams_a & teams_b
-                if shared:
-                    conflicts.append({
-                        "type": "team_double_booking",
-                        "severity": "critical",
-                        "entry_a_id": str(a.id),
-                        "entry_b_id": str(b.id),
-                        "title_a": a.title,
-                        "title_b": b.title,
-                        "time": str(a.start_time),
-                        "message": f"Team conflict: '{a.title}' and '{b.title}' share a team in overlapping time slots",
-                    })
-
-            # Same-day team check (even non-overlapping — warn about team playing twice)
-            if a.start_time.date() == b.start_time.date() and a.entry_type == "game" and b.entry_type == "game":
-                teams_a = {a.team_id, a.opponent_team_id} - {None}
-                teams_b = {b.team_id, b.opponent_team_id} - {None}
-                shared = teams_a & teams_b
-                if shared and not (a.start_time < b.end_time and a.end_time > b.start_time):
-                    conflicts.append({
-                        "type": "team_same_day",
-                        "severity": "warning",
-                        "entry_a_id": str(a.id),
-                        "entry_b_id": str(b.id),
-                        "title_a": a.title,
-                        "title_b": b.title,
-                        "time": str(a.start_time.date()),
-                        "message": f"Same-day warning: A team plays in both '{a.title}' and '{b.title}' on {a.start_time.date()}",
-                    })
-
-    valid = len([c for c in conflicts if c["severity"] == "critical"]) == 0
-
-    return {
-        "valid": valid,
-        "total_entries": len(entries),
-        "total_conflicts": len(conflicts),
-        "critical": len([c for c in conflicts if c["severity"] == "critical"]),
-        "warnings": len([c for c in conflicts if c["severity"] == "warning"]),
-        "conflicts": conflicts,
-    }
-
-
-# --- Weather Cancel ---
 @router.post("/api/organizations/{org_id}/schedules/weather-cancel")
 async def weather_cancel_schedule(org_id: uuid.UUID, request: dict, db: AsyncSession = Depends(get_db)):
     """Cancel all outdoor events for a date."""

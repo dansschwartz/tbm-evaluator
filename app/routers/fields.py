@@ -36,6 +36,43 @@ async def list_fields(org_id: uuid.UUID, active: bool = True, db: AsyncSession =
     return [FieldResponse.model_validate(f) for f in result.scalars().all()]
 
 
+@router.get("/api/organizations/{org_id}/fields/availability")
+async def find_available_fields(
+    org_id: uuid.UUID,
+    date: str,
+    start: str = "16:00",
+    end: str = "20:00",
+    size: str = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Find available fields for a given date/time window."""
+    start_dt = datetime.fromisoformat(f"{date}T{start}:00")
+    end_dt = datetime.fromisoformat(f"{date}T{end}:00")
+
+    query = select(Field).where(Field.org_id == org_id, Field.active == True)
+    if size:
+        query = query.where(Field.size == size)
+    fields = (await db.execute(query)).scalars().all()
+
+    available = []
+    for field in fields:
+        conflicts = await db.execute(
+            select(FieldBooking).where(
+                FieldBooking.field_id == field.id,
+                FieldBooking.status != "cancelled",
+                FieldBooking.start_time < end_dt,
+                FieldBooking.end_time > start_dt,
+            )
+        )
+        if not conflicts.scalars().first():
+            available.append(FieldResponse.model_validate(field))
+
+    return available
+
+
+# --- Weekly Calendar ---
+
+
 @router.get("/api/organizations/{org_id}/fields/{field_id}", response_model=FieldResponse)
 async def get_field(org_id: uuid.UUID, field_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     field = (await db.execute(select(Field).where(Field.id == field_id, Field.org_id == org_id))).scalars().first()
@@ -125,41 +162,6 @@ async def delete_booking(field_id: uuid.UUID, booking_id: uuid.UUID, db: AsyncSe
 
 
 # --- Availability Search ---
-@router.get("/api/organizations/{org_id}/fields/availability")
-async def find_available_fields(
-    org_id: uuid.UUID,
-    date: str,
-    start: str = "16:00",
-    end: str = "20:00",
-    size: str = None,
-    db: AsyncSession = Depends(get_db),
-):
-    """Find available fields for a given date/time window."""
-    start_dt = datetime.fromisoformat(f"{date}T{start}:00")
-    end_dt = datetime.fromisoformat(f"{date}T{end}:00")
-
-    query = select(Field).where(Field.org_id == org_id, Field.active == True)
-    if size:
-        query = query.where(Field.size == size)
-    fields = (await db.execute(query)).scalars().all()
-
-    available = []
-    for field in fields:
-        conflicts = await db.execute(
-            select(FieldBooking).where(
-                FieldBooking.field_id == field.id,
-                FieldBooking.status != "cancelled",
-                FieldBooking.start_time < end_dt,
-                FieldBooking.end_time > start_dt,
-            )
-        )
-        if not conflicts.scalars().first():
-            available.append(FieldResponse.model_validate(field))
-
-    return available
-
-
-# --- Weekly Calendar ---
 @router.get("/api/organizations/{org_id}/fields/calendar")
 async def field_calendar(org_id: uuid.UUID, week: str, db: AsyncSession = Depends(get_db)):
     """Get weekly calendar of all field bookings."""

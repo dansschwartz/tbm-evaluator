@@ -63,6 +63,48 @@ async def list_messages(org_id: uuid.UUID, status: str = None, db: AsyncSession 
     return [MessageResponse.model_validate(m) for m in result.scalars().all()]
 
 
+@router.get("/api/organizations/{org_id}/messages/templates")
+async def get_message_templates(org_id: uuid.UUID):
+    """Get reusable message templates."""
+    return MESSAGE_TEMPLATES
+
+@router.post("/api/organizations/{org_id}/messages/ai-draft")
+async def ai_draft_message(org_id: uuid.UUID, req: AIDraftMessageRequest, db: AsyncSession = Depends(get_db)):
+    """AI drafts a message."""
+    prompt = f"""Draft a professional message for a youth sports club.
+
+Audience: {req.audience}
+Purpose: {req.purpose}
+Tone: {req.tone}
+Additional context: {req.context or 'None'}
+
+Respond in JSON:
+{{
+    "subject": "email subject",
+    "body": "plain text body",
+    "body_html": "<html formatted body>"
+}}
+
+Be warm, parent-friendly, and clear."""
+
+    try:
+        response = await call_openai([{"role": "user", "content": prompt}], max_tokens=1500)
+        start = response.find("{")
+        end = response.rfind("}") + 1
+        if start >= 0 and end > start:
+            return json.loads(response[start:end])
+    except Exception:
+        pass
+
+    return {
+        "subject": req.purpose,
+        "body": f"Dear {req.audience},\n\n{req.context or req.purpose}\n\nThank you,\nClub Administration",
+        "body_html": f"<p>Dear {req.audience},</p><p>{req.context or req.purpose}</p><p>Thank you,<br>Club Administration</p>",
+    }
+
+
+
+
 @router.get("/api/organizations/{org_id}/messages/{message_id}", response_model=MessageResponse)
 async def get_message(org_id: uuid.UUID, message_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     msg = (await db.execute(
@@ -169,42 +211,4 @@ async def send_message(org_id: uuid.UUID, message_id: uuid.UUID, db: AsyncSessio
     }
 
 
-@router.post("/api/organizations/{org_id}/messages/ai-draft")
-async def ai_draft_message(org_id: uuid.UUID, req: AIDraftMessageRequest, db: AsyncSession = Depends(get_db)):
-    """AI drafts a message."""
-    prompt = f"""Draft a professional message for a youth sports club.
 
-Audience: {req.audience}
-Purpose: {req.purpose}
-Tone: {req.tone}
-Additional context: {req.context or 'None'}
-
-Respond in JSON:
-{{
-    "subject": "email subject",
-    "body": "plain text body",
-    "body_html": "<html formatted body>"
-}}
-
-Be warm, parent-friendly, and clear."""
-
-    try:
-        response = await call_openai([{"role": "user", "content": prompt}], max_tokens=1500)
-        start = response.find("{")
-        end = response.rfind("}") + 1
-        if start >= 0 and end > start:
-            return json.loads(response[start:end])
-    except Exception:
-        pass
-
-    return {
-        "subject": req.purpose,
-        "body": f"Dear {req.audience},\n\n{req.context or req.purpose}\n\nThank you,\nClub Administration",
-        "body_html": f"<p>Dear {req.audience},</p><p>{req.context or req.purpose}</p><p>Thank you,<br>Club Administration</p>",
-    }
-
-
-@router.get("/api/organizations/{org_id}/messages/templates")
-async def get_message_templates(org_id: uuid.UUID):
-    """Get reusable message templates."""
-    return MESSAGE_TEMPLATES

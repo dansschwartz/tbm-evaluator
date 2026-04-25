@@ -565,15 +565,6 @@ async def list_events_by_season(
     ]
 
 
-@router.get("/api/organizations/{org_id}/seasons", dependencies=[Depends(verify_admin_key)])
-async def list_seasons(org_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    """Get distinct seasons for an org."""
-    result = await db.execute(
-        select(func.distinct(EvaluationEvent.season))
-        .where(EvaluationEvent.organization_id == org_id, EvaluationEvent.season.isnot(None))
-    )
-    seasons = [row[0] for row in result.all()]
-    return {"seasons": sorted(seasons)}
 
 
 # =====================================================================

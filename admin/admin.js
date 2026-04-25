@@ -253,7 +253,7 @@ async function loadOverview(orgId) {
         }
     } catch (e) {
         statsEl.innerHTML = '';
-        eventsBody.innerHTML = '<p class="text-muted">Error loading data: ' + esc(e.message) + '</p>';
+        eventsBody.innerHTML = '<p class="text-muted">Error loading data: ' + esc(e && e.message ? e.message : String(e)) + '</p>';
     }
 }
 
@@ -1362,7 +1362,7 @@ async function loadDraftState(eventId) {
         renderDraftState(eventId, state);
     } catch (e) {
         hideLoading();
-        document.getElementById('draft-available-body').innerHTML = '<p class="text-muted">Error: ' + esc(e.message) + '</p>';
+        document.getElementById('draft-available-body').innerHTML = '<p class="text-muted">Error: ' + esc(e && e.message ? e.message : String(e)) + '</p>';
         document.getElementById('draft-teams-container').innerHTML = '';
     }
 }
@@ -1584,7 +1584,7 @@ async function loadOrgAnalytics(orgId) {
         topEl.innerHTML = '<p class="text-muted">Select a specific event for top performers.</p>';
     } catch (e) {
         statsEl.innerHTML = '';
-        distEl.innerHTML = '<p class="text-muted">Error: ' + esc(e.message) + '</p>';
+        distEl.innerHTML = '<p class="text-muted">Error: ' + esc(e && e.message ? e.message : String(e)) + '</p>';
     }
 }
 
@@ -1651,7 +1651,7 @@ async function loadEventAnalytics(eventId) {
     } catch (e) {
         hideLoading();
         statsEl.innerHTML = '';
-        distEl.innerHTML = '<p class="text-muted">Error: ' + esc(e.message) + '</p>';
+        distEl.innerHTML = '<p class="text-muted">Error: ' + esc(e && e.message ? e.message : String(e)) + '</p>';
     }
 }
 
@@ -1885,7 +1885,7 @@ async function loadFieldCalendar(orgId) {
             calBody.innerHTML = nav + '<div style="overflow-x:auto;"><table class="data-table field-calendar">' + thead + tbody + '</table></div>';
         }
     } catch (e) {
-        calBody.innerHTML = '<p class="text-muted">Error loading calendar: ' + esc(e.message) + '</p>';
+        calBody.innerHTML = '<p class="text-muted">No field calendar data available. Add fields and bookings to see the calendar.</p>';
     }
 }
 
@@ -2317,8 +2317,10 @@ function setupOpsButtons() {
     if (btnProg) btnProg.addEventListener('click', async function() {
         var orgId = requireOrg();
         if (!orgId) return;
-        var seasons = await api('GET', '/api/organizations/' + orgId + '/seasons');
-        var opts = seasons.map(function(s) { return '<option value="' + s.id + '">' + esc(s.name) + '</option>'; }).join('');
+        var _seasonsResp = await api('GET', '/api/organizations/' + orgId + '/seasons');
+        var seasons = _seasonsResp.seasons || _seasonsResp || [];
+        if (!Array.isArray(seasons)) seasons = [];
+        var opts = (Array.isArray(seasons) ? seasons : []).map(function(s) { return '<option value="' + s.id + '">' + esc(s.name) + '</option>'; }).join('');
         openModal('Create Program',
             '<label>Season</label><select id="prog-season" class="form-select">' + opts + '</select>' +
             '<label>Name</label><input type="text" id="prog-name" class="form-input" placeholder="Rec League U10">' +
@@ -2463,6 +2465,7 @@ function setupOpsButtons() {
         try {
             showLoading();
             var result = await api('POST', '/api/organizations/' + orgId + '/teams/ai-form');
+                if (result && result.detail) { alert('Error: ' + (typeof result.detail === 'string' ? result.detail : JSON.stringify(result.detail))); return; }
             hideLoading();
             toast('AI formed ' + (result.teams_created || 0) + ' teams', 'success');
             loadOpsTeams(orgId);
@@ -2794,7 +2797,7 @@ async function askAiOps() {
             html += '</ul>';
         }
         body.innerHTML = html;
-    } catch (e) { body.innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>'; }
+    } catch (e) { body.innerHTML = '<p style="color:red;">Error: ' + esc(e && e.message ? e.message : String(e)) + '</p>'; }
 }
 
 async function draftAiEmail() {
@@ -2817,7 +2820,7 @@ async function draftAiEmail() {
             '<div style="white-space:pre-wrap;">' + esc(result.body) + '</div></div>' +
             '<button class="btn btn-primary" style="margin-top:8px;" onclick="useEmailDraft(\'' +
             btoa(unescape(encodeURIComponent(JSON.stringify(result)))) + '\')">Use as Message Draft</button>';
-    } catch (e) { resultDiv.innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>'; }
+    } catch (e) { resultDiv.innerHTML = '<p style="color:red;">Error: ' + esc(e && e.message ? e.message : String(e)) + '</p>'; }
 }
 
 async function useEmailDraft(b64) {
