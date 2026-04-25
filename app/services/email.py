@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 def send_email(to_email: str, subject: str, html_body: str) -> bool:
     if not settings.smtp_host:
-        logger.warning(f"SMTP not configured. Would send to {to_email}: {subject}")
-        return False
+        logger.warning(f"SMTP not configured — dry run. Would send to {to_email}: {subject}")
+        return True  # Dry-run mode: log and report success so messages get marked sent
 
     try:
         msg = MIMEMultipart("alternative")

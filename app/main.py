@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
+from sqlalchemy import text
+
 from app.config import settings
 from app.database import engine
 from app.models import Base, EvaluationTemplate, Organization
@@ -69,8 +71,46 @@ app.mount("/parent/static", StaticFiles(directory="parent"), name="parent_static
 app.mount("/self-assess/static", StaticFiles(directory="selfassess"), name="selfassess_static")
 
 
+async def run_migrations(conn):
+    """Add new columns to existing tables. Safe to run repeatedly."""
+    migrations = [
+        "ALTER TABLE organizations ADD COLUMN IF NOT EXISTS webhook_url VARCHAR(500)",
+        "ALTER TABLE evaluation_templates ADD COLUMN IF NOT EXISTS position_overrides JSONB",
+        "ALTER TABLE evaluation_templates ADD COLUMN IF NOT EXISTS position_profiles JSONB",
+        "ALTER TABLE evaluation_events ADD COLUMN IF NOT EXISTS season VARCHAR(100)",
+        "ALTER TABLE evaluation_events ADD COLUMN IF NOT EXISTS draft_settings JSONB",
+        "ALTER TABLE event_players ADD COLUMN IF NOT EXISTS checked_in_at TIMESTAMP",
+        "ALTER TABLE event_players ADD COLUMN IF NOT EXISTS general_notes TEXT",
+        "ALTER TABLE event_players ADD COLUMN IF NOT EXISTS self_assessment JSONB",
+        "ALTER TABLE event_players ADD COLUMN IF NOT EXISTS voice_recordings JSONB",
+        "ALTER TABLE player_reports ADD COLUMN IF NOT EXISTS weighted_overall_score FLOAT",
+        "ALTER TABLE player_reports ADD COLUMN IF NOT EXISTS ai_progress_narrative TEXT",
+        "ALTER TABLE players ADD COLUMN IF NOT EXISTS height_inches INTEGER",
+        "ALTER TABLE players ADD COLUMN IF NOT EXISTS weight_lbs INTEGER",
+        "ALTER TABLE players ADD COLUMN IF NOT EXISTS dominant_foot VARCHAR(10)",
+        "ALTER TABLE players ADD COLUMN IF NOT EXISTS years_playing INTEGER",
+        "ALTER TABLE players ADD COLUMN IF NOT EXISTS school VARCHAR(255)",
+        "ALTER TABLE players ADD COLUMN IF NOT EXISTS medical_notes TEXT",
+        "ALTER TABLE evaluators ADD COLUMN IF NOT EXISTS certifications JSONB",
+        "ALTER TABLE evaluators ADD COLUMN IF NOT EXISTS availability JSONB",
+        "ALTER TABLE evaluators ADD COLUMN IF NOT EXISTS background_check_status VARCHAR(50)",
+        "ALTER TABLE evaluators ADD COLUMN IF NOT EXISTS volunteer_hours FLOAT",
+        "ALTER TABLE evaluators ADD COLUMN IF NOT EXISTS phone VARCHAR(50)",
+    ]
+    for sql in migrations:
+        try:
+            await conn.execute(text(sql))
+        except Exception:
+            pass  # Column already exists or table doesn't exist yet
+
+
 @app.on_event("startup")
 async def startup():
+    logger.info("Running migrations...")
+    async with engine.begin() as conn:
+        await run_migrations(conn)
+    logger.info("Migrations complete.")
+
     logger.info("Creating database tables...")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

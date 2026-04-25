@@ -105,14 +105,15 @@ document.getElementById('modal-overlay').addEventListener('click', function(e) {
 // ---- NAVIGATION ----
 const navItems = document.querySelectorAll('.nav-item');
 const sections = ['overview', 'organizations', 'templates', 'events', 'players', 'reports', 'draft', 'analytics',
-    'ops-overview', 'ops-seasons', 'ops-teams', 'ops-fields', 'ops-schedule', 'ops-coaches', 'ops-comms', 'ops-import', 'ops-ai'];
+    'ops-overview', 'ops-seasons', 'ops-teams', 'ops-fields', 'ops-schedule', 'ops-coaches', 'ops-comms', 'ops-attendance', 'ops-documents', 'ops-import', 'ops-ai'];
 
 const SECTION_TITLES = {
     'overview': 'Overview', 'organizations': 'Organizations', 'templates': 'Templates',
     'events': 'Events', 'players': 'Players', 'reports': 'Reports', 'draft': 'Draft', 'analytics': 'Analytics',
     'ops-overview': 'Operations Dashboard', 'ops-seasons': 'Seasons & Programs', 'ops-teams': 'Teams',
     'ops-fields': 'Fields & Facilities', 'ops-schedule': 'Schedule', 'ops-coaches': 'Coaches & Staff',
-    'ops-comms': 'Communications', 'ops-import': 'PlayMetrics Import', 'ops-ai': 'AI Assistant',
+    'ops-comms': 'Communications', 'ops-attendance': 'Attendance', 'ops-documents': 'Documents',
+    'ops-import': 'PlayMetrics Import', 'ops-ai': 'AI Assistant',
 };
 
 function navigateTo(section) {
@@ -147,6 +148,8 @@ function navigateTo(section) {
     else if (section === 'ops-schedule') loadOpsSchedule(orgId);
     else if (section === 'ops-coaches') loadOpsCoaches(orgId);
     else if (section === 'ops-comms') loadOpsComms(orgId);
+    else if (section === 'ops-attendance') loadOpsAttendance(orgId);
+    else if (section === 'ops-documents') loadOpsDocuments(orgId);
     else if (section === 'ops-import') loadOpsImport(orgId);
     else if (section === 'ops-ai') { /* static, no load needed */ }
 }
@@ -1755,6 +1758,8 @@ async function loadOpsTeams(orgId) {
 }
 
 // --- Fields ---
+var fieldCalendarWeekOffset = 0;
+
 async function loadOpsFields(orgId) {
     if (!orgId) return;
     try {
@@ -1764,10 +1769,123 @@ async function loadOpsFields(orgId) {
             return '<tr><td>' + esc(f.name) + '</td><td>' + esc(f.location_address || '-') + '</td>' +
                 '<td>' + esc(f.surface_type || '-') + '</td><td>' + esc(f.size || '-') + '</td>' +
                 '<td>' + (f.has_lights ? 'Yes' : 'No') + '</td>' +
-                '<td><button class="btn btn-sm btn-outline" onclick="deleteOpsFieldItem(\'' + f.id + '\')">Delete</button></td></tr>';
+                '<td class="btn-group">' +
+                    '<button class="btn btn-xs btn-outline" onclick="editFieldItem(\'' + f.id + '\')">Edit</button>' +
+                    '<button class="btn btn-xs btn-danger" onclick="deleteOpsFieldItem(\'' + f.id + '\')">Delete</button>' +
+                '</td></tr>';
         }).join('');
+
+        loadFieldCalendar(orgId);
     } catch (e) {
         toast('Error: ' + e.message, 'error');
+    }
+}
+
+async function editFieldItem(fieldId) {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        showLoading();
+        var fields = await api('GET', '/api/organizations/' + orgId + '/fields');
+        hideLoading();
+        var f = fields.find(function(x) { return x.id === fieldId; });
+        if (!f) { toast('Field not found', 'error'); return; }
+        openModal('Edit Field',
+            '<label>Name</label><input type="text" id="field-edit-name" class="form-input" value="' + esc(f.name) + '">' +
+            '<label>Address</label><input type="text" id="field-edit-address" class="form-input" value="' + esc(f.location_address || '') + '">' +
+            '<label>Surface</label><select id="field-edit-surface" class="form-select"><option value="grass"' + (f.surface_type === 'grass' ? ' selected' : '') + '>Grass</option><option value="turf"' + (f.surface_type === 'turf' ? ' selected' : '') + '>Turf</option><option value="indoor"' + (f.surface_type === 'indoor' ? ' selected' : '') + '>Indoor</option></select>' +
+            '<label>Size</label><select id="field-edit-size" class="form-select"><option value="full"' + (f.size === 'full' ? ' selected' : '') + '>Full</option><option value="3_4"' + (f.size === '3_4' ? ' selected' : '') + '>3/4</option><option value="half"' + (f.size === 'half' ? ' selected' : '') + '>Half</option><option value="small"' + (f.size === 'small' ? ' selected' : '') + '>Small</option></select>' +
+            '<label><input type="checkbox" id="field-edit-lights"' + (f.has_lights ? ' checked' : '') + '> Has Lights</label>' +
+            '<label>Permitted Hours</label><input type="text" id="field-edit-hours" class="form-input" placeholder="e.g. 8:00-21:00" value="' + esc(f.permitted_hours || '') + '">',
+            '<button class="btn btn-primary" onclick="submitEditField(\'' + fieldId + '\')">Save</button><button class="btn btn-outline" onclick="closeModal()">Cancel</button>'
+        );
+    } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+async function submitEditField(fieldId) {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        await api('PATCH', '/api/organizations/' + orgId + '/fields/' + fieldId, {
+            name: document.getElementById('field-edit-name').value,
+            location_address: document.getElementById('field-edit-address').value || null,
+            surface_type: document.getElementById('field-edit-surface').value,
+            size: document.getElementById('field-edit-size').value,
+            has_lights: document.getElementById('field-edit-lights').checked,
+            permitted_hours: document.getElementById('field-edit-hours').value || null,
+        });
+        closeModal();
+        toast('Field updated', 'success');
+        loadOpsFields(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function loadFieldCalendar(orgId) {
+    var calBody = document.getElementById('field-calendar-body');
+    if (!orgId) { calBody.innerHTML = '<p class="text-muted">Select an organization.</p>'; return; }
+
+    var today = new Date();
+    var monday = new Date(today);
+    monday.setDate(today.getDate() - today.getDay() + 1 + (fieldCalendarWeekOffset * 7));
+    var sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    var startStr = monday.toISOString().split('T')[0];
+    var endStr = sunday.toISOString().split('T')[0];
+
+    try {
+        var [fields, entries] = await Promise.all([
+            api('GET', '/api/organizations/' + orgId + '/fields'),
+            api('GET', '/api/organizations/' + orgId + '/schedules/calendar?start=' + startStr + '&end=' + endStr),
+        ]);
+
+        var dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        var dayDates = [];
+        for (var d = 0; d < 7; d++) {
+            var dd = new Date(monday);
+            dd.setDate(monday.getDate() + d);
+            dayDates.push(dd.toISOString().split('T')[0]);
+        }
+
+        var nav = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">' +
+            '<button class="btn btn-sm btn-outline" onclick="fieldCalendarWeekOffset--;loadFieldCalendar(\'' + orgId + '\')">&larr; Prev</button>' +
+            '<strong>' + startStr + ' to ' + endStr + '</strong>' +
+            '<button class="btn btn-sm btn-outline" onclick="fieldCalendarWeekOffset++;loadFieldCalendar(\'' + orgId + '\')">&rarr; Next</button>' +
+            '</div>';
+
+        var thead = '<thead><tr><th>Field</th>' + dayNames.map(function(dn, i) {
+            return '<th>' + dn + '<br><small>' + dayDates[i].substring(5) + '</small></th>';
+        }).join('') + '</tr></thead>';
+
+        var tbody = '<tbody>';
+        fields.forEach(function(field) {
+            tbody += '<tr><td><strong>' + esc(field.name) + '</strong></td>';
+            dayDates.forEach(function(dateStr) {
+                var dayEntries = entries.filter(function(e) {
+                    return e.field_id === field.id && e.start_time && e.start_time.substring(0, 10) === dateStr;
+                });
+                var cellHtml = '';
+                dayEntries.forEach(function(e) {
+                    var colorMap = { practice: '#3498db', game: '#27ae60', tournament: '#e67e22', cancelled: '#e74c3c' };
+                    var color = colorMap[e.entry_type] || '#6c757d';
+                    if (e.status === 'cancelled') color = '#e74c3c';
+                    var time = new Date(e.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    cellHtml += '<div class="cal-slot" style="background:' + color + ';color:#fff;padding:2px 4px;border-radius:3px;margin-bottom:2px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+                        time + ' ' + esc(e.team_name || e.title || e.entry_type) + '</div>';
+                });
+                tbody += '<td style="vertical-align:top;min-width:100px;">' + (cellHtml || '<span style="color:#ccc;font-size:11px;">-</span>') + '</td>';
+            });
+            tbody += '</tr>';
+        });
+        tbody += '</tbody>';
+
+        if (fields.length === 0) {
+            calBody.innerHTML = nav + '<p class="text-muted">No fields created yet.</p>';
+        } else {
+            calBody.innerHTML = nav + '<div style="overflow-x:auto;"><table class="data-table field-calendar">' + thead + tbody + '</table></div>';
+        }
+    } catch (e) {
+        calBody.innerHTML = '<p class="text-muted">Error loading calendar: ' + esc(e.message) + '</p>';
     }
 }
 
@@ -1783,12 +1901,16 @@ async function loadOpsSchedule(orgId) {
         var tbody = document.getElementById('schedule-table-body');
         tbody.innerHTML = entries.map(function(e) {
             var dt = new Date(e.start_time);
+            var typeColor = e.entry_type === 'game' ? 'badge-active' : e.entry_type === 'practice' ? 'badge-scoring' : 'badge-draft';
             return '<tr><td>' + dt.toLocaleDateString() + '</td><td>' + dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</td>' +
-                '<td>' + esc(e.entry_type) + '</td><td>' + esc(e.title || '-') + '</td>' +
+                '<td><span class="badge ' + typeColor + '">' + esc(e.entry_type) + '</span></td><td>' + esc(e.title || '-') + '</td>' +
                 '<td>' + esc(e.field_name || '-') + '</td>' +
-                '<td><span class="badge badge-' + (e.status === 'scheduled' ? 'success' : e.status === 'cancelled' ? 'danger' : 'default') + '">' + esc(e.status) + '</span></td>' +
-                '<td><button class="btn btn-sm btn-outline" onclick="deleteOpsScheduleItem(\'' + e.id + '\')">Delete</button></td></tr>';
+                '<td><span class="badge badge-' + (e.status === 'scheduled' ? 'active' : e.status === 'cancelled' ? 'no' : 'draft') + '">' + esc(e.status) + '</span></td>' +
+                '<td><button class="btn btn-xs btn-danger" onclick="deleteOpsScheduleItem(\'' + e.id + '\')">Delete</button></td></tr>';
         }).join('');
+        if (entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No schedule entries in the next 90 days.</td></tr>';
+        }
     } catch (e) {
         toast('Error: ' + e.message, 'error');
     }
@@ -1820,7 +1942,9 @@ async function loadOpsComms(orgId) {
     try {
         var msgs = await api('GET', '/api/organizations/' + orgId + '/messages');
         var tbody = document.getElementById('messages-table-body');
-        tbody.innerHTML = msgs.map(function(m) {
+        // Show SMTP warning at top of table
+        var smtpNote = '<tr><td colspan="7" style="background:#fff3cd;color:#856404;font-size:12px;padding:8px 12px;border-left:3px solid #ffc107;">Note: SMTP not configured — emails are logged in dry-run mode. Configure SMTP_HOST env var to enable real sending.</td></tr>';
+        tbody.innerHTML = smtpNote + msgs.map(function(m) {
             return '<tr><td>' + esc(m.subject || '(no subject)') + '</td><td>' + esc(m.audience_type) + '</td>' +
                 '<td>' + esc(m.channel) + '</td>' +
                 '<td><span class="badge badge-' + (m.status === 'sent' ? 'success' : m.status === 'draft' ? 'default' : 'warning') + '">' + esc(m.status) + '</span></td>' +
@@ -1951,6 +2075,229 @@ async function saveCerts(coachId) {
     } catch (e) { toast('Invalid JSON or error: ' + e.message, 'error'); }
 }
 
+// --- Attendance ---
+async function loadOpsAttendance(orgId) {
+    if (!orgId) return;
+    try {
+        var teams = await api('GET', '/api/organizations/' + orgId + '/teams');
+        var teamSelect = document.getElementById('attendance-team-select');
+        teamSelect.innerHTML = '<option value="">-- Select Team --</option>' +
+            teams.map(function(t) { return '<option value="' + t.id + '">' + esc(t.name) + '</option>'; }).join('');
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+document.getElementById('attendance-team-select').addEventListener('change', async function() {
+    var teamId = this.value;
+    var entrySelect = document.getElementById('attendance-entry-select');
+    var orgId = getSelectedOrg();
+    if (!teamId || !orgId) {
+        entrySelect.innerHTML = '<option value="">-- Select Schedule Entry --</option>';
+        return;
+    }
+    try {
+        var entries = await api('GET', '/api/organizations/' + orgId + '/schedules?team_id=' + teamId);
+        entrySelect.innerHTML = '<option value="">-- Select Schedule Entry --</option>' +
+            entries.map(function(e) {
+                var dt = e.start_time ? new Date(e.start_time).toLocaleDateString() : '';
+                return '<option value="' + e.id + '">' + esc(e.title || e.entry_type) + ' — ' + dt + '</option>';
+            }).join('');
+
+        // Load team attendance stats
+        try {
+            var stats = await api('GET', '/api/organizations/' + orgId + '/teams/' + teamId + '/attendance-stats');
+            var statsBody = document.getElementById('attendance-stats-body');
+            if (stats.players && stats.players.length > 0) {
+                var rows = stats.players.map(function(p) {
+                    var pct = p.total > 0 ? Math.round((p.present / p.total) * 100) : 0;
+                    var color = pct >= 80 ? '#27ae60' : pct >= 50 ? '#f39c12' : '#e74c3c';
+                    return '<tr><td>' + esc(p.player_name) + '</td>' +
+                        '<td>' + p.present + '/' + p.total + '</td>' +
+                        '<td><div style="display:flex;align-items:center;gap:8px;"><div style="width:60px;height:8px;background:#eee;border-radius:4px;"><div style="width:' + pct + '%;height:100%;background:' + color + ';border-radius:4px;"></div></div><span style="font-size:12px;font-weight:600;color:' + color + ';">' + pct + '%</span></div></td></tr>';
+                }).join('');
+                statsBody.innerHTML = '<table class="data-table"><thead><tr><th>Player</th><th>Present/Total</th><th>Rate</th></tr></thead><tbody>' + rows + '</tbody></table>';
+            } else {
+                statsBody.innerHTML = '<p class="text-muted">No attendance data yet.</p>';
+            }
+        } catch (_) {
+            document.getElementById('attendance-stats-body').innerHTML = '<p class="text-muted">Could not load stats.</p>';
+        }
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+});
+
+document.getElementById('attendance-entry-select').addEventListener('change', async function() {
+    var entryId = this.value;
+    var teamId = document.getElementById('attendance-team-select').value;
+    var rosterBody = document.getElementById('attendance-roster-body');
+    var orgId = getSelectedOrg();
+    if (!entryId || !teamId) {
+        rosterBody.innerHTML = '<p class="text-muted">Select a schedule entry to mark attendance.</p>';
+        return;
+    }
+    try {
+        showLoading();
+        var [roster, existing] = await Promise.all([
+            api('GET', '/api/teams/' + teamId + '/roster'),
+            api('GET', '/api/schedules/' + entryId + '/attendance').catch(function() { return []; }),
+        ]);
+        hideLoading();
+
+        var existingMap = {};
+        (existing || []).forEach(function(a) { existingMap[a.player_id] = a.status; });
+
+        if (roster.length === 0) {
+            rosterBody.innerHTML = '<p class="text-muted">No players on this team roster.</p>';
+            return;
+        }
+
+        var rows = roster.map(function(r) {
+            var isPresent = existingMap[r.player_id] === 'present';
+            var isAbsent = existingMap[r.player_id] === 'absent';
+            return '<tr>' +
+                '<td>' + esc(r.player_name) + '</td>' +
+                '<td>' + esc(r.position || '-') + '</td>' +
+                '<td>' +
+                    '<label style="cursor:pointer;margin-right:12px;"><input type="radio" name="att-' + r.player_id + '" value="present" ' + (isPresent || !existingMap[r.player_id] ? '' : '') + (isPresent ? 'checked' : '') + '> Present</label>' +
+                    '<label style="cursor:pointer;"><input type="radio" name="att-' + r.player_id + '" value="absent" ' + (isAbsent ? 'checked' : '') + '> Absent</label>' +
+                '</td></tr>';
+        }).join('');
+
+        rosterBody.innerHTML = '<table class="data-table"><thead><tr><th>Player</th><th>Position</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+            '<button class="btn btn-primary" style="margin-top:12px;" onclick="submitAttendance(\'' + entryId + '\')">Submit Attendance</button>';
+    } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+});
+
+async function submitAttendance(entryId) {
+    var radios = document.querySelectorAll('input[name^="att-"]:checked');
+    var records = [];
+    radios.forEach(function(r) {
+        var playerId = r.name.replace('att-', '');
+        records.push({ player_id: playerId, status: r.value });
+    });
+    if (records.length === 0) { toast('Mark at least one player', 'warning'); return; }
+    try {
+        showLoading();
+        await api('POST', '/api/schedules/' + entryId + '/attendance', { records: records });
+        hideLoading();
+        toast('Attendance submitted for ' + records.length + ' players', 'success');
+    } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+// --- Documents ---
+async function loadOpsDocuments(orgId) {
+    if (!orgId) return;
+    try {
+        var players = await api('GET', '/api/organizations/' + orgId + '/players?active=true');
+        var playerSelect = document.getElementById('docs-player-select');
+        playerSelect.innerHTML = '<option value="">-- Select Player --</option>' +
+            players.map(function(p) { return '<option value="' + p.id + '">' + esc(p.first_name + ' ' + p.last_name) + '</option>'; }).join('');
+
+        // Load missing documents alert
+        try {
+            var missing = await api('GET', '/api/organizations/' + orgId + '/documents/missing');
+            var missingBody = document.getElementById('docs-missing-body');
+            if (missing.players && missing.players.length > 0) {
+                var html = '<div style="max-height:300px;overflow-y:auto;">';
+                missing.players.forEach(function(p) {
+                    html += '<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px;">' +
+                        '<strong>' + esc(p.player_name) + '</strong>: missing ' +
+                        '<span style="color:#e74c3c;">' + esc((p.missing_types || []).join(', ')) + '</span></div>';
+                });
+                html += '</div>';
+                missingBody.innerHTML = html;
+            } else {
+                missingBody.innerHTML = '<p class="text-muted" style="color:#27ae60;">All players have required documents.</p>';
+            }
+        } catch (_) {
+            document.getElementById('docs-missing-body').innerHTML = '<p class="text-muted">Could not check missing documents.</p>';
+        }
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+document.getElementById('docs-player-select').addEventListener('change', async function() {
+    var playerId = this.value;
+    var tbody = document.getElementById('docs-table-body');
+    if (!playerId) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Select a player to view documents.</td></tr>';
+        return;
+    }
+    try {
+        var docs = await api('GET', '/api/players/' + playerId + '/documents');
+        if (docs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No documents uploaded.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = docs.map(function(d) {
+            return '<tr><td>' + esc(d.player_name || '-') + '</td><td>' + esc(d.document_type) + '</td>' +
+                '<td>' + esc(d.file_name || '-') + '</td>' +
+                '<td><span class="badge badge-' + (d.verified ? 'yes' : 'no') + '">' + (d.verified ? 'Verified' : 'Unverified') + '</span></td>' +
+                '<td>' + esc(d.expiry_date || 'N/A') + '</td>' +
+                '<td class="btn-group">' +
+                    '<button class="btn btn-xs btn-outline" onclick="verifyDoc(\'' + d.id + '\',\'' + playerId + '\')">Verify</button>' +
+                    '<button class="btn btn-xs btn-danger" onclick="deleteDoc(\'' + d.id + '\',\'' + playerId + '\')">Delete</button>' +
+                '</td></tr>';
+        }).join('');
+    } catch (e) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Error: ' + esc(e.message) + '</td></tr>'; }
+});
+
+document.getElementById('btn-upload-doc').addEventListener('click', function() {
+    var playerId = document.getElementById('docs-player-select').value;
+    if (!playerId) { toast('Select a player first', 'warning'); return; }
+    openModal('Upload Document',
+        '<label>Document Type</label><select id="doc-type" class="form-select"><option value="waiver">Waiver</option><option value="medical">Medical Form</option><option value="birth_cert">Birth Certificate</option><option value="photo_id">Photo ID</option><option value="other">Other</option></select>' +
+        '<label>File Name</label><input type="text" id="doc-filename" class="form-input" placeholder="e.g. medical_form.pdf">' +
+        '<label>Expiry Date (optional)</label><input type="date" id="doc-expiry" class="form-input">' +
+        '<label>File</label><input type="file" id="doc-file" class="form-input">',
+        '<button class="btn btn-primary" onclick="submitUploadDoc(\'' + playerId + '\')">Upload</button><button class="btn btn-outline" onclick="closeModal()">Cancel</button>'
+    );
+});
+
+async function submitUploadDoc(playerId) {
+    var fileInput = document.getElementById('doc-file');
+    var file = fileInput.files[0];
+    var fileName = document.getElementById('doc-filename').value || (file ? file.name : 'document');
+
+    var fileData = '';
+    if (file) {
+        fileData = await new Promise(function(resolve) {
+            var reader = new FileReader();
+            reader.onload = function() { resolve(reader.result.split(',')[1]); };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    try {
+        showLoading();
+        await api('POST', '/api/players/' + playerId + '/documents', {
+            document_type: document.getElementById('doc-type').value,
+            file_name: fileName,
+            file_data: fileData,
+            expiry_date: document.getElementById('doc-expiry').value || null,
+        });
+        hideLoading();
+        closeModal();
+        toast('Document uploaded', 'success');
+        // Trigger reload
+        document.getElementById('docs-player-select').dispatchEvent(new Event('change'));
+    } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+async function verifyDoc(docId, playerId) {
+    try {
+        await api('PATCH', '/api/documents/' + docId, { verified: true });
+        toast('Document verified', 'success');
+        document.getElementById('docs-player-select').dispatchEvent(new Event('change'));
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function deleteDoc(docId, playerId) {
+    if (!confirm('Delete this document?')) return;
+    try {
+        await api('DELETE', '/api/documents/' + docId);
+        toast('Document deleted', 'success');
+        document.getElementById('docs-player-select').dispatchEvent(new Event('change'));
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
 // --- Create Modals ---
 function setupOpsButtons() {
     // Season create
@@ -2008,6 +2355,29 @@ function setupOpsButtons() {
         );
     });
 
+    // Schedule entry create
+    var btnSchedule = document.getElementById('btn-create-schedule');
+    if (btnSchedule) btnSchedule.addEventListener('click', async function() {
+        var orgId = requireOrg();
+        if (!orgId) return;
+        var [teams, fieldsData] = await Promise.all([
+            api('GET', '/api/organizations/' + orgId + '/teams').catch(function() { return []; }),
+            api('GET', '/api/organizations/' + orgId + '/fields').catch(function() { return []; }),
+        ]);
+        var teamOpts = '<option value="">-- None --</option>' + teams.map(function(t) { return '<option value="' + t.id + '">' + esc(t.name) + '</option>'; }).join('');
+        var fieldOpts = '<option value="">-- None --</option>' + fieldsData.map(function(f) { return '<option value="' + f.id + '">' + esc(f.name) + '</option>'; }).join('');
+        openModal('Create Schedule Entry',
+            '<label>Type</label><select id="sched-type" class="form-select"><option value="game">Game</option><option value="practice">Practice</option><option value="tournament">Tournament</option><option value="meeting">Meeting</option></select>' +
+            '<label>Title</label><input type="text" id="sched-title" class="form-input" placeholder="e.g. U12 Blue vs Red">' +
+            '<label>Team</label><select id="sched-team" class="form-select">' + teamOpts + '</select>' +
+            '<label>Opponent Team</label><select id="sched-opponent" class="form-select">' + teamOpts + '</select>' +
+            '<label>Field</label><select id="sched-field" class="form-select">' + fieldOpts + '</select>' +
+            '<div class="form-row"><div class="form-group"><label>Start</label><input type="datetime-local" id="sched-start" class="form-input"></div>' +
+            '<div class="form-group"><label>End</label><input type="datetime-local" id="sched-end" class="form-input"></div></div>',
+            '<button class="btn btn-primary" onclick="createScheduleEntry()">Create</button><button class="btn btn-outline" onclick="closeModal()">Cancel</button>'
+        );
+    });
+
     // Compose message
     var btnCompose = document.getElementById('btn-compose-message');
     if (btnCompose) btnCompose.addEventListener('click', function() {
@@ -2038,6 +2408,145 @@ function setupOpsButtons() {
             document.getElementById('ai-question-input').value = this.getAttribute('data-q');
             askAiOps();
         });
+    });
+
+    // Expiring certs
+    var btnExpCerts = document.getElementById('btn-expiring-certs');
+    if (btnExpCerts) btnExpCerts.addEventListener('click', async function() {
+        var orgId = requireOrg();
+        if (!orgId) return;
+        try {
+            showLoading();
+            var result = await api('GET', '/api/organizations/' + orgId + '/coaches/expiring-certifications?days=60');
+            hideLoading();
+            if (result.length === 0) {
+                toast('No certifications expiring in the next 60 days', 'success');
+                return;
+            }
+            var html = '<p><strong>' + result.length + ' expiring certification(s):</strong></p>';
+            result.forEach(function(c) {
+                html += '<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px;">' +
+                    '<strong>' + esc(c.coach_name) + '</strong>: ' + esc(c.certification_name) + ' expires ' +
+                    '<span style="color:#e74c3c;">' + esc(c.expiry_date) + '</span></div>';
+            });
+            openModal('Expiring Certifications', html);
+        } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+    });
+
+    // AI assign coaches
+    var btnAiAssign = document.getElementById('btn-ai-assign-coaches');
+    if (btnAiAssign) btnAiAssign.addEventListener('click', async function() {
+        var orgId = requireOrg();
+        if (!orgId) return;
+        try {
+            showLoading();
+            var result = await api('POST', '/api/organizations/' + orgId + '/coaches/ai-assign');
+            hideLoading();
+            var html = '<p><strong>AI Coach Assignments:</strong></p>';
+            if (result.assignments && result.assignments.length > 0) {
+                result.assignments.forEach(function(a) {
+                    html += '<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px;">' +
+                        esc(a.coach_name) + ' &rarr; ' + esc(a.team_name) + ' <small style="color:#888;">(' + esc(a.reason || '') + ')</small></div>';
+                });
+            } else {
+                html += '<p class="text-muted">No assignments suggested.</p>';
+            }
+            openModal('AI Coach Assignments', html);
+        } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+    });
+
+    // AI form teams
+    var btnAiFormTeams = document.getElementById('btn-ai-form-teams');
+    if (btnAiFormTeams) btnAiFormTeams.addEventListener('click', async function() {
+        var orgId = requireOrg();
+        if (!orgId) return;
+        try {
+            showLoading();
+            var result = await api('POST', '/api/organizations/' + orgId + '/teams/ai-form');
+            hideLoading();
+            toast('AI formed ' + (result.teams_created || 0) + ' teams', 'success');
+            loadOpsTeams(orgId);
+        } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+    });
+
+    // Generate games
+    var btnGenGames = document.getElementById('btn-generate-games');
+    if (btnGenGames) btnGenGames.addEventListener('click', async function() {
+        var orgId = requireOrg();
+        if (!orgId) return;
+        try {
+            var teams = await api('GET', '/api/organizations/' + orgId + '/teams');
+            if (teams.length < 2) { toast('Need at least 2 teams', 'warning'); return; }
+            var fields = await api('GET', '/api/organizations/' + orgId + '/fields');
+            var teamIds = teams.map(function(t) { return t.id; });
+            var fieldIds = fields.map(function(f) { return f.id; });
+            showLoading();
+            var result = await api('POST', '/api/organizations/' + orgId + '/schedules/generate-games', {
+                team_ids: teamIds,
+                available_field_ids: fieldIds.length > 0 ? fieldIds : null,
+                games_per_team: 6,
+                game_duration_minutes: 90,
+            });
+            hideLoading();
+            toast('Generated ' + result.games_scheduled + ' games!', 'success');
+            loadOpsSchedule(orgId);
+        } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+    });
+
+    // Generate practices
+    var btnGenPractices = document.getElementById('btn-generate-practices');
+    if (btnGenPractices) btnGenPractices.addEventListener('click', async function() {
+        var orgId = requireOrg();
+        if (!orgId) return;
+        try {
+            var teams = await api('GET', '/api/organizations/' + orgId + '/teams');
+            if (teams.length === 0) { toast('No teams found', 'warning'); return; }
+            var fields = await api('GET', '/api/organizations/' + orgId + '/fields');
+            var today = new Date();
+            var endDate = new Date(today.getTime() + 60 * 86400000);
+            showLoading();
+            var result = await api('POST', '/api/organizations/' + orgId + '/schedules/generate-practices', {
+                team_ids: teams.map(function(t) { return t.id; }),
+                field_ids: fields.map(function(f) { return f.id; }),
+                start_date: today.toISOString().split('T')[0],
+                end_date: endDate.toISOString().split('T')[0],
+                practices_per_week: 2,
+                duration_minutes: 90,
+            });
+            hideLoading();
+            toast('Generated ' + result.practices_scheduled + ' practices!', 'success');
+            loadOpsSchedule(orgId);
+        } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+    });
+
+    // Message templates
+    var btnMsgTemplates = document.getElementById('btn-msg-templates');
+    if (btnMsgTemplates) btnMsgTemplates.addEventListener('click', async function() {
+        var orgId = requireOrg();
+        if (!orgId) return;
+        try {
+            var templates = await api('GET', '/api/organizations/' + orgId + '/messages/templates');
+            var html = '<p>Click a template to use it:</p>';
+            templates.forEach(function(t) {
+                html += '<div style="padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:6px;cursor:pointer;" onclick="useMsgTemplate(\'' + btoa(unescape(encodeURIComponent(JSON.stringify(t)))) + '\')">' +
+                    '<strong>' + esc(t.name) + '</strong><br><small style="color:#888;">' + esc(t.description || '') + '</small></div>';
+            });
+            openModal('Message Templates', html);
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+    });
+
+    // AI draft message
+    var btnAiDraft = document.getElementById('btn-ai-draft-msg');
+    if (btnAiDraft) btnAiDraft.addEventListener('click', async function() {
+        var orgId = requireOrg();
+        if (!orgId) return;
+        openModal('AI Draft Message',
+            '<label>Audience</label><input type="text" id="ai-msg-audience" class="form-input" placeholder="e.g. All parents">' +
+            '<label>Purpose</label><input type="text" id="ai-msg-purpose" class="form-input" placeholder="e.g. Weather cancellation">' +
+            '<label>Tone</label><select id="ai-msg-tone" class="form-select"><option>professional</option><option>friendly</option><option>urgent</option></select>' +
+            '<label>Context</label><textarea id="ai-msg-context" class="form-input" style="height:80px;width:100%;"></textarea>',
+            '<button class="btn btn-primary" onclick="aiDraftMessage()">Generate Draft</button>'
+        );
     });
 
     // Weather cancel
@@ -2159,6 +2668,63 @@ async function createMessage() {
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
 
+function useMsgTemplate(b64) {
+    try {
+        var t = JSON.parse(decodeURIComponent(escape(atob(b64))));
+        closeModal();
+        openModal('Compose Message',
+            '<label>Subject</label><input type="text" id="msg-subject" class="form-input" value="' + esc(t.subject || '') + '">' +
+            '<label>Body</label><textarea id="msg-body" class="form-input" style="height:120px;width:100%;">' + esc(t.body || '') + '</textarea>' +
+            '<label>Audience</label><select id="msg-audience" class="form-select"><option value="all">All Players</option><option value="team">Team</option><option value="age_group">Age Group</option></select>' +
+            '<label>Channel</label><select id="msg-channel" class="form-select"><option value="email">Email</option><option value="sms">SMS</option></select>',
+            '<button class="btn btn-primary" onclick="createMessage()">Save Draft</button>'
+        );
+    } catch (_) { toast('Error loading template', 'error'); }
+}
+
+async function aiDraftMessage() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        showLoading();
+        var result = await api('POST', '/api/organizations/' + orgId + '/messages/ai-draft', {
+            audience: document.getElementById('ai-msg-audience').value,
+            purpose: document.getElementById('ai-msg-purpose').value,
+            tone: document.getElementById('ai-msg-tone').value,
+            context: document.getElementById('ai-msg-context').value,
+        });
+        hideLoading();
+        closeModal();
+        openModal('Compose Message',
+            '<label>Subject</label><input type="text" id="msg-subject" class="form-input" value="' + esc(result.subject || '') + '">' +
+            '<label>Body</label><textarea id="msg-body" class="form-input" style="height:120px;width:100%;">' + esc(result.body || '') + '</textarea>' +
+            '<label>Audience</label><select id="msg-audience" class="form-select"><option value="all">All Players</option><option value="team">Team</option><option value="age_group">Age Group</option></select>' +
+            '<label>Channel</label><select id="msg-channel" class="form-select"><option value="email">Email</option><option value="sms">SMS</option></select>',
+            '<button class="btn btn-primary" onclick="createMessage()">Save Draft</button>'
+        );
+    } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+async function createScheduleEntry() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        await api('POST', '/api/organizations/' + orgId + '/schedules', {
+            entry_type: document.getElementById('sched-type').value,
+            title: document.getElementById('sched-title').value,
+            team_id: document.getElementById('sched-team').value || null,
+            opponent_team_id: document.getElementById('sched-opponent').value || null,
+            field_id: document.getElementById('sched-field').value || null,
+            start_time: document.getElementById('sched-start').value ? new Date(document.getElementById('sched-start').value).toISOString() : null,
+            end_time: document.getElementById('sched-end').value ? new Date(document.getElementById('sched-end').value).toISOString() : null,
+            status: 'scheduled',
+        });
+        closeModal();
+        toast('Schedule entry created', 'success');
+        loadOpsSchedule(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
 // --- Import Functions ---
 async function previewImport() {
     var orgId = requireOrg();
@@ -2169,14 +2735,26 @@ async function previewImport() {
         showLoading();
         var result = await api('POST', '/api/organizations/' + orgId + '/imports/preview', { csv_data: csv });
         hideLoading();
-        var html = '<div style="padding:12px;background:#e8f5e9;border-radius:6px;">' +
+        var html = '<div style="padding:12px;background:#e8f5e9;border-radius:6px;margin-bottom:12px;">' +
             '<strong>Preview:</strong> ' + result.imported + ' new, ' + result.updated + ' updates, ' + result.skipped + ' skipped';
-        if (result.errors.length > 0) {
+        if (result.errors && result.errors.length > 0) {
             html += '<br><strong style="color:#c62828;">Errors:</strong><ul>';
             result.errors.slice(0, 10).forEach(function(e) { html += '<li>' + esc(e) + '</li>'; });
             html += '</ul>';
         }
         html += '</div>';
+        // Show parsed rows table
+        if (result.players && result.players.length > 0) {
+            html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>#</th><th>First Name</th><th>Last Name</th><th>DOB</th><th>Email</th><th>Age Group</th><th>Status</th></tr></thead><tbody>';
+            result.players.forEach(function(p, i) {
+                var statusBadge = p.status === 'new' ? 'badge-active' : p.status === 'update' ? 'badge-scoring' : 'badge-draft';
+                html += '<tr><td>' + (i + 1) + '</td><td>' + esc(p.first_name || '') + '</td><td>' + esc(p.last_name || '') + '</td>' +
+                    '<td>' + esc(p.date_of_birth || '-') + '</td><td>' + esc(p.email || p.parent_email || '-') + '</td>' +
+                    '<td>' + esc(p.age_group || '-') + '</td>' +
+                    '<td><span class="badge ' + statusBadge + '">' + esc(p.status || 'new') + '</span></td></tr>';
+            });
+            html += '</tbody></table></div>';
+        }
         document.getElementById('import-results').innerHTML = html;
     } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
 }

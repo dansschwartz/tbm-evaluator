@@ -79,6 +79,14 @@
                     <span class="nav-icon">&#9993;</span>
                     <span class="nav-label">Communications</span>
                 </a>
+                <a href="#" class="nav-item" data-section="ops-attendance">
+                    <span class="nav-icon">&#9745;</span>
+                    <span class="nav-label">Attendance</span>
+                </a>
+                <a href="#" class="nav-item" data-section="ops-documents">
+                    <span class="nav-icon">&#128196;</span>
+                    <span class="nav-label">Documents</span>
+                </a>
                 <a href="#" class="nav-item" data-section="ops-import">
                     <span class="nav-icon">&#8679;</span>
                     <span class="nav-label">Import</span>
@@ -483,6 +491,65 @@
                                 </thead>
                                 <tbody id="messages-table-body"></tbody>
                             </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Attendance -->
+                <section class="section hidden" id="section-ops-attendance">
+                    <div class="section-toolbar">
+                        <h2>Attendance</h2>
+                        <div class="toolbar-actions">
+                            <select class="form-select form-select-sm" id="attendance-team-select">
+                                <option value="">-- Select Team --</option>
+                            </select>
+                            <select class="form-select form-select-sm" id="attendance-entry-select">
+                                <option value="">-- Select Schedule Entry --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>Mark Attendance</h3></div>
+                        <div class="card-body" id="attendance-roster-body">
+                            <p class="text-muted">Select a team and schedule entry to mark attendance.</p>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Attendance Stats</h3></div>
+                        <div class="card-body" id="attendance-stats-body">
+                            <p class="text-muted">Stats will appear after selecting a team.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Documents -->
+                <section class="section hidden" id="section-ops-documents">
+                    <div class="section-toolbar">
+                        <h2>Document Vault</h2>
+                        <div class="toolbar-actions">
+                            <select class="form-select form-select-sm" id="docs-player-select">
+                                <option value="">-- Select Player --</option>
+                            </select>
+                            <button class="btn btn-primary" id="btn-upload-doc">Upload Document</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>Player Documents</h3></div>
+                        <div class="card-body">
+                            <table class="data-table" id="docs-table">
+                                <thead>
+                                    <tr><th>Player</th><th>Type</th><th>Name</th><th>Status</th><th>Expires</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="docs-table-body">
+                                    <tr><td colspan="6" class="text-center text-muted">Select a player to view documents.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Missing Documents Alert</h3></div>
+                        <div class="card-body" id="docs-missing-body">
+                            <p class="text-muted">Select an organization to check for missing documents.</p>
                         </div>
                     </div>
                 </section>

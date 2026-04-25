@@ -853,6 +853,52 @@ html, body {
     padding: 0;
 }
 
+/* ===== Field Calendar ===== */
+.field-calendar td {
+    min-width: 110px;
+    vertical-align: top;
+    padding: 6px 4px;
+}
+
+.field-calendar th {
+    text-align: center;
+    min-width: 110px;
+}
+
+.cal-slot {
+    background: #3498db;
+    color: #fff;
+    padding: 2px 4px;
+    border-radius: 3px;
+    margin-bottom: 2px;
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+/* ===== Attendance Toggle ===== */
+.att-toggle {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.att-toggle label {
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    transition: all var(--transition);
+}
+
+.att-toggle input:checked + label {
+    background: var(--teal);
+    color: #fff;
+    border-color: var(--teal);
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
     .sidebar {
@@ -890,19 +936,93 @@ html, body {
 
     .toolbar-actions {
         width: 100%;
+        flex-wrap: wrap;
     }
 
     .header-actions {
         display: none;
     }
+
+    /* Tables scroll horizontally */
+    .card-body {
+        overflow-x: auto;
+    }
+
+    .data-table {
+        min-width: 600px;
+    }
+
+    /* Forms stack */
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    /* Cards wrap */
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* Buttons wrap */
+    .btn-group {
+        flex-wrap: wrap;
+    }
+
+    /* Modal full width */
+    .modal {
+        width: 95%;
+        max-width: none;
+    }
+
+    /* Field calendar compact */
+    .field-calendar td,
+    .field-calendar th {
+        min-width: 80px;
+        font-size: 11px;
+    }
 }
 
 @media (max-width: 480px) {
     .content-area {
-        padding: 16px;
+        padding: 12px;
     }
 
     .stats-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
+    }
+
+    /* Min font size for readability */
+    body {
+        font-size: 14px;
+    }
+
+    .data-table {
+        font-size: 12px;
+    }
+
+    .btn {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+
+    .stat-value {
+        font-size: 22px;
+    }
+
+    .stat-label {
+        font-size: 12px;
+    }
+
+    .section-toolbar h2 {
+        font-size: 16px;
+    }
+
+    .page-title {
+        font-size: 15px;
+    }
+
+    .nav-item {
+        padding: 8px 16px;
+        font-size: 13px;
     }
 }
