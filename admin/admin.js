@@ -104,7 +104,16 @@ document.getElementById('modal-overlay').addEventListener('click', function(e) {
 
 // ---- NAVIGATION ----
 const navItems = document.querySelectorAll('.nav-item');
-const sections = ['overview', 'organizations', 'templates', 'events', 'players', 'reports', 'draft', 'analytics'];
+const sections = ['overview', 'organizations', 'templates', 'events', 'players', 'reports', 'draft', 'analytics',
+    'ops-overview', 'ops-seasons', 'ops-teams', 'ops-fields', 'ops-schedule', 'ops-coaches', 'ops-comms', 'ops-import', 'ops-ai'];
+
+const SECTION_TITLES = {
+    'overview': 'Overview', 'organizations': 'Organizations', 'templates': 'Templates',
+    'events': 'Events', 'players': 'Players', 'reports': 'Reports', 'draft': 'Draft', 'analytics': 'Analytics',
+    'ops-overview': 'Operations Dashboard', 'ops-seasons': 'Seasons & Programs', 'ops-teams': 'Teams',
+    'ops-fields': 'Fields & Facilities', 'ops-schedule': 'Schedule', 'ops-coaches': 'Coaches & Staff',
+    'ops-comms': 'Communications', 'ops-import': 'PlayMetrics Import', 'ops-ai': 'AI Assistant',
+};
 
 function navigateTo(section) {
     sections.forEach(function(s) {
@@ -118,8 +127,7 @@ function navigateTo(section) {
         item.classList.toggle('active', item.getAttribute('data-section') === section);
     });
 
-    document.getElementById('page-title').textContent =
-        section.charAt(0).toUpperCase() + section.slice(1);
+    document.getElementById('page-title').textContent = SECTION_TITLES[section] || section;
 
     var orgId = getSelectedOrg();
 
@@ -131,6 +139,16 @@ function navigateTo(section) {
     else if (section === 'reports') loadReportsSection(orgId);
     else if (section === 'draft') loadDraftSection(orgId);
     else if (section === 'analytics') loadAnalyticsSection(orgId);
+    // Operations sections
+    else if (section === 'ops-overview') loadOpsDashboard(orgId);
+    else if (section === 'ops-seasons') loadOpsSeasons(orgId);
+    else if (section === 'ops-teams') loadOpsTeams(orgId);
+    else if (section === 'ops-fields') loadOpsFields(orgId);
+    else if (section === 'ops-schedule') loadOpsSchedule(orgId);
+    else if (section === 'ops-coaches') loadOpsCoaches(orgId);
+    else if (section === 'ops-comms') loadOpsComms(orgId);
+    else if (section === 'ops-import') loadOpsImport(orgId);
+    else if (section === 'ops-ai') { /* static, no load needed */ }
 }
 
 navItems.forEach(function(item) {
@@ -1633,6 +1651,617 @@ async function loadEventAnalytics(eventId) {
         distEl.innerHTML = '<p class="text-muted">Error: ' + esc(e.message) + '</p>';
     }
 }
+
+// ===================================================================
+// TBM OPERATIONS — JS FUNCTIONS
+// ===================================================================
+
+// --- Ops Dashboard ---
+async function loadOpsDashboard(orgId) {
+    if (!orgId) { document.getElementById('ops-dashboard-stats').innerHTML = '<p class="text-muted">Select an organization.</p>'; return; }
+    try {
+        showLoading();
+        var [dashboard, alerts] = await Promise.all([
+            api('GET', '/api/organizations/' + orgId + '/dashboard'),
+            api('GET', '/api/organizations/' + orgId + '/ai/alerts'),
+        ]);
+        hideLoading();
+
+        document.getElementById('ops-dashboard-stats').innerHTML =
+            '<div class="stat-card"><div class="stat-value">' + dashboard.total_players + '</div><div class="stat-label">Players</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + dashboard.active_teams + '</div><div class="stat-label">Teams</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + dashboard.total_fields + '</div><div class="stat-label">Fields</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + dashboard.total_coaches + '</div><div class="stat-label">Coaches</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + dashboard.upcoming_events_this_week + '</div><div class="stat-label">Events This Week</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + dashboard.active_seasons + '</div><div class="stat-label">Active Seasons</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + dashboard.messages_sent + '</div><div class="stat-label">Messages Sent</div></div>';
+
+        var alertsHtml = '';
+        if (alerts.alerts && alerts.alerts.length > 0) {
+            alerts.alerts.forEach(function(a) {
+                var color = a.severity === 'critical' ? '#dc3545' : a.severity === 'warning' ? '#ffc107' : '#17a2b8';
+                alertsHtml += '<div style="padding:8px 12px;margin-bottom:6px;border-left:4px solid ' + color + ';background:#f8f9fa;border-radius:4px;font-size:13px;">' +
+                    '<strong style="text-transform:uppercase;font-size:11px;color:' + color + ';">' + esc(a.severity) + '</strong> — ' +
+                    '<span style="color:#666;">[' + esc(a.category) + ']</span> ' + esc(a.message) + '</div>';
+            });
+        } else {
+            alertsHtml = '<p class="text-muted">No alerts. Everything looks good!</p>';
+        }
+        document.getElementById('ops-alerts-body').innerHTML = alertsHtml;
+
+        var upHtml = '';
+        if (dashboard.upcoming_events && dashboard.upcoming_events.length > 0) {
+            dashboard.upcoming_events.forEach(function(e) {
+                upHtml += '<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px;">' +
+                    '<strong>' + esc(e.title) + '</strong> — ' + esc(e.type) + ' — ' + esc(e.start) + '</div>';
+            });
+        } else {
+            upHtml = '<p class="text-muted">No upcoming events.</p>';
+        }
+        document.getElementById('ops-upcoming-body').innerHTML = upHtml;
+    } catch (e) {
+        hideLoading();
+        toast('Error loading dashboard: ' + e.message, 'error');
+    }
+}
+
+// --- Seasons ---
+async function loadOpsSeasons(orgId) {
+    if (!orgId) return;
+    try {
+        var [seasons, programs] = await Promise.all([
+            api('GET', '/api/organizations/' + orgId + '/seasons'),
+            api('GET', '/api/organizations/' + orgId + '/programs'),
+        ]);
+
+        var tbody = document.getElementById('seasons-table-body');
+        tbody.innerHTML = seasons.map(function(s) {
+            return '<tr><td>' + esc(s.name) + '</td><td>' + esc(s.start_date) + '</td><td>' + esc(s.end_date) + '</td>' +
+                '<td><span class="badge badge-' + (s.status === 'active' ? 'success' : 'default') + '">' + esc(s.status) + '</span></td>' +
+                '<td><button class="btn btn-sm btn-outline" onclick="viewSeasonDashboard(\'' + s.id + '\')">Dashboard</button> ' +
+                '<button class="btn btn-sm btn-outline" onclick="deleteOpsItem(\'seasons\',\'' + s.id + '\')">Delete</button></td></tr>';
+        }).join('');
+
+        var ptbody = document.getElementById('programs-table-body');
+        ptbody.innerHTML = programs.map(function(p) {
+            var seasonName = seasons.find(function(s) { return s.id === p.season_id; });
+            return '<tr><td>' + esc(p.name) + '</td><td>' + esc(p.program_type) + '</td>' +
+                '<td>' + esc(seasonName ? seasonName.name : '') + '</td>' +
+                '<td>' + esc((p.age_groups || []).join(', ')) + '</td>' +
+                '<td>$' + (p.registration_fee || 0) + '</td>' +
+                '<td><button class="btn btn-sm btn-outline" onclick="deleteOpsItem(\'programs\',\'' + p.id + '\')">Delete</button></td></tr>';
+        }).join('');
+    } catch (e) {
+        toast('Error: ' + e.message, 'error');
+    }
+}
+
+// --- Teams ---
+async function loadOpsTeams(orgId) {
+    if (!orgId) return;
+    try {
+        var teams = await api('GET', '/api/organizations/' + orgId + '/teams');
+        var tbody = document.getElementById('ops-teams-table-body');
+        tbody.innerHTML = teams.map(function(t) {
+            return '<tr><td>' + esc(t.name) + '</td><td>' + esc(t.team_level || '-') + '</td>' +
+                '<td>' + esc(t.program_id ? 'Assigned' : '-') + '</td>' +
+                '<td>' + esc(t.head_coach_id ? 'Assigned' : 'None') + '</td>' +
+                '<td><button class="btn btn-sm btn-outline" onclick="viewRoster(\'' + t.id + '\')">View</button></td>' +
+                '<td><button class="btn btn-sm btn-outline" onclick="deleteOpsItem(\'teams\',\'' + t.id + '\')">Delete</button></td></tr>';
+        }).join('');
+    } catch (e) {
+        toast('Error: ' + e.message, 'error');
+    }
+}
+
+// --- Fields ---
+async function loadOpsFields(orgId) {
+    if (!orgId) return;
+    try {
+        var fields = await api('GET', '/api/organizations/' + orgId + '/fields');
+        var tbody = document.getElementById('fields-table-body');
+        tbody.innerHTML = fields.map(function(f) {
+            return '<tr><td>' + esc(f.name) + '</td><td>' + esc(f.location_address || '-') + '</td>' +
+                '<td>' + esc(f.surface_type || '-') + '</td><td>' + esc(f.size || '-') + '</td>' +
+                '<td>' + (f.has_lights ? 'Yes' : 'No') + '</td>' +
+                '<td><button class="btn btn-sm btn-outline" onclick="deleteOpsFieldItem(\'' + f.id + '\')">Delete</button></td></tr>';
+        }).join('');
+    } catch (e) {
+        toast('Error: ' + e.message, 'error');
+    }
+}
+
+// --- Schedule ---
+async function loadOpsSchedule(orgId) {
+    if (!orgId) return;
+    try {
+        var now = new Date();
+        var start = now.toISOString().split('T')[0];
+        var end = new Date(now.getTime() + 90 * 86400000).toISOString().split('T')[0];
+        var entries = await api('GET', '/api/organizations/' + orgId + '/schedules/calendar?start=' + start + '&end=' + end);
+
+        var tbody = document.getElementById('schedule-table-body');
+        tbody.innerHTML = entries.map(function(e) {
+            var dt = new Date(e.start_time);
+            return '<tr><td>' + dt.toLocaleDateString() + '</td><td>' + dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</td>' +
+                '<td>' + esc(e.entry_type) + '</td><td>' + esc(e.title || '-') + '</td>' +
+                '<td>' + esc(e.field_name || '-') + '</td>' +
+                '<td><span class="badge badge-' + (e.status === 'scheduled' ? 'success' : e.status === 'cancelled' ? 'danger' : 'default') + '">' + esc(e.status) + '</span></td>' +
+                '<td><button class="btn btn-sm btn-outline" onclick="deleteOpsScheduleItem(\'' + e.id + '\')">Delete</button></td></tr>';
+        }).join('');
+    } catch (e) {
+        toast('Error: ' + e.message, 'error');
+    }
+}
+
+// --- Coaches ---
+async function loadOpsCoaches(orgId) {
+    if (!orgId) return;
+    try {
+        var coaches = await api('GET', '/api/organizations/' + orgId + '/coaches');
+        var tbody = document.getElementById('coaches-table-body');
+        tbody.innerHTML = coaches.map(function(c) {
+            var certs = (c.certifications || []).map(function(cert) { return cert.name; }).join(', ') || 'None';
+            var teams = (c.team_assignments || []).map(function(t) { return t.team_name; }).join(', ') || 'None';
+            return '<tr><td>' + esc(c.name) + '</td><td>' + esc(c.email || '-') + '</td>' +
+                '<td>' + esc(c.phone || '-') + '</td><td>' + esc(certs) + '</td>' +
+                '<td>' + esc(c.background_check_status || '-') + '</td>' +
+                '<td>' + esc(teams) + '</td>' +
+                '<td><button class="btn btn-sm btn-outline" onclick="editCoachCerts(\'' + c.id + '\')">Edit Certs</button></td></tr>';
+        }).join('');
+    } catch (e) {
+        toast('Error: ' + e.message, 'error');
+    }
+}
+
+// --- Communications ---
+async function loadOpsComms(orgId) {
+    if (!orgId) return;
+    try {
+        var msgs = await api('GET', '/api/organizations/' + orgId + '/messages');
+        var tbody = document.getElementById('messages-table-body');
+        tbody.innerHTML = msgs.map(function(m) {
+            return '<tr><td>' + esc(m.subject || '(no subject)') + '</td><td>' + esc(m.audience_type) + '</td>' +
+                '<td>' + esc(m.channel) + '</td>' +
+                '<td><span class="badge badge-' + (m.status === 'sent' ? 'success' : m.status === 'draft' ? 'default' : 'warning') + '">' + esc(m.status) + '</span></td>' +
+                '<td>' + m.recipient_count + '</td>' +
+                '<td>' + esc(m.sent_at || '-') + '</td>' +
+                '<td>' + (m.status === 'draft' ? '<button class="btn btn-sm btn-primary" onclick="sendOpsMessage(\'' + m.id + '\')">Send</button> ' : '') +
+                '</td></tr>';
+        }).join('');
+    } catch (e) {
+        toast('Error: ' + e.message, 'error');
+    }
+}
+
+// --- Import ---
+async function loadOpsImport(orgId) {
+    if (!orgId) return;
+    try {
+        var imports = await api('GET', '/api/organizations/' + orgId + '/imports');
+        var tbody = document.getElementById('imports-table-body');
+        tbody.innerHTML = imports.map(function(i) {
+            return '<tr><td>' + esc(i.created_at) + '</td><td>' + esc(i.import_type) + '</td>' +
+                '<td>' + i.row_count + '</td><td>' + i.imported_count + '</td>' +
+                '<td><span class="badge badge-' + (i.status === 'completed' ? 'success' : 'default') + '">' + esc(i.status) + '</span></td></tr>';
+        }).join('');
+    } catch (e) {
+        toast('Error: ' + e.message, 'error');
+    }
+}
+
+// --- Ops Helper Functions ---
+async function deleteOpsItem(type, id) {
+    if (!confirm('Delete this item?')) return;
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        await api('DELETE', '/api/organizations/' + orgId + '/' + type + '/' + id);
+        toast('Deleted', 'success');
+        var active = document.querySelector('.nav-item.active');
+        if (active) navigateTo(active.getAttribute('data-section'));
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function deleteOpsFieldItem(fieldId) {
+    if (!confirm('Delete this field?')) return;
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        await api('DELETE', '/api/organizations/' + orgId + '/fields/' + fieldId);
+        toast('Deleted', 'success');
+        loadOpsFields(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function deleteOpsScheduleItem(entryId) {
+    if (!confirm('Delete this schedule entry?')) return;
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        await api('DELETE', '/api/organizations/' + orgId + '/schedules/' + entryId);
+        toast('Deleted', 'success');
+        loadOpsSchedule(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function viewSeasonDashboard(seasonId) {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        showLoading();
+        var data = await api('GET', '/api/organizations/' + orgId + '/seasons/' + seasonId + '/dashboard');
+        hideLoading();
+        openModal('Season Dashboard: ' + data.season.name,
+            '<div class="stats-grid">' +
+            '<div class="stat-card"><div class="stat-value">' + data.programs + '</div><div class="stat-label">Programs</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + data.teams + '</div><div class="stat-label">Teams</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + data.players_rostered + '</div><div class="stat-label">Players Rostered</div></div>' +
+            '</div>'
+        );
+    } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+async function viewRoster(teamId) {
+    try {
+        showLoading();
+        var roster = await api('GET', '/api/teams/' + teamId + '/roster');
+        hideLoading();
+        var html = '<table class="data-table"><thead><tr><th>#</th><th>Name</th><th>Position</th><th>Role</th><th>Status</th></tr></thead><tbody>';
+        roster.forEach(function(r) {
+            html += '<tr><td>' + (r.jersey_number || '-') + '</td><td>' + esc(r.player_name) + '</td>' +
+                '<td>' + esc(r.position || '-') + '</td><td>' + esc(r.role) + '</td><td>' + esc(r.status) + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        if (roster.length === 0) html = '<p class="text-muted">No players on roster.</p>';
+        openModal('Team Roster', html);
+    } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+async function sendOpsMessage(msgId) {
+    if (!confirm('Send this message now?')) return;
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        showLoading();
+        var result = await api('POST', '/api/organizations/' + orgId + '/messages/' + msgId + '/send');
+        hideLoading();
+        toast('Sent to ' + result.recipient_count + ' recipients', 'success');
+        loadOpsComms(orgId);
+    } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+function editCoachCerts(coachId) {
+    openModal('Update Certifications',
+        '<p style="margin-bottom:8px;">Enter certifications as JSON array:</p>' +
+        '<textarea id="cert-json" class="form-input" style="width:100%;height:120px;font-family:monospace;" placeholder=\'[{"name":"SafeSport","expiry":"2026-12-01","status":"active"}]\'></textarea>',
+        '<button class="btn btn-primary" onclick="saveCerts(\'' + coachId + '\')">Save</button>'
+    );
+}
+
+async function saveCerts(coachId) {
+    var json = document.getElementById('cert-json').value;
+    try {
+        var certs = JSON.parse(json);
+        await api('PATCH', '/api/evaluators/' + coachId + '/certifications', { certifications: certs });
+        closeModal();
+        toast('Certifications updated', 'success');
+        var orgId = requireOrg();
+        if (orgId) loadOpsCoaches(orgId);
+    } catch (e) { toast('Invalid JSON or error: ' + e.message, 'error'); }
+}
+
+// --- Create Modals ---
+function setupOpsButtons() {
+    // Season create
+    var btnSeason = document.getElementById('btn-create-season');
+    if (btnSeason) btnSeason.addEventListener('click', function() {
+        openModal('Create Season',
+            '<label>Name</label><input type="text" id="season-name" class="form-input" placeholder="Spring 2026">' +
+            '<label>Start Date</label><input type="date" id="season-start" class="form-input">' +
+            '<label>End Date</label><input type="date" id="season-end" class="form-input">' +
+            '<label>Status</label><select id="season-status" class="form-select"><option>planning</option><option>registration</option><option>active</option><option>completed</option></select>',
+            '<button class="btn btn-primary" onclick="createSeason()">Create</button>'
+        );
+    });
+
+    // Program create
+    var btnProg = document.getElementById('btn-create-program');
+    if (btnProg) btnProg.addEventListener('click', async function() {
+        var orgId = requireOrg();
+        if (!orgId) return;
+        var seasons = await api('GET', '/api/organizations/' + orgId + '/seasons');
+        var opts = seasons.map(function(s) { return '<option value="' + s.id + '">' + esc(s.name) + '</option>'; }).join('');
+        openModal('Create Program',
+            '<label>Season</label><select id="prog-season" class="form-select">' + opts + '</select>' +
+            '<label>Name</label><input type="text" id="prog-name" class="form-input" placeholder="Rec League U10">' +
+            '<label>Type</label><select id="prog-type" class="form-select"><option>recreational</option><option>travel</option><option>academy</option><option>camp</option><option>clinic</option><option>tournament</option></select>' +
+            '<label>Gender</label><select id="prog-gender" class="form-select"><option>coed</option><option>boys</option><option>girls</option></select>' +
+            '<label>Registration Fee ($)</label><input type="number" id="prog-fee" class="form-input" placeholder="150">',
+            '<button class="btn btn-primary" onclick="createProgram()">Create</button>'
+        );
+    });
+
+    // Team create
+    var btnTeam = document.getElementById('btn-create-team');
+    if (btnTeam) btnTeam.addEventListener('click', function() {
+        openModal('Create Team',
+            '<label>Name</label><input type="text" id="team-name" class="form-input" placeholder="Blue Thunder">' +
+            '<label>Level</label><input type="text" id="team-level" class="form-input" placeholder="Select / Blue / Red">' +
+            '<label>Max Roster Size</label><input type="number" id="team-max" class="form-input" placeholder="18">' +
+            '<label>Practice Day</label><input type="text" id="team-pday" class="form-input" placeholder="Tuesday">' +
+            '<label>Practice Time</label><input type="text" id="team-ptime" class="form-input" placeholder="17:00-18:30">',
+            '<button class="btn btn-primary" onclick="createTeam()">Create</button>'
+        );
+    });
+
+    // Field create
+    var btnField = document.getElementById('btn-create-field');
+    if (btnField) btnField.addEventListener('click', function() {
+        openModal('Create Field',
+            '<label>Name</label><input type="text" id="field-name" class="form-input" placeholder="Main Field A">' +
+            '<label>Address</label><input type="text" id="field-address" class="form-input" placeholder="123 Sports Ave">' +
+            '<label>Surface</label><select id="field-surface" class="form-select"><option value="grass">Grass</option><option value="turf">Turf</option><option value="indoor">Indoor</option></select>' +
+            '<label>Size</label><select id="field-size" class="form-select"><option value="full">Full</option><option value="3_4">3/4</option><option value="half">Half</option><option value="small">Small</option></select>' +
+            '<label><input type="checkbox" id="field-lights"> Has Lights</label>',
+            '<button class="btn btn-primary" onclick="createField()">Create</button>'
+        );
+    });
+
+    // Compose message
+    var btnCompose = document.getElementById('btn-compose-message');
+    if (btnCompose) btnCompose.addEventListener('click', function() {
+        openModal('Compose Message',
+            '<label>Subject</label><input type="text" id="msg-subject" class="form-input">' +
+            '<label>Body</label><textarea id="msg-body" class="form-input" style="height:120px;width:100%;"></textarea>' +
+            '<label>Audience</label><select id="msg-audience" class="form-select"><option value="all">All Players</option><option value="team">Team</option><option value="age_group">Age Group</option></select>' +
+            '<label>Channel</label><select id="msg-channel" class="form-select"><option value="email">Email</option><option value="sms">SMS</option></select>',
+            '<button class="btn btn-primary" onclick="createMessage()">Save Draft</button>'
+        );
+    });
+
+    // Import buttons
+    var btnPreview = document.getElementById('btn-preview-import');
+    if (btnPreview) btnPreview.addEventListener('click', previewImport);
+    var btnImport = document.getElementById('btn-run-import');
+    if (btnImport) btnImport.addEventListener('click', runImport);
+
+    // AI Assistant buttons
+    var btnAiAsk = document.getElementById('btn-ai-ask');
+    if (btnAiAsk) btnAiAsk.addEventListener('click', askAiOps);
+    var btnDraftEmail = document.getElementById('btn-draft-email');
+    if (btnDraftEmail) btnDraftEmail.addEventListener('click', draftAiEmail);
+
+    // AI quick action buttons
+    document.querySelectorAll('.ai-quick').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.getElementById('ai-question-input').value = this.getAttribute('data-q');
+            askAiOps();
+        });
+    });
+
+    // Weather cancel
+    var btnWeather = document.getElementById('btn-weather-cancel');
+    if (btnWeather) btnWeather.addEventListener('click', function() {
+        var date = prompt('Enter date to cancel outdoor bookings (YYYY-MM-DD):');
+        if (!date) return;
+        var orgId = requireOrg();
+        if (!orgId) return;
+        api('POST', '/api/organizations/' + orgId + '/fields/weather-cancel', { date: date })
+            .then(function(r) { toast('Cancelled ' + r.cancelled + ' bookings', 'success'); })
+            .catch(function(e) { toast('Error: ' + e.message, 'error'); });
+    });
+
+    // Conflict check
+    var btnConflicts = document.getElementById('btn-check-conflicts');
+    if (btnConflicts) btnConflicts.addEventListener('click', async function() {
+        var orgId = requireOrg();
+        if (!orgId) return;
+        try {
+            showLoading();
+            var result = await api('GET', '/api/organizations/' + orgId + '/schedules/conflicts');
+            hideLoading();
+            if (result.total === 0) {
+                toast('No scheduling conflicts found!', 'success');
+            } else {
+                var html = '<p><strong>' + result.total + ' conflicts found:</strong></p>';
+                result.conflicts.forEach(function(c) {
+                    html += '<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px;">' +
+                        '<strong>' + esc(c.type) + '</strong>: ' + esc(c.title_a) + ' vs ' + esc(c.title_b) + ' at ' + esc(c.time) + '</div>';
+                });
+                openModal('Schedule Conflicts', html);
+            }
+        } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+    });
+}
+
+// --- Create Ops Items ---
+async function createSeason() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        await api('POST', '/api/organizations/' + orgId + '/seasons', {
+            name: document.getElementById('season-name').value,
+            start_date: document.getElementById('season-start').value || null,
+            end_date: document.getElementById('season-end').value || null,
+            status: document.getElementById('season-status').value,
+        });
+        closeModal();
+        toast('Season created', 'success');
+        loadOpsSeasons(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function createProgram() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        await api('POST', '/api/organizations/' + orgId + '/programs', {
+            season_id: document.getElementById('prog-season').value,
+            name: document.getElementById('prog-name').value,
+            program_type: document.getElementById('prog-type').value,
+            gender: document.getElementById('prog-gender').value,
+            registration_fee: parseFloat(document.getElementById('prog-fee').value) || null,
+        });
+        closeModal();
+        toast('Program created', 'success');
+        loadOpsSeasons(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function createTeam() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        await api('POST', '/api/organizations/' + orgId + '/teams', {
+            name: document.getElementById('team-name').value,
+            team_level: document.getElementById('team-level').value || null,
+            max_roster_size: parseInt(document.getElementById('team-max').value) || null,
+            practice_day: document.getElementById('team-pday').value || null,
+            practice_time: document.getElementById('team-ptime').value || null,
+        });
+        closeModal();
+        toast('Team created', 'success');
+        loadOpsTeams(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function createField() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        await api('POST', '/api/organizations/' + orgId + '/fields', {
+            name: document.getElementById('field-name').value,
+            location_address: document.getElementById('field-address').value || null,
+            surface_type: document.getElementById('field-surface').value,
+            size: document.getElementById('field-size').value,
+            has_lights: document.getElementById('field-lights').checked,
+        });
+        closeModal();
+        toast('Field created', 'success');
+        loadOpsFields(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function createMessage() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        await api('POST', '/api/organizations/' + orgId + '/messages', {
+            subject: document.getElementById('msg-subject').value,
+            body: document.getElementById('msg-body').value,
+            audience_type: document.getElementById('msg-audience').value,
+            channel: document.getElementById('msg-channel').value,
+        });
+        closeModal();
+        toast('Message draft saved', 'success');
+        loadOpsComms(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// --- Import Functions ---
+async function previewImport() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    var csv = document.getElementById('import-csv-data').value;
+    if (!csv.trim()) { toast('Paste CSV data first', 'warning'); return; }
+    try {
+        showLoading();
+        var result = await api('POST', '/api/organizations/' + orgId + '/imports/preview', { csv_data: csv });
+        hideLoading();
+        var html = '<div style="padding:12px;background:#e8f5e9;border-radius:6px;">' +
+            '<strong>Preview:</strong> ' + result.imported + ' new, ' + result.updated + ' updates, ' + result.skipped + ' skipped';
+        if (result.errors.length > 0) {
+            html += '<br><strong style="color:#c62828;">Errors:</strong><ul>';
+            result.errors.slice(0, 10).forEach(function(e) { html += '<li>' + esc(e) + '</li>'; });
+            html += '</ul>';
+        }
+        html += '</div>';
+        document.getElementById('import-results').innerHTML = html;
+    } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+async function runImport() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    var csv = document.getElementById('import-csv-data').value;
+    if (!csv.trim()) { toast('Paste CSV data first', 'warning'); return; }
+    if (!confirm('Import these players?')) return;
+    try {
+        showLoading();
+        var result = await api('POST', '/api/organizations/' + orgId + '/imports/playmetrics', { csv_data: csv });
+        hideLoading();
+        toast('Imported ' + result.imported + ' new, ' + result.updated + ' updated', 'success');
+        document.getElementById('import-csv-data').value = '';
+        document.getElementById('import-results').innerHTML = '';
+        loadOpsImport(orgId);
+    } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+// --- AI Functions ---
+async function askAiOps() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    var q = document.getElementById('ai-question-input').value;
+    if (!q.trim()) return;
+    var body = document.getElementById('ai-answer-body');
+    body.style.display = 'block';
+    body.innerHTML = '<p style="color:#999;">Thinking...</p>';
+    try {
+        var result = await api('POST', '/api/organizations/' + orgId + '/ai/ask', { question: q });
+        var html = '<p><strong>Answer:</strong></p><p>' + esc(result.answer) + '</p>';
+        if (result.suggestions && result.suggestions.length > 0) {
+            html += '<p style="margin-top:8px;"><strong>Suggestions:</strong></p><ul>';
+            result.suggestions.forEach(function(s) { html += '<li>' + esc(s) + '</li>'; });
+            html += '</ul>';
+        }
+        body.innerHTML = html;
+    } catch (e) { body.innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>'; }
+}
+
+async function draftAiEmail() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    var audience = document.getElementById('email-audience').value;
+    var purpose = document.getElementById('email-purpose').value;
+    var context = document.getElementById('email-context').value;
+    if (!audience || !purpose) { toast('Fill in audience and purpose', 'warning'); return; }
+
+    var resultDiv = document.getElementById('email-draft-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<p style="color:#999;">Drafting...</p>';
+    try {
+        var result = await api('POST', '/api/organizations/' + orgId + '/ai/email-draft', {
+            audience: audience, purpose: purpose, context: context,
+        });
+        resultDiv.innerHTML = '<div style="background:white;padding:16px;border-radius:8px;border:1px solid #ddd;">' +
+            '<p><strong>Subject:</strong> ' + esc(result.subject) + '</p><hr style="margin:8px 0;">' +
+            '<div style="white-space:pre-wrap;">' + esc(result.body) + '</div></div>' +
+            '<button class="btn btn-primary" style="margin-top:8px;" onclick="useEmailDraft(\'' +
+            btoa(unescape(encodeURIComponent(JSON.stringify(result)))) + '\')">Use as Message Draft</button>';
+    } catch (e) { resultDiv.innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>'; }
+}
+
+async function useEmailDraft(b64) {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        var data = JSON.parse(decodeURIComponent(escape(atob(b64))));
+        await api('POST', '/api/organizations/' + orgId + '/messages', {
+            subject: data.subject,
+            body: data.body,
+            body_html: data.body_html,
+            audience_type: 'all',
+            channel: 'email',
+        });
+        toast('Email draft saved to messages', 'success');
+        navigateTo('ops-comms');
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// Initialize ops buttons
+setupOpsButtons();
+
 
 // ===================================================================
 // UTILITY

@@ -377,3 +377,462 @@ class CSVImportResult(BaseModel):
 # --- Feature 8: Photo upload ---
 class PhotoUpload(BaseModel):
     photo_data: str
+
+
+# ============================================================
+# TBM OPERATIONS — Schemas for Modules 1-11
+# ============================================================
+
+# --- Module 1: PlayMetrics Import ---
+class PlayMetricsImportRequest(BaseModel):
+    csv_data: str
+    import_type: str = "roster"
+
+
+class PlayMetricsImportResponse(BaseModel):
+    id: UUID
+    org_id: UUID
+    import_type: str
+    status: str
+    row_count: int
+    imported_count: int
+    errors: list = []
+    created_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ImportSummary(BaseModel):
+    imported: int = 0
+    updated: int = 0
+    skipped: int = 0
+    errors: list[str] = []
+
+
+# --- Module 2: Field Management ---
+class FieldCreate(BaseModel):
+    name: str
+    location_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    surface_type: Optional[str] = None
+    size: Optional[str] = None
+    has_lights: bool = False
+    capacity: Optional[int] = None
+    permitted_hours: Optional[dict] = None
+    notes: Optional[str] = None
+
+
+class FieldUpdate(BaseModel):
+    name: Optional[str] = None
+    location_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    surface_type: Optional[str] = None
+    size: Optional[str] = None
+    has_lights: Optional[bool] = None
+    capacity: Optional[int] = None
+    permitted_hours: Optional[dict] = None
+    notes: Optional[str] = None
+    active: Optional[bool] = None
+
+
+class FieldResponse(BaseModel):
+    id: UUID
+    org_id: UUID
+    name: str
+    location_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    surface_type: Optional[str] = None
+    size: Optional[str] = None
+    has_lights: bool = False
+    capacity: Optional[int] = None
+    permitted_hours: Optional[dict] = None
+    notes: Optional[str] = None
+    active: bool = True
+    created_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class FieldBookingCreate(BaseModel):
+    event_type: str = "practice"
+    team_id: Optional[UUID] = None
+    title: Optional[str] = None
+    start_time: datetime
+    end_time: datetime
+    recurring: bool = False
+    recurrence_rule: Optional[dict] = None
+    status: str = "confirmed"
+    notes: Optional[str] = None
+
+
+class FieldBookingUpdate(BaseModel):
+    event_type: Optional[str] = None
+    team_id: Optional[UUID] = None
+    title: Optional[str] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    recurring: Optional[bool] = None
+    recurrence_rule: Optional[dict] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class FieldBookingResponse(BaseModel):
+    id: UUID
+    field_id: UUID
+    event_type: str
+    team_id: Optional[UUID] = None
+    title: Optional[str] = None
+    start_time: datetime
+    end_time: datetime
+    recurring: bool = False
+    recurrence_rule: Optional[dict] = None
+    status: str
+    notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# --- Module 3: Season & Program ---
+class SeasonCreate(BaseModel):
+    name: str
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    registration_open_date: Optional[date] = None
+    registration_close_date: Optional[date] = None
+    status: str = "planning"
+    settings: dict = {}
+
+
+class SeasonUpdate(BaseModel):
+    name: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    registration_open_date: Optional[date] = None
+    registration_close_date: Optional[date] = None
+    status: Optional[str] = None
+    settings: Optional[dict] = None
+
+
+class SeasonResponse(BaseModel):
+    id: UUID
+    org_id: UUID
+    name: str
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    registration_open_date: Optional[date] = None
+    registration_close_date: Optional[date] = None
+    status: str
+    settings: dict = {}
+    created_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ProgramCreate(BaseModel):
+    season_id: UUID
+    name: str
+    program_type: str = "recreational"
+    age_groups: list = []
+    gender: str = "coed"
+    max_players_per_team: Optional[int] = None
+    max_teams: Optional[int] = None
+    registration_fee: Optional[float] = None
+    early_bird_fee: Optional[float] = None
+    late_fee: Optional[float] = None
+    financial_aid_eligible: bool = False
+    description: Optional[str] = None
+
+
+class ProgramUpdate(BaseModel):
+    name: Optional[str] = None
+    program_type: Optional[str] = None
+    age_groups: Optional[list] = None
+    gender: Optional[str] = None
+    max_players_per_team: Optional[int] = None
+    max_teams: Optional[int] = None
+    registration_fee: Optional[float] = None
+    early_bird_fee: Optional[float] = None
+    late_fee: Optional[float] = None
+    financial_aid_eligible: Optional[bool] = None
+    description: Optional[str] = None
+
+
+class ProgramResponse(BaseModel):
+    id: UUID
+    org_id: UUID
+    season_id: UUID
+    name: str
+    program_type: str
+    age_groups: list = []
+    gender: str
+    max_players_per_team: Optional[int] = None
+    max_teams: Optional[int] = None
+    registration_fee: Optional[float] = None
+    early_bird_fee: Optional[float] = None
+    late_fee: Optional[float] = None
+    financial_aid_eligible: bool = False
+    description: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# --- Module 4: Team Management ---
+class TeamCreate(BaseModel):
+    program_id: Optional[UUID] = None
+    season_id: Optional[UUID] = None
+    name: str
+    team_level: Optional[str] = None
+    head_coach_id: Optional[UUID] = None
+    assistant_coaches: list = []
+    max_roster_size: Optional[int] = None
+    practice_day: Optional[str] = None
+    practice_time: Optional[str] = None
+    practice_field_id: Optional[UUID] = None
+
+
+class TeamUpdate(BaseModel):
+    name: Optional[str] = None
+    program_id: Optional[UUID] = None
+    season_id: Optional[UUID] = None
+    team_level: Optional[str] = None
+    head_coach_id: Optional[UUID] = None
+    assistant_coaches: Optional[list] = None
+    max_roster_size: Optional[int] = None
+    practice_day: Optional[str] = None
+    practice_time: Optional[str] = None
+    practice_field_id: Optional[UUID] = None
+
+
+class TeamResponse(BaseModel):
+    id: UUID
+    org_id: UUID
+    program_id: Optional[UUID] = None
+    season_id: Optional[UUID] = None
+    name: str
+    team_level: Optional[str] = None
+    head_coach_id: Optional[UUID] = None
+    assistant_coaches: list = []
+    max_roster_size: Optional[int] = None
+    practice_day: Optional[str] = None
+    practice_time: Optional[str] = None
+    practice_field_id: Optional[UUID] = None
+    created_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class TeamRosterAdd(BaseModel):
+    player_id: UUID
+    jersey_number: Optional[int] = None
+    role: str = "player"
+
+
+class TeamRosterResponse(BaseModel):
+    id: UUID
+    team_id: UUID
+    player_id: UUID
+    jersey_number: Optional[int] = None
+    role: str
+    joined_at: Optional[datetime] = None
+    status: str
+
+    model_config = {"from_attributes": True}
+
+
+# --- Module 5: Scheduling Engine ---
+class ScheduleEntryCreate(BaseModel):
+    season_id: Optional[UUID] = None
+    entry_type: str = "practice"
+    team_id: Optional[UUID] = None
+    opponent_team_id: Optional[UUID] = None
+    field_id: Optional[UUID] = None
+    start_time: datetime
+    end_time: datetime
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: str = "scheduled"
+    referee_ids: list = []
+    notes: Optional[str] = None
+
+
+class ScheduleEntryUpdate(BaseModel):
+    entry_type: Optional[str] = None
+    team_id: Optional[UUID] = None
+    opponent_team_id: Optional[UUID] = None
+    field_id: Optional[UUID] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    weather_status: Optional[str] = None
+    referee_ids: Optional[list] = None
+    notes: Optional[str] = None
+
+
+class ScheduleEntryResponse(BaseModel):
+    id: UUID
+    org_id: UUID
+    season_id: Optional[UUID] = None
+    entry_type: str
+    team_id: Optional[UUID] = None
+    opponent_team_id: Optional[UUID] = None
+    field_id: Optional[UUID] = None
+    start_time: datetime
+    end_time: datetime
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: str
+    weather_status: str = "clear"
+    referee_ids: list = []
+    notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class GenerateGamesRequest(BaseModel):
+    team_ids: list[UUID]
+    games_per_team: int = 8
+    available_field_ids: list[UUID] = []
+    available_dates: list[date] = []
+    game_duration_minutes: int = 60
+    constraints: dict = {}
+
+
+class GeneratePracticesRequest(BaseModel):
+    team_ids: list[UUID]
+    field_ids: list[UUID] = []
+    practices_per_week: int = 2
+    duration_minutes: int = 90
+    start_date: date
+    end_date: date
+
+
+# --- Module 6: AI Operations ---
+class AIOpsAskRequest(BaseModel):
+    question: str
+
+
+class AIEmailDraftRequest(BaseModel):
+    audience: str
+    purpose: str
+    context: str
+
+
+class AISeasonPlanRequest(BaseModel):
+    season_name: str
+    age_groups: list[str] = []
+    estimated_players: int = 100
+    available_fields: int = 4
+    weeks: int = 10
+
+
+# --- Module 7: Communication Center ---
+class MessageCreate(BaseModel):
+    subject: Optional[str] = None
+    body: Optional[str] = None
+    body_html: Optional[str] = None
+    channel: str = "email"
+    audience_type: str = "all"
+    audience_filter: Optional[dict] = None
+    scheduled_for: Optional[datetime] = None
+
+
+class MessageUpdate(BaseModel):
+    subject: Optional[str] = None
+    body: Optional[str] = None
+    body_html: Optional[str] = None
+    audience_type: Optional[str] = None
+    audience_filter: Optional[dict] = None
+    scheduled_for: Optional[datetime] = None
+
+
+class MessageResponse(BaseModel):
+    id: UUID
+    org_id: UUID
+    subject: Optional[str] = None
+    body: Optional[str] = None
+    body_html: Optional[str] = None
+    channel: str
+    audience_type: str
+    audience_filter: Optional[dict] = None
+    status: str
+    scheduled_for: Optional[datetime] = None
+    sent_at: Optional[datetime] = None
+    recipient_count: int = 0
+    open_count: int = 0
+    created_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class AIDraftMessageRequest(BaseModel):
+    audience: str
+    purpose: str
+    tone: str = "professional"
+    context: Optional[str] = None
+
+
+# --- Module 8: Coach Management ---
+class CertificationUpdate(BaseModel):
+    certifications: list[dict]  # [{name, expiry, status}]
+
+
+class AvailabilityUpdate(BaseModel):
+    availability: dict  # {mon: ["16:00-20:00"], ...}
+
+
+class CoachAssignRequest(BaseModel):
+    team_ids: list[UUID]
+
+
+# --- Module 9: Attendance ---
+class AttendanceSubmit(BaseModel):
+    records: list[dict]  # [{player_id, status, notes?}]
+
+
+class AttendanceResponse(BaseModel):
+    id: UUID
+    org_id: UUID
+    schedule_entry_id: UUID
+    player_id: UUID
+    team_id: Optional[UUID] = None
+    status: str
+    check_in_time: Optional[datetime] = None
+    recorded_by: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# --- Module 11: Document Vault ---
+class PlayerDocumentCreate(BaseModel):
+    document_type: str = "other"
+    file_name: Optional[str] = None
+    file_data: str  # base64 encoded
+    mime_type: Optional[str] = None
+    uploaded_by: Optional[str] = None
+    expires_at: Optional[datetime] = None
+
+
+class PlayerDocumentResponse(BaseModel):
+    id: UUID
+    player_id: UUID
+    org_id: UUID
+    document_type: str
+    file_name: Optional[str] = None
+    mime_type: Optional[str] = None
+    uploaded_by: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    verified: bool = False
+    created_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}

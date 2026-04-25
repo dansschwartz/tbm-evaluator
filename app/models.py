@@ -162,6 +162,12 @@ class Evaluator(Base):
     email = Column(String(255), nullable=True)
     access_code = Column(String(6), nullable=False, unique=True)
     active = Column(Boolean, default=True)
+    # Module 8: Coach management extensions
+    phone = Column(String(50), nullable=True)
+    certifications = Column(JSONB, nullable=True)  # [{name, expiry, status}]
+    background_check_status = Column(String(50), nullable=True)  # pending/cleared/expired
+    availability = Column(JSONB, nullable=True)  # {mon: ["16:00-20:00"], ...}
+    volunteer_hours = Column(Float, nullable=True, default=0)
 
     organization = relationship("Organization", back_populates="evaluators")
     scores = relationship("Score", back_populates="evaluator", cascade="all, delete-orphan")
@@ -250,3 +256,255 @@ class APIToken(Base):
     created_at = Column(DateTime, server_default=func.now())
     expires_at = Column(DateTime, nullable=True)
     active = Column(Boolean, default=True)
+
+
+# ============================================================
+# TBM OPERATIONS — Modules 1-11
+# ============================================================
+
+# Module 1: PlayMetrics Data Import
+class PlayMetricsImport(Base):
+    __tablename__ = "playmetrics_imports"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    import_type = Column(String(50), default="roster")  # roster/program/team
+    status = Column(String(50), default="pending")  # pending/processing/completed/failed
+    row_count = Column(Integer, default=0)
+    imported_count = Column(Integer, default=0)
+    errors = Column(JSONB, default=list)
+    raw_data = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+# Module 2: Field/Facility Management
+class Field(Base):
+    __tablename__ = "fields"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(255), nullable=False)
+    location_address = Column(String(500), nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    surface_type = Column(String(50), nullable=True)  # grass/turf/indoor
+    size = Column(String(50), nullable=True)  # full/3_4/half/small
+    has_lights = Column(Boolean, default=False)
+    capacity = Column(Integer, nullable=True)
+    permitted_hours = Column(JSONB, nullable=True)  # {mon: ["16:00-20:00"], ...}
+    notes = Column(Text, nullable=True)
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    bookings = relationship("FieldBooking", back_populates="field", cascade="all, delete-orphan")
+
+
+class FieldBooking(Base):
+    __tablename__ = "field_bookings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    field_id = Column(UUID(as_uuid=True), ForeignKey("fields.id", ondelete="CASCADE"), nullable=False)
+    event_type = Column(String(50), default="practice")  # practice/game/tournament/clinic
+    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id", ondelete="SET NULL"), nullable=True)
+    title = Column(String(255), nullable=True)
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    recurring = Column(Boolean, default=False)
+    recurrence_rule = Column(JSONB, nullable=True)
+    status = Column(String(50), default="confirmed")  # confirmed/tentative/cancelled
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    field = relationship("Field", back_populates="bookings")
+    team = relationship("Team", back_populates="field_bookings")
+
+
+# Module 3: Season & Program Management
+class Season(Base):
+    __tablename__ = "seasons"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(255), nullable=False)
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
+    registration_open_date = Column(Date, nullable=True)
+    registration_close_date = Column(Date, nullable=True)
+    status = Column(String(50), default="planning")  # planning/registration/active/completed
+    settings = Column(JSONB, default=dict)
+    created_at = Column(DateTime, server_default=func.now())
+
+    programs = relationship("Program", back_populates="season", cascade="all, delete-orphan")
+    teams = relationship("Team", back_populates="season", cascade="all, delete-orphan")
+    schedule_entries = relationship("ScheduleEntry", back_populates="season", cascade="all, delete-orphan")
+
+
+class Program(Base):
+    __tablename__ = "programs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    season_id = Column(UUID(as_uuid=True), ForeignKey("seasons.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(255), nullable=False)
+    program_type = Column(String(50), default="recreational")  # recreational/travel/academy/camp/clinic/tournament
+    age_groups = Column(JSONB, default=list)
+    gender = Column(String(20), default="coed")  # coed/boys/girls
+    max_players_per_team = Column(Integer, nullable=True)
+    max_teams = Column(Integer, nullable=True)
+    registration_fee = Column(Float, nullable=True)
+    early_bird_fee = Column(Float, nullable=True)
+    late_fee = Column(Float, nullable=True)
+    financial_aid_eligible = Column(Boolean, default=False)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    season = relationship("Season", back_populates="programs")
+    teams = relationship("Team", back_populates="program", cascade="all, delete-orphan")
+
+
+# Module 4: Advanced Team Management
+class Team(Base):
+    __tablename__ = "teams"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    program_id = Column(UUID(as_uuid=True), ForeignKey("programs.id", ondelete="SET NULL"), nullable=True)
+    season_id = Column(UUID(as_uuid=True), ForeignKey("seasons.id", ondelete="SET NULL"), nullable=True)
+    name = Column(String(255), nullable=False)
+    team_level = Column(String(100), nullable=True)  # Blue/Red/Select
+    head_coach_id = Column(UUID(as_uuid=True), ForeignKey("evaluators.id", ondelete="SET NULL"), nullable=True)
+    assistant_coaches = Column(JSONB, default=list)  # array of evaluator IDs
+    max_roster_size = Column(Integer, nullable=True)
+    practice_day = Column(String(20), nullable=True)
+    practice_time = Column(String(20), nullable=True)
+    practice_field_id = Column(UUID(as_uuid=True), ForeignKey("fields.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    program = relationship("Program", back_populates="teams")
+    season = relationship("Season", back_populates="teams")
+    head_coach = relationship("Evaluator", foreign_keys=[head_coach_id])
+    practice_field = relationship("Field", foreign_keys=[practice_field_id])
+    roster = relationship("TeamRoster", back_populates="team", cascade="all, delete-orphan")
+    field_bookings = relationship("FieldBooking", back_populates="team", cascade="all, delete-orphan")
+    schedule_entries = relationship("ScheduleEntry", back_populates="team", foreign_keys="ScheduleEntry.team_id")
+    attendance_records = relationship("AttendanceRecord", back_populates="team", cascade="all, delete-orphan")
+
+
+class TeamRoster(Base):
+    __tablename__ = "team_rosters"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
+    player_id = Column(UUID(as_uuid=True), ForeignKey("players.id", ondelete="CASCADE"), nullable=False)
+    jersey_number = Column(Integer, nullable=True)
+    role = Column(String(50), default="player")  # player/captain/alternate
+    joined_at = Column(DateTime, server_default=func.now())
+    status = Column(String(50), default="active")  # active/injured/suspended/released
+
+    team = relationship("Team", back_populates="roster")
+    player = relationship("Player")
+
+
+# Module 5: Scheduling Engine
+class ScheduleEntry(Base):
+    __tablename__ = "schedule_entries"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    season_id = Column(UUID(as_uuid=True), ForeignKey("seasons.id", ondelete="SET NULL"), nullable=True)
+    entry_type = Column(String(50), default="practice")  # practice/game/event
+    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id", ondelete="SET NULL"), nullable=True)
+    opponent_team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id", ondelete="SET NULL"), nullable=True)
+    field_id = Column(UUID(as_uuid=True), ForeignKey("fields.id", ondelete="SET NULL"), nullable=True)
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    title = Column(String(255), nullable=True)
+    description = Column(Text, nullable=True)
+    status = Column(String(50), default="scheduled")  # scheduled/cancelled/completed
+    weather_status = Column(String(50), default="clear")  # clear/delayed/cancelled
+    referee_ids = Column(JSONB, default=list)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    season = relationship("Season", back_populates="schedule_entries")
+    team = relationship("Team", back_populates="schedule_entries", foreign_keys=[team_id])
+    opponent_team = relationship("Team", foreign_keys=[opponent_team_id])
+    field = relationship("Field")
+    attendance_records = relationship("AttendanceRecord", back_populates="schedule_entry", cascade="all, delete-orphan")
+
+
+# Module 7: Communication Center
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    subject = Column(String(500), nullable=True)
+    body = Column(Text, nullable=True)
+    body_html = Column(Text, nullable=True)
+    channel = Column(String(20), default="email")  # email/sms
+    audience_type = Column(String(50), default="all")  # all/program/team/age_group/custom
+    audience_filter = Column(JSONB, nullable=True)
+    status = Column(String(50), default="draft")  # draft/scheduled/sent
+    scheduled_for = Column(DateTime, nullable=True)
+    sent_at = Column(DateTime, nullable=True)
+    recipient_count = Column(Integer, default=0)
+    open_count = Column(Integer, default=0)
+    created_at = Column(DateTime, server_default=func.now())
+
+    recipients = relationship("MessageRecipient", back_populates="message", cascade="all, delete-orphan")
+
+
+class MessageRecipient(Base):
+    __tablename__ = "message_recipients"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    message_id = Column(UUID(as_uuid=True), ForeignKey("messages.id", ondelete="CASCADE"), nullable=False)
+    player_id = Column(UUID(as_uuid=True), ForeignKey("players.id", ondelete="SET NULL"), nullable=True)
+    parent_email = Column(String(255), nullable=True)
+    parent_phone = Column(String(50), nullable=True)
+    delivery_status = Column(String(50), default="pending")  # pending/sent/delivered/bounced
+    opened = Column(Boolean, default=False)
+    sent_at = Column(DateTime, nullable=True)
+
+    message = relationship("Message", back_populates="recipients")
+    player = relationship("Player")
+
+
+# Module 9: Attendance Tracking
+class AttendanceRecord(Base):
+    __tablename__ = "attendance_records"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    schedule_entry_id = Column(UUID(as_uuid=True), ForeignKey("schedule_entries.id", ondelete="CASCADE"), nullable=False)
+    player_id = Column(UUID(as_uuid=True), ForeignKey("players.id", ondelete="CASCADE"), nullable=False)
+    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id", ondelete="SET NULL"), nullable=True)
+    status = Column(String(50), default="present")  # present/absent/late/excused
+    check_in_time = Column(DateTime, nullable=True)
+    recorded_by = Column(String(255), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    schedule_entry = relationship("ScheduleEntry", back_populates="attendance_records")
+    player = relationship("Player")
+    team = relationship("Team", back_populates="attendance_records")
+
+
+# Module 11: Document Vault
+class PlayerDocument(Base):
+    __tablename__ = "player_documents"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    player_id = Column(UUID(as_uuid=True), ForeignKey("players.id", ondelete="CASCADE"), nullable=False)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    document_type = Column(String(50), default="other")  # waiver/medical/birth_cert/photo_id/other
+    file_name = Column(String(500), nullable=True)
+    file_data = Column(Text, nullable=True)  # base64 encoded
+    mime_type = Column(String(100), nullable=True)
+    uploaded_by = Column(String(255), nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+    verified = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    player = relationship("Player")

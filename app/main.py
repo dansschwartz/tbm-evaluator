@@ -9,16 +9,22 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import engine
 from app.models import Base, EvaluationTemplate, Organization
-from app.routers import analytics, draft, evaluators, events, features, notifications, organizations, players, reports, scoring, templates
+from app.routers import (
+    analytics, draft, evaluators, events, features, notifications,
+    organizations, players, reports, scoring, templates,
+    # TBM Operations modules
+    imports, fields, seasons, teams, schedules, ai_ops,
+    communications, coaches, attendance, ops_analytics, documents,
+)
 from app.routers.templates import SPORT_PRESETS
 
 logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="TBM Evaluator",
-    version="2.0.0",
-    description="AI-Native Player Evaluation Platform — 46 features including QR check-in, progress tracking, player comparison, radar charts, CSV import/export, offline scoring, parent portal, self-assessment, AI coach, voice scoring, calibration, webhooks, PDF reports, and white-label branding.",
+    title="TBM Operations — AI-Native Sports Club Platform",
+    version="3.0.0",
+    description="AI-Native Sports Club Operating System — 70+ features including player evaluation, scoring, reports, drafting, PlayMetrics import, field management, season/program management, team management, scheduling engine, AI operations assistant, communication center, coach management, attendance tracking, analytics dashboard, and document vault.",
 )
 
 app.add_middleware(
@@ -41,6 +47,19 @@ app.include_router(draft.router)
 app.include_router(notifications.router)
 app.include_router(analytics.router)
 app.include_router(features.router)
+
+# TBM Operations routers
+app.include_router(imports.router)
+app.include_router(fields.router)
+app.include_router(seasons.router)
+app.include_router(teams.router)
+app.include_router(schedules.router)
+app.include_router(ai_ops.router)
+app.include_router(communications.router)
+app.include_router(coaches.router)
+app.include_router(attendance.router)
+app.include_router(ops_analytics.router)
+app.include_router(documents.router)
 
 # Static files
 app.mount("/admin/static", StaticFiles(directory="admin"), name="admin_static")
@@ -92,7 +111,7 @@ async def shutdown():
 @app.get("/health")
 async def health():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "tbm-evaluator", "version": "2.0.0", "features": 46}
+    return {"status": "healthy", "service": "tbm-operations", "version": "3.0.0", "features": 70}
 
 
 # Serve frontend pages

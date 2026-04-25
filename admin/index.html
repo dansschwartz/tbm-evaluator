@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TBM Evaluator Admin</title>
+    <title>TBM Operations Admin</title>
     <link rel="stylesheet" href="/admin/static/admin.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="brand-logo">TBM</div>
-                <div class="brand-text">Evaluator Admin</div>
+                <div class="brand-text">Operations Admin</div>
             </div>
             <nav class="sidebar-nav">
                 <a href="#" class="nav-item active" data-section="overview">
@@ -46,6 +46,46 @@
                 <a href="#" class="nav-item" data-section="analytics">
                     <span class="nav-icon">&#9636;</span>
                     <span class="nav-label">Analytics</span>
+                </a>
+
+                <div class="nav-divider" style="border-top:1px solid rgba(255,255,255,0.1);margin:12px 16px;"></div>
+                <div style="padding:4px 16px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);">Operations</div>
+
+                <a href="#" class="nav-item" data-section="ops-overview">
+                    <span class="nav-icon">&#9881;</span>
+                    <span class="nav-label">Ops Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-section="ops-seasons">
+                    <span class="nav-icon">&#9788;</span>
+                    <span class="nav-label">Seasons</span>
+                </a>
+                <a href="#" class="nav-item" data-section="ops-teams">
+                    <span class="nav-icon">&#9812;</span>
+                    <span class="nav-label">Teams</span>
+                </a>
+                <a href="#" class="nav-item" data-section="ops-fields">
+                    <span class="nav-icon">&#9635;</span>
+                    <span class="nav-label">Fields</span>
+                </a>
+                <a href="#" class="nav-item" data-section="ops-schedule">
+                    <span class="nav-icon">&#128197;</span>
+                    <span class="nav-label">Schedule</span>
+                </a>
+                <a href="#" class="nav-item" data-section="ops-coaches">
+                    <span class="nav-icon">&#9997;</span>
+                    <span class="nav-label">Coaches</span>
+                </a>
+                <a href="#" class="nav-item" data-section="ops-comms">
+                    <span class="nav-icon">&#9993;</span>
+                    <span class="nav-label">Communications</span>
+                </a>
+                <a href="#" class="nav-item" data-section="ops-import">
+                    <span class="nav-icon">&#8679;</span>
+                    <span class="nav-label">Import</span>
+                </a>
+                <a href="#" class="nav-item" data-section="ops-ai">
+                    <span class="nav-icon">&#10024;</span>
+                    <span class="nav-label">AI Assistant</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -271,6 +311,255 @@
                         <div class="card">
                             <div class="card-header"><h3>Top Performers</h3></div>
                             <div class="card-body" id="analytics-top"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================ -->
+                <!-- TBM OPERATIONS SECTIONS                      -->
+                <!-- ============================================ -->
+
+                <!-- Ops Dashboard -->
+                <section class="section hidden" id="section-ops-overview">
+                    <div class="section-toolbar"><h2>Operations Dashboard</h2></div>
+                    <div class="stats-grid" id="ops-dashboard-stats"></div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Alerts</h3></div>
+                        <div class="card-body" id="ops-alerts-body">
+                            <p class="text-muted">Loading alerts...</p>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Upcoming Events</h3></div>
+                        <div class="card-body" id="ops-upcoming-body">
+                            <p class="text-muted">Loading...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Seasons & Programs -->
+                <section class="section hidden" id="section-ops-seasons">
+                    <div class="section-toolbar">
+                        <h2>Seasons & Programs</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-primary" id="btn-create-season">+ New Season</button>
+                            <button class="btn btn-secondary" id="btn-create-program">+ New Program</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>Seasons</h3></div>
+                        <div class="card-body">
+                            <table class="data-table" id="seasons-table">
+                                <thead>
+                                    <tr><th>Name</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="seasons-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Programs</h3></div>
+                        <div class="card-body">
+                            <table class="data-table" id="programs-table">
+                                <thead>
+                                    <tr><th>Name</th><th>Type</th><th>Season</th><th>Age Groups</th><th>Fee</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="programs-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Teams -->
+                <section class="section hidden" id="section-ops-teams">
+                    <div class="section-toolbar">
+                        <h2>Teams</h2>
+                        <div class="toolbar-actions">
+                            <select class="form-select form-select-sm" id="teams-season-filter">
+                                <option value="">All Seasons</option>
+                            </select>
+                            <button class="btn btn-primary" id="btn-create-team">+ New Team</button>
+                            <button class="btn btn-secondary" id="btn-ai-form-teams">AI Form Teams</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table" id="ops-teams-table">
+                                <thead>
+                                    <tr><th>Name</th><th>Level</th><th>Program</th><th>Head Coach</th><th>Roster</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="ops-teams-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Fields -->
+                <section class="section hidden" id="section-ops-fields">
+                    <div class="section-toolbar">
+                        <h2>Fields & Facilities</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-primary" id="btn-create-field">+ New Field</button>
+                            <button class="btn btn-coral" id="btn-weather-cancel">Weather Cancel</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table" id="fields-table">
+                                <thead>
+                                    <tr><th>Name</th><th>Address</th><th>Surface</th><th>Size</th><th>Lights</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="fields-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Field Calendar</h3></div>
+                        <div class="card-body" id="field-calendar-body">
+                            <p class="text-muted">Select an organization to view field calendar.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Schedule -->
+                <section class="section hidden" id="section-ops-schedule">
+                    <div class="section-toolbar">
+                        <h2>Schedule</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-primary" id="btn-create-schedule">+ New Entry</button>
+                            <button class="btn btn-secondary" id="btn-generate-games">Generate Games</button>
+                            <button class="btn btn-secondary" id="btn-generate-practices">Generate Practices</button>
+                            <button class="btn btn-outline" id="btn-check-conflicts">Check Conflicts</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table" id="schedule-table">
+                                <thead>
+                                    <tr><th>Date</th><th>Time</th><th>Type</th><th>Title</th><th>Field</th><th>Status</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="schedule-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Coaches -->
+                <section class="section hidden" id="section-ops-coaches">
+                    <div class="section-toolbar">
+                        <h2>Coaches & Staff</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-secondary" id="btn-expiring-certs">Expiring Certs</button>
+                            <button class="btn btn-secondary" id="btn-ai-assign-coaches">AI Assign</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table" id="coaches-table">
+                                <thead>
+                                    <tr><th>Name</th><th>Email</th><th>Phone</th><th>Certifications</th><th>Background</th><th>Teams</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="coaches-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Communications -->
+                <section class="section hidden" id="section-ops-comms">
+                    <div class="section-toolbar">
+                        <h2>Communications</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-primary" id="btn-compose-message">Compose</button>
+                            <button class="btn btn-secondary" id="btn-ai-draft-msg">AI Draft</button>
+                            <button class="btn btn-outline" id="btn-msg-templates">Templates</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table" id="messages-table">
+                                <thead>
+                                    <tr><th>Subject</th><th>Audience</th><th>Channel</th><th>Status</th><th>Recipients</th><th>Sent</th><th>Actions</th></tr>
+                                </thead>
+                                <tbody id="messages-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Import -->
+                <section class="section hidden" id="section-ops-import">
+                    <div class="section-toolbar">
+                        <h2>PlayMetrics Import</h2>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>Import Players from CSV</h3></div>
+                        <div class="card-body">
+                            <p style="margin-bottom:12px;">Paste PlayMetrics CSV data below. Columns auto-detected: First Name, Last Name, Date of Birth, Email, Phone, Parent/Guardian Name, Grade, Team, Program.</p>
+                            <textarea id="import-csv-data" class="form-input" style="width:100%;height:200px;font-family:monospace;font-size:12px;" placeholder="First Name,Last Name,Date of Birth,Email,Phone..."></textarea>
+                            <div style="margin-top:12px;display:flex;gap:8px;">
+                                <button class="btn btn-outline" id="btn-preview-import">Preview Import</button>
+                                <button class="btn btn-primary" id="btn-run-import">Import Players</button>
+                            </div>
+                            <div id="import-results" style="margin-top:16px;"></div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Import History</h3></div>
+                        <div class="card-body">
+                            <table class="data-table" id="imports-table">
+                                <thead>
+                                    <tr><th>Date</th><th>Type</th><th>Rows</th><th>Imported</th><th>Status</th></tr>
+                                </thead>
+                                <tbody id="imports-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- AI Assistant -->
+                <section class="section hidden" id="section-ops-ai">
+                    <div class="section-toolbar"><h2>AI Operations Assistant</h2></div>
+                    <div class="card">
+                        <div class="card-header"><h3>Ask a Question</h3></div>
+                        <div class="card-body">
+                            <p style="margin-bottom:8px;">Ask anything about your club operations: teams, players, fields, schedules, coaches, registrations...</p>
+                            <div style="display:flex;gap:8px;">
+                                <input type="text" id="ai-question-input" class="form-input" style="flex:1;" placeholder='e.g., "Which teams dont have coaches?" or "How many U10 players registered?"'>
+                                <button class="btn btn-primary" id="btn-ai-ask">Ask</button>
+                            </div>
+                            <div id="ai-answer-body" style="margin-top:16px;padding:16px;background:#f8f9fa;border-radius:8px;display:none;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Quick Actions</h3></div>
+                        <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <button class="btn btn-outline ai-quick" data-q="Which teams don't have head coaches?">Unassigned Coaches</button>
+                            <button class="btn btn-outline ai-quick" data-q="What fields are available this Saturday?">Open Fields Saturday</button>
+                            <button class="btn btn-outline ai-quick" data-q="How many players are registered?">Registration Count</button>
+                            <button class="btn btn-outline ai-quick" data-q="Are there any scheduling conflicts this week?">Schedule Conflicts</button>
+                            <button class="btn btn-outline ai-quick" data-q="Which coaches have expiring certifications?">Expiring Certs</button>
+                            <button class="btn btn-outline ai-quick" data-q="Give me a summary of our current operations status">Ops Summary</button>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>AI Email Drafting</h3></div>
+                        <div class="card-body">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                                <div>
+                                    <label style="font-weight:600;font-size:13px;">Audience</label>
+                                    <input type="text" id="email-audience" class="form-input" placeholder="e.g., U12 parents">
+                                </div>
+                                <div>
+                                    <label style="font-weight:600;font-size:13px;">Purpose</label>
+                                    <input type="text" id="email-purpose" class="form-input" placeholder="e.g., weather cancellation">
+                                </div>
+                            </div>
+                            <label style="font-weight:600;font-size:13px;">Context</label>
+                            <textarea id="email-context" class="form-input" style="width:100%;height:80px;" placeholder="e.g., Lightning in area, cancelling all outdoor activities tonight"></textarea>
+                            <button class="btn btn-primary" id="btn-draft-email" style="margin-top:8px;">Draft Email</button>
+                            <div id="email-draft-result" style="margin-top:16px;display:none;"></div>
                         </div>
                     </div>
                 </section>
