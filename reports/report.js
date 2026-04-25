@@ -536,3 +536,102 @@ async function playReportRecording(reportId, eventName, recordingId) {
     alert('Unable to play recording');
   }
 }
+
+// ============================================================
+// Development Plan on Report Card
+// ============================================================
+(function() {
+  function renderDevelopmentPlan(data) {
+    if (!data.development_plan) return;
+    var plan = data.development_plan;
+    
+    var container = document.querySelector('.report-card') || document.querySelector('.report-content') || document.body;
+    var section = document.createElement('section');
+    section.className = 'report-section';
+    section.style.cssText = 'margin-top:24px;padding:24px;background:linear-gradient(135deg,#f0fafa,#fff);border-radius:12px;border:2px solid #09A1A1;';
+    
+    var html = '<h3 style="margin:0 0 4px;font-size:18px;color:#09A1A1;"><i data-lucide="target" style="width:20px;height:20px;vertical-align:middle;margin-right:6px;"></i>Custom Development Plan</h3>';
+    html += '<p style="font-size:12px;color:#888;margin-bottom:16px;">' + (plan.plan_duration || '6 weeks') + ' · Position: ' + (plan.position || 'General') + '</p>';
+    
+    // AI Narrative
+    if (plan.narrative) {
+      html += '<div style="padding:14px;background:#fff;border-radius:8px;margin-bottom:16px;border:1px solid #e0e0e0;">';
+      html += '<p style="font-size:14px;line-height:1.6;color:#333;margin:0;">' + plan.narrative + '</p>';
+      html += '</div>';
+    }
+    
+    // Focus Areas
+    if (plan.focus_areas && plan.focus_areas.length) {
+      html += '<h4 style="font-size:14px;color:#333;margin:12px 0 8px;"><i data-lucide="crosshair" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i>Focus Areas</h4>';
+      html += '<ul style="font-size:13px;color:#555;padding-left:20px;margin-bottom:16px;">';
+      plan.focus_areas.forEach(function(a) { html += '<li style="margin-bottom:4px;">' + a + '</li>'; });
+      html += '</ul>';
+    }
+    
+    // Drills
+    if (plan.drills && plan.drills.length) {
+      html += '<h4 style="font-size:14px;color:#333;margin:12px 0 8px;"><i data-lucide="dumbbell" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i>Recommended Drills</h4>';
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">';
+      plan.drills.forEach(function(d) {
+        var priorityColor = d.priority === "high" ? "#FA6E82" : "#F6C992";
+        html += '<div style="padding:12px;background:#fff;border-radius:8px;border:1px solid #eee;border-left:4px solid ' + priorityColor + ';">';
+        html += '<div style="font-size:13px;font-weight:700;color:#333;">' + d.name + '</div>';
+        html += '<div style="font-size:12px;color:#888;margin:4px 0;">' + (d.skill_target || '') + ' · ' + (d.duration || '') + ' · ' + (d.frequency || '') + '</div>';
+        html += '<div style="font-size:12px;color:#555;">' + d.description + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    
+    // Weekly Schedule
+    if (plan.weekly_schedule) {
+      var sched = plan.weekly_schedule;
+      var hasSched = (sched.monday && sched.monday.length) || (sched.wednesday && sched.wednesday.length) || (sched.friday && sched.friday.length);
+      if (hasSched) {
+        html += '<h4 style="font-size:14px;color:#333;margin:16px 0 8px;"><i data-lucide="calendar" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i>Weekly Schedule</h4>';
+        html += '<div style="display:flex;gap:10px;flex-wrap:wrap;">';
+        ["monday","wednesday","friday"].forEach(function(day) {
+          if (sched[day] && sched[day].length) {
+            html += '<div style="flex:1;min-width:150px;padding:10px;background:#fff;border-radius:8px;border:1px solid #eee;">';
+            html += '<div style="font-size:12px;font-weight:700;color:#09A1A1;text-transform:capitalize;margin-bottom:4px;">' + day + '</div>';
+            sched[day].forEach(function(drill) { html += '<div style="font-size:12px;color:#555;">• ' + drill + '</div>'; });
+            html += '</div>';
+          }
+        });
+        if (sched.daily && sched.daily.length) {
+          html += '<div style="flex:1;min-width:150px;padding:10px;background:#fff;border-radius:8px;border:1px solid #eee;">';
+          html += '<div style="font-size:12px;font-weight:700;color:#F6C992;">Daily</div>';
+          sched.daily.forEach(function(drill) { html += '<div style="font-size:12px;color:#555;">• ' + drill + '</div>'; });
+          html += '</div>';
+        }
+        html += '</div>';
+      }
+    }
+    
+    section.innerHTML = html;
+    
+    // Insert after AI section
+    var aiSection = document.getElementById('ai-summary-section') || document.querySelector('.ai-summary');
+    if (aiSection && aiSection.parentNode) {
+      aiSection.parentNode.insertBefore(section, aiSection.nextSibling);
+    } else {
+      container.appendChild(section);
+    }
+    
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  
+  // Hook into report data
+  var _origFetch2 = window.fetch;
+  window.fetch = function() {
+    return _origFetch2.apply(this, arguments).then(function(response) {
+      var cloned = response.clone();
+      cloned.json().then(function(data) {
+        if (data && data.development_plan) {
+          setTimeout(function() { renderDevelopmentPlan(data); }, 600);
+        }
+      }).catch(function(){});
+      return response;
+    });
+  };
+})();

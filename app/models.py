@@ -210,6 +210,8 @@ class PlayerReport(Base):
     ai_recommendation = Column(Text, nullable=True)
     # Feature 22: AI progress narrative
     ai_progress_narrative = Column(Text, nullable=True)
+    # AI-generated custom development/work plan based on scores + position
+    development_plan = Column(JSONB, nullable=True)  # {drills: [{name, description, skill_target, duration, frequency}], focus_areas: [], position_notes: str}
     report_url = Column(String(500), nullable=True)
     sent_to_parent = Column(Boolean, default=False)
     sent_at = Column(DateTime, nullable=True)

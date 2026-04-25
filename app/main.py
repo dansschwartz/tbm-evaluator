@@ -85,6 +85,7 @@ async def run_migrations(conn):
         "ALTER TABLE event_players ADD COLUMN IF NOT EXISTS voice_recordings JSONB",
         "ALTER TABLE player_reports ADD COLUMN IF NOT EXISTS weighted_overall_score FLOAT",
         "ALTER TABLE player_reports ADD COLUMN IF NOT EXISTS ai_progress_narrative TEXT",
+        "ALTER TABLE player_reports ADD COLUMN IF NOT EXISTS development_plan JSONB",
         "ALTER TABLE players ADD COLUMN IF NOT EXISTS height_inches INTEGER",
         "ALTER TABLE players ADD COLUMN IF NOT EXISTS weight_lbs INTEGER",
         "ALTER TABLE players ADD COLUMN IF NOT EXISTS dominant_foot VARCHAR(10)",

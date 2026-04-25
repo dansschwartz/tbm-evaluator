@@ -123,6 +123,7 @@ async def generate_reports(event_id: uuid.UUID, db: AsyncSession = Depends(get_d
                 rank=rank,
                 total_players=total_players,
                 template_skills=template_skills,
+                position=player.position or "",
             )
         except Exception as e:
             logger.error(f"AI summary failed for player {player_id}: {e}")
@@ -317,6 +318,7 @@ async def get_public_report(report_id: uuid.UUID, db: AsyncSession = Depends(get
         "self_assessment": self_assessment,
         "template": template_data,
         # Voice recordings (without audio_data for listing — use individual endpoint to play)
+        "development_plan": report.development_plan,
         "voice_recordings": [
             {"id": r["id"], "label": r.get("label",""), "duration_seconds": r.get("duration_seconds",0),
              "evaluator_name": r.get("evaluator_name",""), "recorded_at": r.get("recorded_at","")}

@@ -50,6 +50,7 @@ async def generate_player_summary(
     rank: int,
     total_players: int,
     template_skills: list[dict],
+    position: str = "",
 ) -> dict:
     skill_details = []
     for skill in template_skills:
@@ -62,6 +63,14 @@ async def generate_player_summary(
 
     skills_text = "\n".join(skill_details) if skill_details else "No scores available"
 
+    position_context = ""
+    if position:
+        position_context = f"""
+Position: {position}
+IMPORTANT: Evaluate this player specifically through the lens of what a {position} needs to succeed.
+For example, a Forward needs excellent shooting and speed, while a Midfielder needs passing and stamina.
+Reference their position throughout your evaluation — how their skills match what their position demands."""
+
     prompt = f"""You are an expert youth {sport} evaluator. Generate an evaluation report for a player.
 
 Player: {player_name}
@@ -69,19 +78,20 @@ Age Group: {age_group}
 Event: {event_name}
 Overall Score: {overall_score:.2f}
 Rank: {rank} out of {total_players} players
+{position_context}
 
 Skill Scores:
 {skills_text}
 
 Respond in this exact JSON format:
 {{
-    "summary": "2-3 sentence narrative summary of the player's performance",
-    "strengths": ["strength 1", "strength 2", "strength 3"],
-    "improvements": ["area 1", "area 2", "area 3"],
-    "recommendation": "One sentence recommendation about the player's readiness level"
+    "summary": "2-3 sentence narrative summary referencing the player by first name and their position. Be specific about which skills stand out and which need development FOR THEIR POSITION.",
+    "strengths": ["strength 1 (reference position relevance)", "strength 2", "strength 3"],
+    "improvements": ["area 1 (explain why this matters for their position)", "area 2", "area 3"],
+    "recommendation": "One sentence about their readiness level and what specific training would help them most at their position"
 }}
 
-Be specific to their scores. Be encouraging but honest. Use youth-appropriate language."""
+Use the player's first name. Be specific to their scores AND position demands. Be encouraging but honest. Parents will read this."""
 
     response_text = await call_openai([{"role": "user", "content": prompt}])
 

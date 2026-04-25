@@ -1494,3 +1494,223 @@ async def update_player_bio(player_id: str, request: Request, db: AsyncSession =
         "years_playing": player.years_playing,
         "school": player.school,
     }
+
+
+# ============================================================
+# AI Development Plans — Custom work plans per player based on scores + position
+# ============================================================
+
+POSITION_DRILL_LIBRARY = {
+    "Goalkeeper": {
+        "Shot Stopping": [
+            {"name": "Rapid Fire Saves", "description": "Partner shoots 10 balls in quick succession from 12 yards. Focus on quick recovery between saves.", "duration": "15 min", "frequency": "3x/week"},
+            {"name": "Diving Technique", "description": "Practice diving saves to both sides from a set position. Focus on proper landing technique and getting up quickly.", "duration": "10 min", "frequency": "2x/week"},
+        ],
+        "Distribution": [
+            {"name": "Goal Kicks for Accuracy", "description": "Place 5 targets at different distances. Practice hitting each consistently from goal kicks.", "duration": "15 min", "frequency": "2x/week"},
+            {"name": "Throw Distribution Drill", "description": "Practice one-hand throws to targets at 15, 25, and 35 yards. Alternate overarm and underarm.", "duration": "10 min", "frequency": "2x/week"},
+        ],
+        "Positioning": [
+            {"name": "Angle Play", "description": "Attacker approaches from different angles. GK practices narrowing the angle by adjusting position. No shots — just positioning.", "duration": "10 min", "frequency": "3x/week"},
+        ],
+    },
+    "Defender": {
+        "Tackling / Defending": [
+            {"name": "1v1 Defending Channel", "description": "Set up a narrow channel. Defender must force attacker wide and win the ball. Focus on body position and timing.", "duration": "15 min", "frequency": "3x/week"},
+            {"name": "Shadow Defending", "description": "Mirror an attacker's movements without the ball. Focus on staying goal-side and reading body language.", "duration": "10 min", "frequency": "2x/week"},
+        ],
+        "Heading": [
+            {"name": "Headed Clearances", "description": "Partner tosses balls from varying heights. Practice clearing with direction and power. Alternate standing and jumping headers.", "duration": "10 min", "frequency": "2x/week"},
+        ],
+        "Positioning / Movement": [
+            {"name": "Defensive Shape Drill", "description": "Practice maintaining a back line of 3-4 players. Coach calls scenarios — shift left, shift right, drop, press. Focus on communication.", "duration": "15 min", "frequency": "2x/week"},
+        ],
+        "Speed / Acceleration": [
+            {"name": "Recovery Runs", "description": "Start facing your own goal. On whistle, turn and sprint to catch an attacker. Builds the recovery speed defenders need.", "duration": "10 min", "frequency": "2x/week"},
+        ],
+    },
+    "Midfielder": {
+        "Passing Accuracy": [
+            {"name": "Triangle Passing", "description": "3 players form a triangle 15 yards apart. One-touch passing, focusing on accuracy and weight. Rotate direction every 30 seconds.", "duration": "10 min", "frequency": "3x/week"},
+            {"name": "Long Ball Target Practice", "description": "Hit targets at 30 and 40 yards. Practice driven and lofted passes. Track accuracy percentage.", "duration": "15 min", "frequency": "2x/week"},
+        ],
+        "Game Intelligence": [
+            {"name": "Small-Sided Decision Games", "description": "4v4 in a small area with 2-touch limit. Forces quick scanning, decision-making, and awareness.", "duration": "15 min", "frequency": "3x/week"},
+            {"name": "Film Study", "description": "Watch 15 minutes of professional midfield play. Note positioning, passing choices, and movement patterns.", "duration": "15 min", "frequency": "1x/week"},
+        ],
+        "Stamina / Work Rate": [
+            {"name": "Box-to-Box Intervals", "description": "Sprint from one penalty box to the other, jog back. Repeat 10 times. Rest 2 min. Do 3 sets. Builds the engine midfielders need.", "duration": "20 min", "frequency": "2x/week"},
+        ],
+        "Ball Control / First Touch": [
+            {"name": "Wall Pass First Touch", "description": "Pass against a wall and control the return with different surfaces — inside, outside, sole, thigh. 50 touches each surface.", "duration": "10 min", "frequency": "Daily"},
+        ],
+    },
+    "Forward": {
+        "Shooting / Finishing": [
+            {"name": "Finishing Circuit", "description": "Set up 5 stations around the box. Sprint to each, receive a pass, and finish first time. Focus on accuracy over power.", "duration": "15 min", "frequency": "3x/week"},
+            {"name": "1v1 with Goalkeeper", "description": "Start at halfway, receive a through ball, and finish 1v1 against the keeper. Practice different finishes: low, chip, round the keeper.", "duration": "15 min", "frequency": "2x/week"},
+        ],
+        "Speed / Acceleration": [
+            {"name": "Sprint Starts", "description": "From standing, sitting, and lying positions — explode into a 20-yard sprint on whistle. 10 reps from each position.", "duration": "15 min", "frequency": "3x/week"},
+        ],
+        "Positioning / Movement": [
+            {"name": "Blind-Side Runs", "description": "Practice making runs behind defenders. Partner plays through balls. Focus on timing the run to stay onside.", "duration": "15 min", "frequency": "2x/week"},
+            {"name": "Checking to the Ball", "description": "Start in the box, check toward the ball, receive, turn, shoot. Practice different turn types.", "duration": "10 min", "frequency": "2x/week"},
+        ],
+        "Dribbling": [
+            {"name": "Cone Dribbling at Speed", "description": "Set up 10 cones in a zigzag. Dribble through at maximum speed using both feet. Time each run and try to beat your best.", "duration": "10 min", "frequency": "3x/week"},
+        ],
+    },
+}
+
+# Generic drills for any position
+GENERIC_DRILLS = {
+    "Ball Control / First Touch": [
+        {"name": "Juggling Challenge", "description": "Juggle using feet, thighs, and head. Track your best streak. Aim to add 5 more each week.", "duration": "10 min", "frequency": "Daily"},
+    ],
+    "Coachability": [
+        {"name": "Video Self-Review", "description": "Record yourself in practice or games. Watch back and identify 2 things to improve and 1 thing you did well.", "duration": "15 min", "frequency": "1x/week"},
+    ],
+    "Attitude / Effort": [
+        {"name": "Leadership Challenge", "description": "Before each practice, set a personal goal (e.g., 'I will encourage a teammate 3 times'). Review after.", "duration": "5 min", "frequency": "Every practice"},
+    ],
+    "Stamina / Work Rate": [
+        {"name": "Fartlek Running", "description": "20 min run alternating between jogging and sprinting. Sprint for 30 sec, jog for 60 sec. Builds game-like fitness.", "duration": "20 min", "frequency": "2x/week"},
+    ],
+    "Speed / Acceleration": [
+        {"name": "Ladder Drills", "description": "Agility ladder — practice in-in-out-out, lateral shuffles, and ickey shuffle. 5 reps each pattern.", "duration": "10 min", "frequency": "3x/week"},
+    ],
+}
+
+
+@router.post("/api/reports/{report_id}/generate-plan")
+async def generate_development_plan(report_id: str, db: AsyncSession = Depends(get_db)):
+    """Generate a custom AI development/work plan for a player based on their evaluation scores and position.
+    Includes specific drills, exercises, and focus areas tailored to their weaknesses and position demands."""
+    
+    report = (await db.execute(
+        select(PlayerReport).options(
+            selectinload(PlayerReport.player),
+            selectinload(PlayerReport.event)
+        ).where(PlayerReport.id == report_id)
+    )).scalar_one_or_none()
+    
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    player = report.player
+    position = player.position or "Midfielder"  # Default to midfielder
+    skill_scores = report.skill_scores or {}
+    
+    # Sort skills by score (lowest first = biggest improvement areas)
+    sorted_skills = sorted(skill_scores.items(), key=lambda x: x[1])
+    
+    # Get position-specific ideal scores
+    ideal = SOCCER_POSITION_PROFILES.get(position, {}).get("ideal_scores", {})
+    
+    # Calculate gaps: where is the player furthest from the ideal for their position?
+    gaps = []
+    for skill, score in sorted_skills:
+        ideal_score = ideal.get(skill, 3.0)
+        gap = ideal_score - score
+        if gap > 0:
+            gaps.append({"skill": skill, "current": score, "ideal": ideal_score, "gap": round(gap, 1)})
+    
+    gaps.sort(key=lambda x: x["gap"], reverse=True)
+    
+    # Select drills based on position and weaknesses
+    position_drills = POSITION_DRILL_LIBRARY.get(position, {})
+    selected_drills = []
+    focus_areas = []
+    
+    for gap_item in gaps[:5]:  # Top 5 weakest areas
+        skill = gap_item["skill"]
+        focus_areas.append(f"{skill} (current: {gap_item['current']}/5, target: {gap_item['ideal']}/5)")
+        
+        # Get position-specific drills for this skill
+        drills = position_drills.get(skill, [])
+        if not drills:
+            drills = GENERIC_DRILLS.get(skill, [])
+        
+        for drill in drills[:2]:  # Max 2 drills per skill
+            selected_drills.append({
+                **drill,
+                "skill_target": skill,
+                "priority": "high" if gap_item["gap"] > 1.0 else "medium",
+            })
+    
+    # Generate AI narrative for the plan
+    player_name = f"{player.first_name} {player.last_name}"
+    drills_text = "\n".join(f"- {d['name']}: {d['description']}" for d in selected_drills[:8])
+    gaps_text = "\n".join(f"- {g['skill']}: {g['current']}/5 (target {g['ideal']}/5 for {position})" for g in gaps[:5])
+    
+    prompt = f"""Create a personalized 6-week development plan for a youth soccer player.
+
+Player: {player_name}
+Position: {position}
+Age Group: {player.age_group or 'U12'}
+Overall Score: {report.overall_score}/5
+
+Biggest gaps for their position ({position}):
+{gaps_text}
+
+Recommended drills:
+{drills_text}
+
+Write a 4-5 sentence development plan summary that:
+1. Uses the player's first name
+2. Acknowledges their current strengths
+3. Identifies the 2-3 key areas to focus on for their position
+4. Provides a realistic timeline and weekly commitment
+5. Ends with an encouraging, motivating message
+
+Keep it specific to their position demands. Be encouraging but honest."""
+
+    try:
+        plan_narrative = await call_openai([{"role": "user", "content": prompt}], max_tokens=300)
+    except Exception:
+        plan_narrative = f"{player.first_name} should focus on developing {', '.join(g['skill'] for g in gaps[:3])} over the next 6 weeks to better match the demands of the {position} position."
+    
+    # Build the full plan
+    development_plan = {
+        "player_name": player_name,
+        "position": position,
+        "generated_at": datetime.utcnow().isoformat(),
+        "plan_duration": "6 weeks",
+        "narrative": plan_narrative,
+        "focus_areas": focus_areas,
+        "position_demands": SOCCER_POSITION_PROFILES.get(position, {}).get("key_traits", []),
+        "drills": selected_drills,
+        "weekly_schedule": {
+            "monday": [d["name"] for d in selected_drills if "3x" in d.get("frequency", "") or "Daily" in d.get("frequency", "")][:2],
+            "wednesday": [d["name"] for d in selected_drills if "3x" in d.get("frequency", "") or "2x" in d.get("frequency", "")][:2],
+            "friday": [d["name"] for d in selected_drills if "3x" in d.get("frequency", "")][:2],
+            "daily": [d["name"] for d in selected_drills if "Daily" in d.get("frequency", "")],
+        },
+        "position_notes": SOCCER_POSITION_PROFILES.get(position, {}).get("description", ""),
+        "ideal_profile": ideal,
+    }
+    
+    # Save to report
+    report.development_plan = development_plan
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(report, "development_plan")
+    
+    return development_plan
+
+
+@router.get("/api/reports/{report_id}/plan")
+async def get_development_plan(report_id: str, db: AsyncSession = Depends(get_db)):
+    """Get the development plan for a report. Generate one if it doesn't exist."""
+    report = (await db.execute(
+        select(PlayerReport).where(PlayerReport.id == report_id)
+    )).scalar_one_or_none()
+    
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    if report.development_plan:
+        return report.development_plan
+    
+    # Auto-generate if not exists
+    return await generate_development_plan(report_id, db)
