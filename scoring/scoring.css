@@ -410,7 +410,7 @@ body {
   background: var(--success);
 }
 
-.status-dot.scored {
+.status-dot.sco#FA6E82 {
   background: var(--teal);
   box-shadow: 0 0 0 3px var(--teal-light);
 }

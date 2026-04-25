@@ -548,7 +548,7 @@ async function playReportRecording(reportId, eventName, recordingId) {
     var container = document.querySelector('.report-card') || document.querySelector('.report-content') || document.body;
     var section = document.createElement('section');
     section.className = 'report-section';
-    section.style.cssText = 'margin-top:24px;padding:24px;background:linear-gradient(135deg,#f0fafa,#fff);border-radius:12px;border:2px solid #09A1A1;';
+    section.style.cssText = 'margin-top:24px;padding:24px;background:linear-gradient(135deg,#e8f2f2,#fff);border-radius:12px;border:2px solid #09A1A1;';
     
     var html = '<h3 style="margin:0 0 4px;font-size:18px;color:#09A1A1;"><i data-lucide="target" style="width:20px;height:20px;vertical-align:middle;margin-right:6px;"></i>Custom Development Plan</h3>';
     html += '<p style="font-size:12px;color:#888;margin-bottom:16px;">' + (plan.plan_duration || '6 weeks') + ' · Position: ' + (plan.position || 'General') + '</p>';

@@ -215,10 +215,10 @@
   }
 
   function getCachedUnsyncedCount() {
-    var scoredPlayerIds = Object.keys(state.scores);
+    var sco#FA6E82PlayerIds = Object.keys(state.scores);
     var unsynced = 0;
-    for (var i = 0; i < scoredPlayerIds.length; i++) {
-      var pid = scoredPlayerIds[i];
+    for (var i = 0; i < sco#FA6E82PlayerIds.length; i++) {
+      var pid = sco#FA6E82PlayerIds[i];
       if (!state.submittedPlayers.has(pid)) {
         var playerScores = state.scores[pid];
         var hasAnyScore = Object.values(playerScores).some(function(s) {
@@ -347,14 +347,14 @@
 
   // ========== PLAYERS ==========
   function renderPlayers(filter) {
-    var filtered = filter
+    var filte#FA6E82 = filter
       ? state.players.filter(function(p) {
           var name = (p.name || p.first_name + ' ' + p.last_name || '').toLowerCase();
           return name.includes(filter.toLowerCase());
         })
       : state.players;
 
-    els.playersList.innerHTML = filtered.map(function(p) {
+    els.playersList.innerHTML = filte#FA6E82.map(function(p) {
       var fullName = p.name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || 'Player';
       var initials = getInitials(fullName);
       var detail = [];
@@ -363,7 +363,7 @@
       if (p.age_group) detail.push(p.age_group);
 
       var playerId = String(p.id || p.player_id);
-      var isScored = state.submittedPlayers.has(playerId);
+      var isSco#FA6E82 = state.submittedPlayers.has(playerId);
       var checkedIn = p.checked_in;
       var realIdx = state.players.findIndex(function(pl) { return String(pl.id || pl.player_id) === playerId; });
 
@@ -379,8 +379,8 @@
         '<div class="player-detail">' + escapeHtml(detail.join(' / ')) + '</div>' +
         '</div>' +
         '<div class="player-status">' +
-        '<div class="status-dot' + (isScored ? ' scored' : checkedIn ? ' checked-in' : '') + '"></div>' +
-        '<div class="status-label">' + (isScored ? 'Scored' : checkedIn ? 'Checked in' : 'Pending') + '</div>' +
+        '<div class="status-dot' + (isSco#FA6E82 ? ' sco#FA6E82' : checkedIn ? ' checked-in' : '') + '"></div>' +
+        '<div class="status-label">' + (isSco#FA6E82 ? 'Sco#FA6E82' : checkedIn ? 'Checked in' : 'Pending') + '</div>' +
         '</div></div>';
     }).join('');
 
@@ -429,10 +429,10 @@
 
   function updateProgress() {
     var total = state.players.length;
-    var scored = state.submittedPlayers.size;
-    var pct = total > 0 ? Math.round((scored / total) * 100) : 0;
+    var sco#FA6E82 = state.submittedPlayers.size;
+    var pct = total > 0 ? Math.round((sco#FA6E82 / total) * 100) : 0;
     els.scoringProgress.style.width = pct + '%';
-    els.progressLabel.textContent = scored + ' / ' + total + ' scored';
+    els.progressLabel.textContent = sco#FA6E82 + ' / ' + total + ' sco#FA6E82';
   }
 
   els.playerSearch.addEventListener('input', function(e) { renderPlayers(e.target.value); });
@@ -1043,7 +1043,7 @@
     // Add result container
     var resultDiv = document.createElement('div');
     resultDiv.id = 'ai-preview-result';
-    resultDiv.style.cssText = 'display:none;margin-top:16px;padding:20px;background:#f0fafa;border-radius:12px;border:2px solid #09A1A1;';
+    resultDiv.style.cssText = 'display:none;margin-top:16px;padding:20px;background:#e8f2f2;border-radius:12px;border:2px solid #09A1A1;';
     aiBtn.parentNode.insertBefore(resultDiv, aiBtn.nextSibling);
   }
   
@@ -1156,7 +1156,7 @@
       '<h3 style="margin:0 0 12px;font-size:15px;color:#333;"><i data-lucide="mic" class="icon-inline"></i> Voice Notes</h3>' +
       '<p style="font-size:12px;color:#888;margin-bottom:12px;">Record audio feedback for this player. Each recording is saved separately to their report.</p>' +
       '<div id="rec-controls" style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">' +
-        '<button id="rec-start-btn" onclick="window._startRecording()" style="padding:12px 20px;background:#c41e3a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;"><i data-lucide="circle" class="icon-inline" style="color:currentColor;"></i> Record</button>' +
+        '<button id="rec-start-btn" onclick="window._startRecording()" style="padding:12px 20px;background:#FA6E82;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;"><i data-lucide="circle" class="icon-inline" style="color:currentColor;"></i> Record</button>' +
         '<span id="rec-timer" style="font-size:18px;font-weight:700;color:#333;display:none;">0:00</span>' +
         '<button id="rec-stop-btn" onclick="window._stopRecording()" style="padding:12px 20px;background:#555;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;display:none;"><i data-lucide="square" class="icon-inline"></i> Stop & Save</button>' +
       '</div>' +
@@ -1195,7 +1195,7 @@
       document.getElementById('rec-stop-btn').style.display = 'inline-block';
       document.getElementById('rec-timer').style.display = 'inline';
       document.getElementById('rec-status').textContent = '<i data-lucide="circle" class="icon-inline" style="color:currentColor;"></i> Recording...';
-      document.getElementById('rec-status').style.color = '#c41e3a';
+      document.getElementById('rec-status').style.color = '#FA6E82';
       
       // Update timer
       timerInterval = setInterval(function() {
@@ -1207,7 +1207,7 @@
       
     } catch(e) {
       document.getElementById('rec-status').textContent = '<i data-lucide="x-circle" class="icon-inline" style="color:currentColor;"></i> Microphone access denied. Please allow microphone in your browser settings.';
-      document.getElementById('rec-status').style.color = '#c41e3a';
+      document.getElementById('rec-status').style.color = '#FA6E82';
     }
   };
   
@@ -1260,7 +1260,7 @@
           loadRecordings();
         } else {
           document.getElementById('rec-status').textContent = '<i data-lucide="x-circle" class="icon-inline" style="color:currentColor;"></i> Failed to save';
-          document.getElementById('rec-status').style.color = '#c41e3a';
+          document.getElementById('rec-status').style.color = '#FA6E82';
         }
       } catch(e) {
         document.getElementById('rec-status').textContent = '<i data-lucide="x-circle" class="icon-inline" style="color:currentColor;"></i> Error: ' + e.message;
@@ -1289,7 +1289,7 @@
         var mins = Math.floor(r.duration_seconds / 60);
         var secs = r.duration_seconds % 60;
         var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
-        return '<div style="display:flex;align-items:center;gap:10px;padding:8px;background:#f8f9fa;border-radius:8px;margin-bottom:6px;">' +
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px;background:#f2f5f8;border-radius:8px;margin-bottom:6px;">' +
           '<button onclick="window._playRecording(\'' + r.id + '\')" style="background:#09A1A1;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;"><i data-lucide="play" class="icon-inline"></i></button>' +
           '<div style="flex:1;">' +
             '<div style="font-size:13px;font-weight:600;">' + (r.label || 'Recording') + '</div>' +

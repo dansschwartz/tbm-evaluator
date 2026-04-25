@@ -630,7 +630,7 @@ html, body {
 
 .badge-draft { background: #eef1f5; color: #5a6a7e; }
 .badge-active { background: #e0f5f0; color: #0a7a6e; }
-.badge-scoring { background: #fff3e0; color: #e65100; }
+.badge-scoring { background: #fdf5ec; color: #F6C992; }
 .badge-completed { background: #e0f5f0; color: #0a7a6e; }
 .badge-yes { background: #e0f5f0; color: #0a7a6e; }
 .badge-no { background: #fce8e8; color: #c0392b; }

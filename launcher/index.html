@@ -8,12 +8,12 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Inter',system-ui,sans-serif; background:#f5f7fa; min-height:100vh; display:flex; flex-direction:column; }
+  body { font-family:'Inter',system-ui,sans-serif; background:#f2f4f8; min-height:100vh; display:flex; flex-direction:column; }
   
-  .header { background:#fff; border-bottom:1px solid #e8eaed; padding:20px 40px; display:flex; align-items:center; gap:16px; }
+  .header { background:#fff; border-bottom:1px solid #ACC0D3; padding:20px 40px; display:flex; align-items:center; gap:16px; }
   .logo { width:44px; height:44px; background:linear-gradient(135deg,#09A1A1,#5484A4); border-radius:12px; display:flex; align-items:center; justify-content:center; }
   .logo svg { stroke:white; }
-  .header h1 { font-size:22px; font-weight:800; color:#1a1a2e; }
+  .header h1 { font-size:22px; font-weight:800; color:#5484A4; }
   .header p { font-size:13px; color:#888; margin-left:auto; }
   
   .main { flex:1; display:flex; align-items:center; justify-content:center; padding:40px; }
@@ -25,7 +25,7 @@
     border-radius:16px;
     padding:32px;
     text-align:center;
-    border:2px solid #e8eaed;
+    border:2px solid #ACC0D3;
     cursor:pointer;
     transition:all 0.2s;
     text-decoration:none;
@@ -36,7 +36,7 @@
   .app-card:hover { border-color:#09A1A1; transform:translateY(-4px); box-shadow:0 8px 30px rgba(9,161,161,0.15); }
   .app-card.active { border-color:#09A1A1; }
   .app-card.coming-soon { opacity:0.5; cursor:default; }
-  .app-card.coming-soon:hover { transform:none; box-shadow:none; border-color:#e8eaed; }
+  .app-card.coming-soon:hover { transform:none; box-shadow:none; border-color:#ACC0D3; }
   
   .app-icon {
     width:64px; height:64px;
@@ -46,7 +46,7 @@
   }
   .app-icon i { width:32px; height:32px; }
   
-  .app-card h2 { font-size:18px; font-weight:700; margin-bottom:6px; color:#1a1a2e; }
+  .app-card h2 { font-size:18px; font-weight:700; margin-bottom:6px; color:#5484A4; }
   .app-card p { font-size:13px; color:#888; line-height:1.5; }
   
   .app-badge {
@@ -61,12 +61,12 @@
   .footer { text-align:center; padding:20px; font-size:11px; color:#aaa; }
   
   /* Color themes per app */
-  .app-finance .app-icon { background:#e8f5e9; color:#2e7d32; }
-  .app-operations .app-icon { background:#e0f7fa; color:#09A1A1; }
-  .app-marketing .app-icon { background:#fce4ec; color:#c62828; }
-  .app-fundraising .app-icon { background:#fff3e0; color:#e65100; }
-  .app-hr .app-icon { background:#e8eaf6; color:#283593; }
-  .app-impact .app-icon { background:#f3e5f5; color:#6a1b9a; }
+  .app-finance .app-icon { background:#e0f5f5; color:#09A1A1; }
+  .app-operations .app-icon { background:#e0f5f5; color:#09A1A1; }
+  .app-marketing .app-icon { background:#fae8ec; color:#FA6E82; }
+  .app-fundraising .app-icon { background:#fdf5ec; color:#F6C992; }
+  .app-hr .app-icon { background:#e8edf6; color:#5484A4; }
+  .app-impact .app-icon { background:#f5e8ed; color:#D396A6; }
   
   @media (max-width:768px) { .apps-grid { grid-template-columns:1fr; } }
 </style>
