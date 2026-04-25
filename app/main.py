@@ -73,6 +73,7 @@ app.mount("/self-assess/static", StaticFiles(directory="selfassess"), name="self
 async def startup():
     logger.info("Creating database tables...")
     async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database tables created.")
 
