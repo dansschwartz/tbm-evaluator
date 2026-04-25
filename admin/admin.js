@@ -13,6 +13,23 @@ const CONFIG = {
 
 // Prompt for admin key on first visit
 
+
+// Collapsible AI insight panel
+function aiPanel(title, content, startOpen) {
+    if (!content) return '';
+    var id = 'ai-panel-' + Math.random().toString(36).substr(2, 9);
+    var isOpen = startOpen !== false;
+    return '<div class="ai-insight-panel" style="margin:12px 0;border:1px solid #d0e8e8;border-radius:10px;overflow:hidden;background:#fafffe;">' +
+        '<div class="ai-insight-header" onclick="var b=document.getElementById(\'' + id + '\');var a=this.querySelector(\'i\');b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.style.transform=b.style.display===\'none\'?\'rotate(-90deg)\':\'rotate(0deg)\';" style="padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;background:#f0fafa;border-bottom:1px solid #d0e8e8;user-select:none;">' +
+            '<i data-lucide="chevron-down" style="width:16px;height:16px;color:#09A1A1;transition:transform 0.2s;' + (isOpen ? '' : 'transform:rotate(-90deg);') + '"></i>' +
+            '<i data-lucide="sparkles" style="width:16px;height:16px;color:#09A1A1;"></i>' +
+            '<span style="font-weight:600;font-size:14px;color:#333;">' + title + '</span>' +
+            '<span style="margin-left:auto;font-size:11px;color:#09A1A1;font-weight:500;">AI Generated</span>' +
+        '</div>' +
+        '<div id="' + id + '" style="padding:16px;display:' + (isOpen ? 'block' : 'none') + ';">' + renderMd(content) + '</div>' +
+    '</div>';
+}
+
 // Simple markdown-to-HTML renderer for AI output
 function renderMd(text) {
     if (!text) return '';
@@ -1299,10 +1316,10 @@ async function viewReport(reportId) {
                 '<div class="stat-card"><div class="stat-value">' + (r.overall_score !== null ? r.overall_score.toFixed(2) : '--') + '</div><div class="stat-label">Overall Score</div></div>' +
                 '<div class="stat-card steel"><div class="stat-value">' + (r.rank || '--') + ' / ' + (r.total_players || '--') + '</div><div class="stat-label">Rank</div></div>' +
             '</div>' +
-            (r.ai_summary ? '<div style="margin-bottom:12px"><strong>AI Summary:</strong><p style="margin-top:4px">' + esc(r.ai_summary) + '</p></div>' : '') +
+            (r.ai_summary ? '<div style="margin-bottom:12px"><strong>AI Summary:</strong>' + renderMd(r.ai_summary) + '</div>' : '') +
             (r.ai_strengths && r.ai_strengths.length > 0 ? '<div style="margin-bottom:12px"><strong>Strengths:</strong><ul>' + r.ai_strengths.map(function(s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></div>' : '') +
             (r.ai_improvements && r.ai_improvements.length > 0 ? '<div style="margin-bottom:12px"><strong>Areas for Improvement:</strong><ul>' + r.ai_improvements.map(function(s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></div>' : '') +
-            (r.ai_recommendation ? '<div style="margin-bottom:12px"><strong>Recommendation:</strong><p style="margin-top:4px">' + r.ai_recommendation + '</p></div>' : '') +
+            (r.ai_recommendation ? '<div style="margin-bottom:12px"><strong>Recommendation:</strong>' + renderMd(r.ai_recommendation) + '</div>' : '') +
             (skillRows ? '<h4 style="margin-top:12px">Skill Scores</h4><table class="data-table"><thead><tr><th>Skill</th><th>Score</th></tr></thead><tbody>' + skillRows + '</tbody></table>' : ''),
             '<button class="btn btn-outline" onclick="closeModal()">Close</button>'
         );
@@ -3233,7 +3250,7 @@ async function loadIntelHealth(orgId) {
         for (var i = 1; i <= 5; i++) {
             dots += '<span style="display:inline-block;width:32px;height:32px;border-radius:50%;margin:0 4px;line-height:32px;text-align:center;font-weight:700;color:#fff;background:' + (i <= lc.overall_phase ? '#09A1A1' : '#ddd') + ';">' + i + '</span>';
         }
-        document.getElementById('lifecycle-body').innerHTML = '<div style="text-align:center;margin-bottom:12px;">' + dots + '</div><div style="text-align:center;font-size:20px;font-weight:700;">Phase ' + lc.overall_phase + ': ' + phaseName + '</div><p style="margin-top:12px;">' + renderMd(lc.ai_analysis || '');
+        document.getElementById('lifecycle-body').innerHTML = '<div style="text-align:center;margin-bottom:12px;">' + dots + '</div><div style="text-align:center;font-size:20px;font-weight:700;">Phase ' + lc.overall_phase + ': ' + phaseName + '</div><p style="margin-top:12px;">' + aiPanel('Lifecycle Analysis', lc.ai_analysis, false);
     } catch (e) {
         document.getElementById('lifecycle-body').innerHTML = '<p class="text-muted">Could not load lifecycle data.</p>';
     }
@@ -3269,7 +3286,7 @@ async function loadIntelHealth(orgId) {
                 fHtml += '<tr><td>' + prog + '</td><td>' + fd.current_count + '</td><td>' + fd.predicted_count + '</td><td>' + fd.capacity + '</td><td>' + fd.fill_rate + '%</td><td>' + trendBadge + '</td></tr>';
             }
             fHtml += '</tbody></table>';
-            if (f.ai_narrative) fHtml += '<div style="margin-top:12px;padding:12px;background:#f0f9ff;border-left:3px solid #09A1A1;border-radius:4px;">' + renderMd(f.ai_narrative || '') + '</div>';
+            if (f.ai_narrative) fHtml += aiPanel('Forecast Analysis', f.ai_narrative, false);
             document.getElementById('forecast-body').innerHTML = fHtml;
         } else {
             document.getElementById('forecast-body').innerHTML = '<p class="text-muted">No forecasts yet.</p><button class="btn btn-secondary btn-sm" onclick="generateForecast()">Generate Forecast</button>';
@@ -3338,7 +3355,8 @@ function renderHealthScore(hs) {
 
     // AI narrative
     if (hs.ai_narrative) {
-        document.getElementById('health-ai-narrative').innerHTML = renderMd(hs.ai_narrative || '');
+        document.getElementById('health-ai-narrative').innerHTML = aiPanel('Club Health Analysis', hs.ai_narrative, true);
+if(typeof lucide!=='undefined')lucide.createIcons();
     }
 }
 
@@ -3508,7 +3526,8 @@ document.getElementById('btn-view-assessment-report').addEventListener('click', 
         document.getElementById('stakeholder-body').innerHTML = sHtml || '<p class="text-muted">No stakeholder data.</p>';
 
         // AI recommendations
-        document.getElementById('assessment-ai-body').innerHTML = renderMd(report.ai_recommendations || '');
+        document.getElementById('assessment-ai-body').innerHTML = aiPanel('AI Improvement Recommendations', report.ai_recommendations, true);
+if(typeof lucide!=='undefined')lucide.createIcons();
 
     } catch (e) { toast('Error: ' + e.message, 'error'); }
     hideLoading();
