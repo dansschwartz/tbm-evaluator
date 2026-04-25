@@ -226,7 +226,7 @@ async def ai_email_draft(org_id: uuid.UUID, req: AIEmailDraftRequest, db: AsyncS
 
 Audience: {req.audience}
 Purpose: {req.purpose}
-Context: {req.context}
+Context: {req.context or 'No additional context provided'}
 
 Respond in JSON:
 {{

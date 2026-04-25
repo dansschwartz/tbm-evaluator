@@ -698,10 +698,10 @@ class ScheduleEntryResponse(BaseModel):
 
 
 class GenerateGamesRequest(BaseModel):
-    team_ids: list[UUID]
+    team_ids: list[UUID] = []
     games_per_team: int = 8
-    available_field_ids: list[UUID] = []
-    available_dates: list[date] = []
+    available_field_ids: Optional[list[UUID]] = []
+    available_dates: Optional[list[date]] = []
     game_duration_minutes: int = 60
     constraints: dict = {}
 
@@ -723,7 +723,7 @@ class AIOpsAskRequest(BaseModel):
 class AIEmailDraftRequest(BaseModel):
     audience: str
     purpose: str
-    context: str
+    context: Optional[str] = ""
 
 
 class AISeasonPlanRequest(BaseModel):

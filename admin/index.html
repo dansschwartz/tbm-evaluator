@@ -307,8 +307,10 @@
                             <select class="form-select" id="analytics-event-select">
                                 <option value="">-- Org-level Analytics --</option>
                             </select>
+                            <button class="btn btn-secondary" id="btn-ai-insights"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Insights</button>
                         </div>
                     </div>
+                    <div id="ai-analytics-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:linear-gradient(135deg,#f0f9ff,#e8f5e9);border-left:4px solid #09A1A1;"></div></div>
                     <div class="stats-grid" id="analytics-stats"></div>
                     <div class="analytics-charts">
                         <div class="card">
@@ -355,8 +357,11 @@
                         <div class="toolbar-actions">
                             <button class="btn btn-primary" id="btn-create-season">+ New Season</button>
                             <button class="btn btn-secondary" id="btn-create-program">+ New Program</button>
+                            <button class="btn btn-secondary" id="btn-ai-season-plan"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Plan Season</button>
                         </div>
                     </div>
+                    <div class="stats-grid" id="seasons-stats-bar"></div>
+                    <div id="ai-season-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:linear-gradient(135deg,#f0f9ff,#e8f5e9);border-left:4px solid #09A1A1;"></div></div>
                     <div class="card">
                         <div class="card-header"><h3>Seasons</h3></div>
                         <div class="card-body">
@@ -391,8 +396,11 @@
                             </select>
                             <button class="btn btn-primary" id="btn-create-team">+ New Team</button>
                             <button class="btn btn-secondary" id="btn-ai-form-teams">AI Form Teams</button>
+                            <button class="btn btn-secondary" id="btn-ai-roster-suggest"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Suggest Roster Changes</button>
                         </div>
                     </div>
+                    <div class="stats-grid" id="teams-stats-bar"></div>
+                    <div id="ai-teams-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:linear-gradient(135deg,#f0f9ff,#e8f5e9);border-left:4px solid #09A1A1;"></div></div>
                     <div class="card">
                         <div class="card-body">
                             <table class="data-table" id="ops-teams-table">
@@ -412,8 +420,11 @@
                         <div class="toolbar-actions">
                             <button class="btn btn-primary" id="btn-create-field">+ New Field</button>
                             <button class="btn btn-coral" id="btn-weather-cancel">Weather Cancel</button>
+                            <button class="btn btn-secondary" id="btn-ai-field-allocation"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Suggest Allocation</button>
                         </div>
                     </div>
+                    <div class="stats-grid" id="fields-stats-bar"></div>
+                    <div id="ai-field-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:linear-gradient(135deg,#f0f9ff,#e8f5e9);border-left:4px solid #09A1A1;"></div></div>
                     <div class="card">
                         <div class="card-body">
                             <table class="data-table" id="fields-table">
@@ -440,9 +451,10 @@
                             <button class="btn btn-primary" id="btn-create-schedule">+ New Entry</button>
                             <button class="btn btn-secondary" id="btn-generate-games">Generate Games</button>
                             <button class="btn btn-secondary" id="btn-generate-practices">Generate Practices</button>
-                            <button class="btn btn-outline" id="btn-check-conflicts">Check Conflicts</button>
+                            <button class="btn btn-outline" id="btn-check-conflicts"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Find Conflicts</button>
                         </div>
                     </div>
+                    <div class="stats-grid" id="schedule-stats-bar"></div>
                     <div class="card">
                         <div class="card-body">
                             <table class="data-table" id="schedule-table">
@@ -460,10 +472,12 @@
                     <div class="section-toolbar">
                         <h2>Coaches & Staff</h2>
                         <div class="toolbar-actions">
-                            <button class="btn btn-secondary" id="btn-expiring-certs">Expiring Certs</button>
-                            <button class="btn btn-secondary" id="btn-ai-assign-coaches">AI Assign</button>
+                            <button class="btn btn-coral" id="btn-expiring-certs"><i data-lucide="alert-triangle" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Expiring Certs</button>
+                            <button class="btn btn-secondary" id="btn-ai-assign-coaches"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Match Coaches to Teams</button>
                         </div>
                     </div>
+                    <div class="stats-grid" id="coaches-stats-bar"></div>
+                    <div id="coaches-cert-alerts" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:#fff3cd;border-left:4px solid #ffc107;"></div></div>
                     <div class="card">
                         <div class="card-body">
                             <table class="data-table" id="coaches-table">
@@ -482,10 +496,11 @@
                         <h2>Communications</h2>
                         <div class="toolbar-actions">
                             <button class="btn btn-primary" id="btn-compose-message">Compose</button>
-                            <button class="btn btn-secondary" id="btn-ai-draft-msg">AI Draft</button>
+                            <button class="btn btn-secondary" id="btn-ai-draft-msg"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Draft Email</button>
                             <button class="btn btn-outline" id="btn-msg-templates">Templates</button>
                         </div>
                     </div>
+                    <div class="stats-grid" id="comms-stats-bar"></div>
                     <div class="card">
                         <div class="card-body">
                             <table class="data-table" id="messages-table">
@@ -509,8 +524,11 @@
                             <select class="form-select form-select-sm" id="attendance-entry-select">
                                 <option value="">-- Select Schedule Entry --</option>
                             </select>
+                            <button class="btn btn-secondary" id="btn-ai-attendance"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Attendance Insights</button>
                         </div>
                     </div>
+                    <div class="stats-grid" id="attendance-stats-bar"></div>
+                    <div id="ai-attendance-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:linear-gradient(135deg,#f0f9ff,#e8f5e9);border-left:4px solid #09A1A1;"></div></div>
                     <div class="card">
                         <div class="card-header"><h3>Mark Attendance</h3></div>
                         <div class="card-body" id="attendance-roster-body">
@@ -536,6 +554,7 @@
                             <button class="btn btn-primary" id="btn-upload-doc">Upload Document</button>
                         </div>
                     </div>
+                    <div class="stats-grid" id="docs-stats-bar"></div>
                     <div class="card">
                         <div class="card-header"><h3>Player Documents</h3></div>
                         <div class="card-body">
@@ -561,6 +580,9 @@
                 <section class="section hidden" id="section-ops-import">
                     <div class="section-toolbar">
                         <h2>PlayMetrics Import</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-secondary" id="btn-ai-clean-data"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Clean Data</button>
+                        </div>
                     </div>
                     <div class="card">
                         <div class="card-header"><h3>Import Players from CSV</h3></div>
@@ -605,12 +627,15 @@
                     <div class="card" style="margin-top:16px;">
                         <div class="card-header"><h3>Quick Actions</h3></div>
                         <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap;">
-                            <button class="btn btn-outline ai-quick" data-q="Which teams don't have head coaches?">Unassigned Coaches</button>
-                            <button class="btn btn-outline ai-quick" data-q="What fields are available this Saturday?">Open Fields Saturday</button>
+                            <button class="btn btn-outline ai-quick" data-q="Which teams need more players?">Teams Need Players</button>
+                            <button class="btn btn-outline ai-quick" data-q="What fields are overbooked this week?">Overbooked Fields</button>
                             <button class="btn btn-outline ai-quick" data-q="How many players are registered?">Registration Count</button>
                             <button class="btn btn-outline ai-quick" data-q="Are there any scheduling conflicts this week?">Schedule Conflicts</button>
                             <button class="btn btn-outline ai-quick" data-q="Which coaches have expiring certifications?">Expiring Certs</button>
                             <button class="btn btn-outline ai-quick" data-q="Give me a summary of our current operations status">Ops Summary</button>
+                            <button class="btn btn-outline ai-quick" data-q="Draft an email about spring registration opening">Draft Registration Email</button>
+                            <button class="btn btn-outline ai-quick" data-q="Which teams don't have head coaches assigned?">Unassigned Coaches</button>
+                            <button class="btn btn-outline ai-quick" data-q="What is our player retention rate compared to last season?">Retention Rate</button>
                         </div>
                     </div>
                     <div class="card" style="margin-top:16px;">

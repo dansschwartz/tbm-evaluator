@@ -255,8 +255,22 @@ async def delete_schedule_entry(org_id: uuid.UUID, entry_id: uuid.UUID, db: Asyn
 
 # --- Generate Game Schedule ---
 @router.post("/api/organizations/{org_id}/schedules/generate-games")
-async def generate_game_schedule(org_id: uuid.UUID, req: GenerateGamesRequest, db: AsyncSession = Depends(get_db)):
+async def generate_game_schedule(org_id: uuid.UUID, req: GenerateGamesRequest = None, db: AsyncSession = Depends(get_db)):
     """AI generates full game schedule with balanced home/away, no conflicts."""
+    # If no body or empty team_ids, default to all teams in the org
+    if req is None:
+        req = GenerateGamesRequest(team_ids=[])
+    if not req.team_ids:
+        all_teams = (await db.execute(
+            select(Team).where(Team.org_id == org_id)
+        )).scalars().all()
+        req.team_ids = [t.id for t in all_teams]
+        if not req.available_field_ids:
+            all_fields = (await db.execute(
+                select(Field).where(Field.org_id == org_id, Field.active == True)
+            )).scalars().all()
+            req.available_field_ids = [f.id for f in all_fields]
+
     teams = (await db.execute(
         select(Team).where(Team.id.in_(req.team_ids))
     )).scalars().all()

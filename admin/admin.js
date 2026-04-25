@@ -151,7 +151,7 @@ function navigateTo(section) {
     else if (section === 'ops-attendance') loadOpsAttendance(orgId);
     else if (section === 'ops-documents') loadOpsDocuments(orgId);
     else if (section === 'ops-import') loadOpsImport(orgId);
-    else if (section === 'ops-ai') { /* static, no load needed */ }
+    else if (section === 'ops-ai') { /* AI assistant is static but needs org context */ }
 }
 
 navItems.forEach(function(item) {
@@ -1717,7 +1717,17 @@ async function loadOpsSeasons(orgId) {
             api('GET', '/api/organizations/' + orgId + '/programs'),
         ]);
 
+        var activeSeasons = seasons.filter(function(s) { return s.status === 'active'; }).length;
+        document.getElementById('seasons-stats-bar').innerHTML = buildStatCards([
+            { value: seasons.length, label: 'Seasons', cls: '' },
+            { value: activeSeasons, label: 'Active', cls: 'steel' },
+            { value: programs.length, label: 'Programs', cls: 'coral' },
+        ]);
+
         var tbody = document.getElementById('seasons-table-body');
+        if (seasons.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No seasons yet. Create your first season to get started.</td></tr>';
+        }
         tbody.innerHTML = seasons.map(function(s) {
             return '<tr><td>' + esc(s.name) + '</td><td>' + esc(s.start_date) + '</td><td>' + esc(s.end_date) + '</td>' +
                 '<td><span class="badge badge-' + (s.status === 'active' ? 'success' : 'default') + '">' + esc(s.status) + '</span></td>' +
@@ -1744,14 +1754,25 @@ async function loadOpsTeams(orgId) {
     if (!orgId) return;
     try {
         var teams = await api('GET', '/api/organizations/' + orgId + '/teams');
+        var withCoach = teams.filter(function(t) { return t.head_coach_id; }).length;
+        document.getElementById('teams-stats-bar').innerHTML = buildStatCards([
+            { value: teams.length, label: 'Total Teams', cls: '' },
+            { value: withCoach, label: 'With Coach', cls: 'steel' },
+            { value: teams.length - withCoach, label: 'Need Coach', cls: 'coral' },
+        ]);
+
         var tbody = document.getElementById('ops-teams-table-body');
-        tbody.innerHTML = teams.map(function(t) {
-            return '<tr><td>' + esc(t.name) + '</td><td>' + esc(t.team_level || '-') + '</td>' +
-                '<td>' + esc(t.program_id ? 'Assigned' : '-') + '</td>' +
-                '<td>' + esc(t.head_coach_id ? 'Assigned' : 'None') + '</td>' +
-                '<td><button class="btn btn-sm btn-outline" onclick="viewRoster(\'' + t.id + '\')">View</button></td>' +
-                '<td><button class="btn btn-sm btn-outline" onclick="deleteOpsItem(\'teams\',\'' + t.id + '\')">Delete</button></td></tr>';
-        }).join('');
+        if (teams.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No teams yet. Create teams manually or use AI Form Teams.</td></tr>';
+        } else {
+            tbody.innerHTML = teams.map(function(t) {
+                return '<tr><td>' + esc(t.name) + '</td><td>' + esc(t.team_level || '-') + '</td>' +
+                    '<td>' + esc(t.program_id ? 'Assigned' : '-') + '</td>' +
+                    '<td>' + (t.head_coach_id ? '<span class="badge badge-yes">Assigned</span>' : '<span class="badge badge-no">None</span>') + '</td>' +
+                    '<td><button class="btn btn-sm btn-outline" onclick="viewRoster(\'' + t.id + '\')">Roster</button></td>' +
+                    '<td><button class="btn btn-sm btn-outline" onclick="deleteOpsItem(\'teams\',\'' + t.id + '\')">Delete</button></td></tr>';
+            }).join('');
+        }
     } catch (e) {
         toast('Error: ' + e.message, 'error');
     }
@@ -1764,16 +1785,30 @@ async function loadOpsFields(orgId) {
     if (!orgId) return;
     try {
         var fields = await api('GET', '/api/organizations/' + orgId + '/fields');
+
+        // Stats bar
+        var withLights = fields.filter(function(f) { return f.has_lights; }).length;
+        var turfCount = fields.filter(function(f) { return f.surface_type === 'turf'; }).length;
+        document.getElementById('fields-stats-bar').innerHTML = buildStatCards([
+            { value: fields.length, label: 'Total Fields', cls: '' },
+            { value: turfCount, label: 'Turf Fields', cls: 'steel' },
+            { value: withLights, label: 'With Lights', cls: 'coral' },
+        ]);
+
         var tbody = document.getElementById('fields-table-body');
-        tbody.innerHTML = fields.map(function(f) {
-            return '<tr><td>' + esc(f.name) + '</td><td>' + esc(f.location_address || '-') + '</td>' +
-                '<td>' + esc(f.surface_type || '-') + '</td><td>' + esc(f.size || '-') + '</td>' +
-                '<td>' + (f.has_lights ? 'Yes' : 'No') + '</td>' +
-                '<td class="btn-group">' +
-                    '<button class="btn btn-xs btn-outline" onclick="editFieldItem(\'' + f.id + '\')">Edit</button>' +
-                    '<button class="btn btn-xs btn-danger" onclick="deleteOpsFieldItem(\'' + f.id + '\')">Delete</button>' +
-                '</td></tr>';
-        }).join('');
+        if (fields.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No fields yet. Add your first field or use AI to import from your permit list.</td></tr>';
+        } else {
+            tbody.innerHTML = fields.map(function(f) {
+                return '<tr><td>' + esc(f.name) + '</td><td>' + esc(f.location_address || '-') + '</td>' +
+                    '<td>' + esc(f.surface_type || '-') + '</td><td>' + esc(f.size || '-') + '</td>' +
+                    '<td>' + (f.has_lights ? 'Yes' : 'No') + '</td>' +
+                    '<td class="btn-group">' +
+                        '<button class="btn btn-xs btn-outline" onclick="editFieldItem(\'' + f.id + '\')">Edit</button>' +
+                        '<button class="btn btn-xs btn-danger" onclick="deleteOpsFieldItem(\'' + f.id + '\')">Delete</button>' +
+                    '</td></tr>';
+            }).join('');
+        }
 
         loadFieldCalendar(orgId);
     } catch (e) {
@@ -1898,7 +1933,20 @@ async function loadOpsSchedule(orgId) {
         var end = new Date(now.getTime() + 90 * 86400000).toISOString().split('T')[0];
         var entries = await api('GET', '/api/organizations/' + orgId + '/schedules/calendar?start=' + start + '&end=' + end);
 
+        var games = entries.filter(function(e) { return e.entry_type === 'game'; }).length;
+        var practices = entries.filter(function(e) { return e.entry_type === 'practice'; }).length;
+        var cancelled = entries.filter(function(e) { return e.status === 'cancelled'; }).length;
+        document.getElementById('schedule-stats-bar').innerHTML = buildStatCards([
+            { value: entries.length, label: 'Total Entries', cls: '' },
+            { value: games, label: 'Games', cls: 'steel' },
+            { value: practices, label: 'Practices', cls: '' },
+            { value: cancelled, label: 'Cancelled', cls: 'coral' },
+        ]);
+
         var tbody = document.getElementById('schedule-table-body');
+        if (entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No schedule entries in the next 90 days. Use Generate Games or Generate Practices to create a schedule.</td></tr>';
+        }
         tbody.innerHTML = entries.map(function(e) {
             var dt = new Date(e.start_time);
             var typeColor = e.entry_type === 'game' ? 'badge-active' : e.entry_type === 'practice' ? 'badge-scoring' : 'badge-draft';
@@ -1921,16 +1969,61 @@ async function loadOpsCoaches(orgId) {
     if (!orgId) return;
     try {
         var coaches = await api('GET', '/api/organizations/' + orgId + '/coaches');
+
+        var totalCerts = 0;
+        var expiringCerts = 0;
+        var now = new Date();
+        var thirtyDays = new Date(now.getTime() + 30 * 86400000);
+        coaches.forEach(function(c) {
+            (c.certifications || []).forEach(function(cert) {
+                totalCerts++;
+                if (cert.expiry && new Date(cert.expiry) <= thirtyDays) expiringCerts++;
+            });
+        });
+
+        document.getElementById('coaches-stats-bar').innerHTML = buildStatCards([
+            { value: coaches.length, label: 'Coaches', cls: '' },
+            { value: totalCerts, label: 'Certifications', cls: 'steel' },
+            { value: expiringCerts, label: 'Expiring (30d)', cls: expiringCerts > 0 ? 'coral' : '' },
+        ]);
+
+        // Show cert expiry alerts prominently
+        var certAlertDiv = document.getElementById('coaches-cert-alerts');
+        if (expiringCerts > 0) {
+            var alertHtml = '<strong style="color:#856404;">Certification Expiry Alerts</strong><br>';
+            coaches.forEach(function(c) {
+                (c.certifications || []).forEach(function(cert) {
+                    if (cert.expiry && new Date(cert.expiry) <= thirtyDays) {
+                        var daysLeft = Math.ceil((new Date(cert.expiry) - now) / 86400000);
+                        var urgency = daysLeft <= 0 ? 'EXPIRED' : daysLeft + ' days left';
+                        alertHtml += '<div style="padding:4px 0;font-size:13px;"><strong>' + esc(c.name) + '</strong>: ' + esc(cert.name) + ' — <span style="color:' + (daysLeft <= 7 ? '#dc3545' : '#e67e22') + ';font-weight:600;">' + urgency + '</span></div>';
+                    }
+                });
+            });
+            certAlertDiv.querySelector('.card-body').innerHTML = alertHtml;
+            certAlertDiv.style.display = 'block';
+        } else {
+            certAlertDiv.style.display = 'none';
+        }
+
         var tbody = document.getElementById('coaches-table-body');
-        tbody.innerHTML = coaches.map(function(c) {
-            var certs = (c.certifications || []).map(function(cert) { return cert.name; }).join(', ') || 'None';
-            var teams = (c.team_assignments || []).map(function(t) { return t.team_name; }).join(', ') || 'None';
-            return '<tr><td>' + esc(c.name) + '</td><td>' + esc(c.email || '-') + '</td>' +
-                '<td>' + esc(c.phone || '-') + '</td><td>' + esc(certs) + '</td>' +
-                '<td>' + esc(c.background_check_status || '-') + '</td>' +
-                '<td>' + esc(teams) + '</td>' +
-                '<td><button class="btn btn-sm btn-outline" onclick="editCoachCerts(\'' + c.id + '\')">Edit Certs</button></td></tr>';
-        }).join('');
+        if (coaches.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No coaches yet. Add evaluators from the Events section.</td></tr>';
+        } else {
+            tbody.innerHTML = coaches.map(function(c) {
+                var certs = (c.certifications || []).map(function(cert) {
+                    var expDate = cert.expiry ? new Date(cert.expiry) : null;
+                    var isExpiring = expDate && expDate <= thirtyDays;
+                    return '<span style="' + (isExpiring ? 'color:#dc3545;font-weight:600;' : '') + '">' + esc(cert.name) + (isExpiring ? ' !!!' : '') + '</span>';
+                }).join(', ') || 'None';
+                var teams = (c.team_assignments || []).map(function(t) { return t.team_name; }).join(', ') || 'None';
+                return '<tr><td>' + esc(c.name) + '</td><td>' + esc(c.email || '-') + '</td>' +
+                    '<td>' + esc(c.phone || '-') + '</td><td>' + certs + '</td>' +
+                    '<td><span class="badge badge-' + (c.background_check_status === 'cleared' ? 'yes' : 'no') + '">' + esc(c.background_check_status || '-') + '</span></td>' +
+                    '<td>' + esc(teams) + '</td>' +
+                    '<td><button class="btn btn-sm btn-outline" onclick="editCoachCerts(\'' + c.id + '\')">Edit Certs</button></td></tr>';
+            }).join('');
+        }
     } catch (e) {
         toast('Error: ' + e.message, 'error');
     }
@@ -1941,8 +2034,21 @@ async function loadOpsComms(orgId) {
     if (!orgId) return;
     try {
         var msgs = await api('GET', '/api/organizations/' + orgId + '/messages');
+
+        var sent = msgs.filter(function(m) { return m.status === 'sent'; }).length;
+        var drafts = msgs.filter(function(m) { return m.status === 'draft'; }).length;
+        var totalRecipients = msgs.reduce(function(sum, m) { return sum + (m.recipient_count || 0); }, 0);
+        document.getElementById('comms-stats-bar').innerHTML = buildStatCards([
+            { value: msgs.length, label: 'Total Messages', cls: '' },
+            { value: sent, label: 'Sent', cls: 'steel' },
+            { value: drafts, label: 'Drafts', cls: '' },
+            { value: totalRecipients, label: 'Recipients', cls: 'coral' },
+        ]);
+
         var tbody = document.getElementById('messages-table-body');
-        // Show SMTP warning at top of table
+        if (msgs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No messages yet. Compose a message or use AI Draft to get started.</td></tr>';
+        }
         var smtpNote = '<tr><td colspan="7" style="background:#fff3cd;color:#856404;font-size:12px;padding:8px 12px;border-left:3px solid #ffc107;">Note: SMTP not configured — emails are logged in dry-run mode. Configure SMTP_HOST env var to enable real sending.</td></tr>';
         tbody.innerHTML = smtpNote + msgs.map(function(m) {
             return '<tr><td>' + esc(m.subject || '(no subject)') + '</td><td>' + esc(m.audience_type) + '</td>' +
@@ -2083,6 +2189,26 @@ async function loadOpsAttendance(orgId) {
         var teamSelect = document.getElementById('attendance-team-select');
         teamSelect.innerHTML = '<option value="">-- Select Team --</option>' +
             teams.map(function(t) { return '<option value="' + t.id + '">' + esc(t.name) + '</option>'; }).join('');
+
+        // Try to load at-risk players
+        try {
+            var atRisk = await api('GET', '/api/organizations/' + orgId + '/attendance/at-risk');
+            if (atRisk && atRisk.length > 0) {
+                document.getElementById('attendance-stats-bar').innerHTML = buildStatCards([
+                    { value: teams.length, label: 'Teams', cls: '' },
+                    { value: atRisk.length, label: 'At-Risk Players', cls: 'coral' },
+                ]);
+            } else {
+                document.getElementById('attendance-stats-bar').innerHTML = buildStatCards([
+                    { value: teams.length, label: 'Teams', cls: '' },
+                    { value: 0, label: 'At-Risk Players', cls: '' },
+                ]);
+            }
+        } catch (_) {
+            document.getElementById('attendance-stats-bar').innerHTML = buildStatCards([
+                { value: teams.length, label: 'Teams', cls: '' },
+            ]);
+        }
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
 
@@ -2092,6 +2218,7 @@ document.getElementById('attendance-team-select').addEventListener('change', asy
     var orgId = getSelectedOrg();
     if (!teamId || !orgId) {
         entrySelect.innerHTML = '<option value="">-- Select Schedule Entry --</option>';
+        document.getElementById('attendance-stats-bar').innerHTML = '';
         return;
     }
     try {
@@ -2101,6 +2228,15 @@ document.getElementById('attendance-team-select').addEventListener('change', asy
                 var dt = e.start_time ? new Date(e.start_time).toLocaleDateString() : '';
                 return '<option value="' + e.id + '">' + esc(e.title || e.entry_type) + ' — ' + dt + '</option>';
             }).join('');
+
+        // Stats bar for team
+        var totalEntries = entries.length;
+        var completed = entries.filter(function(e) { return e.status === 'completed'; }).length;
+        document.getElementById('attendance-stats-bar').innerHTML = buildStatCards([
+            { value: totalEntries, label: 'Total Sessions', cls: '' },
+            { value: completed, label: 'Completed', cls: 'steel' },
+            { value: totalEntries - completed, label: 'Upcoming', cls: '' },
+        ]);
 
         // Load team attendance stats
         try {
@@ -2192,15 +2328,21 @@ async function loadOpsDocuments(orgId) {
             players.map(function(p) { return '<option value="' + p.id + '">' + esc(p.first_name + ' ' + p.last_name) + '</option>'; }).join('');
 
         // Load missing documents alert
+        var missingCount = 0;
         try {
             var missing = await api('GET', '/api/organizations/' + orgId + '/documents/missing');
             var missingBody = document.getElementById('docs-missing-body');
             if (missing.players && missing.players.length > 0) {
-                var html = '<div style="max-height:300px;overflow-y:auto;">';
+                missingCount = missing.players.length;
+                var html = '<div style="padding:8px 12px;background:#fce4ec;border-radius:6px;margin-bottom:12px;font-weight:600;color:#c62828;font-size:14px;">' +
+                    missingCount + ' of ' + players.length + ' players are missing required documents</div>';
+                html += '<div style="max-height:300px;overflow-y:auto;">';
                 missing.players.forEach(function(p) {
-                    html += '<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px;">' +
-                        '<strong>' + esc(p.player_name) + '</strong>: missing ' +
-                        '<span style="color:#e74c3c;">' + esc((p.missing_types || []).join(', ')) + '</span></div>';
+                    html += '<div style="padding:8px 0;border-bottom:1px solid #eee;font-size:13px;display:flex;justify-content:space-between;align-items:center;">' +
+                        '<div><strong>' + esc(p.player_name) + '</strong>: missing ' +
+                        '<span style="color:#e74c3c;font-weight:600;">' + esc((p.missing_types || []).join(', ')) + '</span></div>' +
+                        '<button class="btn btn-xs btn-outline" onclick="sendDocReminder(\'' + esc(p.player_name) + '\')">Send Reminder</button>' +
+                        '</div>';
                 });
                 html += '</div>';
                 missingBody.innerHTML = html;
@@ -2210,7 +2352,17 @@ async function loadOpsDocuments(orgId) {
         } catch (_) {
             document.getElementById('docs-missing-body').innerHTML = '<p class="text-muted">Could not check missing documents.</p>';
         }
+
+        document.getElementById('docs-stats-bar').innerHTML = buildStatCards([
+            { value: players.length, label: 'Active Players', cls: '' },
+            { value: players.length - missingCount, label: 'Docs Complete', cls: 'steel' },
+            { value: missingCount, label: 'Missing Docs', cls: missingCount > 0 ? 'coral' : '' },
+        ]);
     } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function sendDocReminder(playerName) {
+    toast('Reminder would be sent to ' + playerName + "'s parent (SMTP not configured)", 'warning');
 }
 
 document.getElementById('docs-player-select').addEventListener('change', async function() {
@@ -2486,7 +2638,7 @@ function setupOpsButtons() {
             showLoading();
             var result = await api('POST', '/api/organizations/' + orgId + '/schedules/generate-games', {
                 team_ids: teamIds,
-                available_field_ids: fieldIds.length > 0 ? fieldIds : null,
+                available_field_ids: fieldIds.length > 0 ? fieldIds : [],
                 games_per_team: 6,
                 game_duration_minutes: 90,
             });
@@ -2528,11 +2680,12 @@ function setupOpsButtons() {
         var orgId = requireOrg();
         if (!orgId) return;
         try {
-            var templates = await api('GET', '/api/organizations/' + orgId + '/messages/templates');
+            var templatesData = await api('GET', '/api/organizations/' + orgId + '/messages/templates');
+            var templatesList = Array.isArray(templatesData) ? templatesData : Object.values(templatesData);
             var html = '<p>Click a template to use it:</p>';
-            templates.forEach(function(t) {
+            templatesList.forEach(function(t) {
                 html += '<div style="padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:6px;cursor:pointer;" onclick="useMsgTemplate(\'' + btoa(unescape(encodeURIComponent(JSON.stringify(t)))) + '\')">' +
-                    '<strong>' + esc(t.name) + '</strong><br><small style="color:#888;">' + esc(t.description || '') + '</small></div>';
+                    '<strong>' + esc(t.name) + '</strong><br><small style="color:#888;">' + esc(t.subject || t.description || '') + '</small></div>';
             });
             openModal('Message Templates', html);
         } catch (e) { toast('Error: ' + e.message, 'error'); }
@@ -2563,6 +2716,30 @@ function setupOpsButtons() {
             .then(function(r) { toast('Cancelled ' + r.cancelled + ' bookings', 'success'); })
             .catch(function(e) { toast('Error: ' + e.message, 'error'); });
     });
+
+    // AI Field Allocation
+    var btnAiField = document.getElementById('btn-ai-field-allocation');
+    if (btnAiField) btnAiField.addEventListener('click', aiFieldAllocation);
+
+    // AI Season Plan
+    var btnAiSeason = document.getElementById('btn-ai-season-plan');
+    if (btnAiSeason) btnAiSeason.addEventListener('click', aiPlanSeason);
+
+    // AI Roster Suggest
+    var btnAiRoster = document.getElementById('btn-ai-roster-suggest');
+    if (btnAiRoster) btnAiRoster.addEventListener('click', aiRosterSuggest);
+
+    // AI Attendance Insights
+    var btnAiAtt = document.getElementById('btn-ai-attendance');
+    if (btnAiAtt) btnAiAtt.addEventListener('click', aiAttendanceInsights);
+
+    // AI Analytics Insights
+    var btnAiIns = document.getElementById('btn-ai-insights');
+    if (btnAiIns) btnAiIns.addEventListener('click', aiAnalyticsInsights);
+
+    // AI Clean Data
+    var btnAiClean = document.getElementById('btn-ai-clean-data');
+    if (btnAiClean) btnAiClean.addEventListener('click', aiCleanData);
 
     // Conflict check
     var btnConflicts = document.getElementById('btn-check-conflicts');
@@ -2838,6 +3015,155 @@ async function useEmailDraft(b64) {
         toast('Email draft saved to messages', 'success');
         navigateTo('ops-comms');
     } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ===================================================================
+// AI BUTTON HANDLERS FOR ALL TABS
+// ===================================================================
+
+// --- AI Suggest Field Allocation ---
+async function aiFieldAllocation() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    var resultDiv = document.getElementById('ai-field-result');
+    resultDiv.style.display = 'block';
+    resultDiv.querySelector('.card-body').innerHTML = '<p style="color:#999;">AI is analyzing field allocation...</p>';
+    try {
+        var result = await api('POST', '/api/organizations/' + orgId + '/ai/ask', {
+            question: 'Analyze our fields and teams. Recommend optimal field assignments for each team based on practice schedules, field size, lighting availability, and team level. Show a table of recommended assignments.'
+        });
+        resultDiv.querySelector('.card-body').innerHTML =
+            '<strong style="color:#09A1A1;">AI Field Allocation Recommendation</strong><br><br>' +
+            '<div style="white-space:pre-wrap;">' + esc(result.answer || 'No recommendation available.') + '</div>';
+    } catch (e) {
+        resultDiv.querySelector('.card-body').innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>';
+    }
+}
+
+// --- AI Plan Season ---
+async function aiPlanSeason() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    openModal('AI Season Planner',
+        '<label>Season Name</label><input type="text" id="ai-sp-name" class="form-input" value="Fall 2026">' +
+        '<label>Age Groups (comma-separated)</label><input type="text" id="ai-sp-ages" class="form-input" value="U8, U10, U12, U14">' +
+        '<label>Estimated Players</label><input type="number" id="ai-sp-players" class="form-input" value="200">' +
+        '<label>Available Fields</label><input type="number" id="ai-sp-fields" class="form-input" value="6">' +
+        '<label>Season Length (weeks)</label><input type="number" id="ai-sp-weeks" class="form-input" value="10">',
+        '<button class="btn btn-primary" onclick="runAiSeasonPlan()">Generate Plan</button><button class="btn btn-outline" onclick="closeModal()">Cancel</button>'
+    );
+}
+
+async function runAiSeasonPlan() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    var ages = document.getElementById('ai-sp-ages').value.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+    closeModal();
+    var resultDiv = document.getElementById('ai-season-result');
+    resultDiv.style.display = 'block';
+    resultDiv.querySelector('.card-body').innerHTML = '<p style="color:#999;">AI is generating season plan...</p>';
+    try {
+        var result = await api('POST', '/api/organizations/' + orgId + '/ai/season-plan', {
+            season_name: document.getElementById('ai-sp-name').value,
+            age_groups: ages,
+            estimated_players: parseInt(document.getElementById('ai-sp-players').value) || 200,
+            available_fields: parseInt(document.getElementById('ai-sp-fields').value) || 6,
+            weeks: parseInt(document.getElementById('ai-sp-weeks').value) || 10,
+        });
+        var html = '<strong style="color:#09A1A1;">AI Season Plan</strong><br><br>';
+        html += '<p><strong>Overview:</strong> ' + esc(result.overview || '') + '</p>';
+        if (result.teams_plan && result.teams_plan.length > 0) {
+            html += '<h4 style="margin:12px 0 4px;">Teams Plan</h4><table class="data-table"><thead><tr><th>Age Group</th><th>Teams</th><th>Players/Team</th></tr></thead><tbody>';
+            result.teams_plan.forEach(function(t) { html += '<tr><td>' + esc(t.age_group) + '</td><td>' + t.num_teams + '</td><td>' + t.players_per + '</td></tr>'; });
+            html += '</tbody></table>';
+        }
+        if (result.schedule_plan) {
+            html += '<h4 style="margin:12px 0 4px;">Schedule</h4><p>Games/team: ' + (result.schedule_plan.games_per_team || '-') + ' | Practices/week: ' + (result.schedule_plan.practices_per_week || '-') + '</p>';
+        }
+        if (result.staffing_plan) {
+            html += '<h4 style="margin:12px 0 4px;">Staffing</h4><p>Coaches needed: ' + (result.staffing_plan.coaches_needed || '-') + ' | Refs: ' + (result.staffing_plan.refs_needed || '-') + '</p>';
+        }
+        resultDiv.querySelector('.card-body').innerHTML = html;
+    } catch (e) {
+        resultDiv.querySelector('.card-body').innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>';
+    }
+}
+
+// --- AI Suggest Roster Changes ---
+async function aiRosterSuggest() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    var resultDiv = document.getElementById('ai-teams-result');
+    resultDiv.style.display = 'block';
+    resultDiv.querySelector('.card-body').innerHTML = '<p style="color:#999;">AI is analyzing team rosters...</p>';
+    try {
+        var result = await api('POST', '/api/organizations/' + orgId + '/ai/ask', {
+            question: 'Analyze all team rosters and player evaluations. Suggest specific roster changes — which players should move between teams for better balance? Consider skill levels, positions, and team competitiveness.'
+        });
+        resultDiv.querySelector('.card-body').innerHTML =
+            '<strong style="color:#09A1A1;">AI Roster Suggestions</strong><br><br>' +
+            '<div style="white-space:pre-wrap;">' + esc(result.answer || 'No suggestions available.') + '</div>';
+    } catch (e) {
+        resultDiv.querySelector('.card-body').innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>';
+    }
+}
+
+// --- AI Attendance Insights ---
+async function aiAttendanceInsights() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    var resultDiv = document.getElementById('ai-attendance-result');
+    resultDiv.style.display = 'block';
+    resultDiv.querySelector('.card-body').innerHTML = '<p style="color:#999;">AI is analyzing attendance patterns...</p>';
+    try {
+        var result = await api('POST', '/api/organizations/' + orgId + '/ai/ask', {
+            question: 'Analyze attendance patterns across all teams. Flag any at-risk players with low attendance. Identify trends — are certain days/times getting lower turnout? Suggest ways to improve attendance.'
+        });
+        resultDiv.querySelector('.card-body').innerHTML =
+            '<strong style="color:#09A1A1;">AI Attendance Insights</strong><br><br>' +
+            '<div style="white-space:pre-wrap;">' + esc(result.answer || 'No insights available.') + '</div>';
+    } catch (e) {
+        resultDiv.querySelector('.card-body').innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>';
+    }
+}
+
+// --- AI Analytics Insights ---
+async function aiAnalyticsInsights() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    var resultDiv = document.getElementById('ai-analytics-result');
+    resultDiv.style.display = 'block';
+    resultDiv.querySelector('.card-body').innerHTML = '<p style="color:#999;">AI is generating insights...</p>';
+    try {
+        var result = await api('POST', '/api/organizations/' + orgId + '/ai/ask', {
+            question: 'Give me a comprehensive analytics overview: registration fill rates, player retention, team balance, coach-to-player ratios, field utilization, and any data-driven recommendations for improvement.'
+        });
+        resultDiv.querySelector('.card-body').innerHTML =
+            '<strong style="color:#09A1A1;">AI Analytics Insights</strong><br><br>' +
+            '<div style="white-space:pre-wrap;">' + esc(result.answer || 'No insights available.') + '</div>';
+    } catch (e) {
+        resultDiv.querySelector('.card-body').innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>';
+    }
+}
+
+// --- AI Clean Import Data ---
+async function aiCleanData() {
+    var csv = document.getElementById('import-csv-data').value;
+    if (!csv.trim()) { toast('Paste CSV data first', 'warning'); return; }
+    var orgId = requireOrg();
+    if (!orgId) return;
+    var resultDiv = document.getElementById('import-results');
+    resultDiv.innerHTML = '<p style="color:#999;">AI is analyzing data quality...</p>';
+    try {
+        var result = await api('POST', '/api/organizations/' + orgId + '/ai/ask', {
+            question: 'Analyze this CSV data for a player import and identify formatting issues, duplicates, missing fields, or data quality problems. Here is the data:\n\n' + csv.substring(0, 2000)
+        });
+        resultDiv.innerHTML = '<div style="padding:12px;background:linear-gradient(135deg,#f0f9ff,#e8f5e9);border-left:4px solid #09A1A1;border-radius:6px;">' +
+            '<strong style="color:#09A1A1;">AI Data Quality Report</strong><br><br>' +
+            '<div style="white-space:pre-wrap;">' + esc(result.answer || 'No issues found.') + '</div></div>';
+    } catch (e) {
+        resultDiv.innerHTML = '<p style="color:red;">Error: ' + esc(e.message) + '</p>';
+    }
 }
 
 // Initialize ops buttons
