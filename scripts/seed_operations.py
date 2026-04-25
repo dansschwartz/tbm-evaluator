@@ -15,7 +15,7 @@ from datetime import datetime, date, timedelta
 
 import httpx
 
-ORG_ID = "32099855-0233-4528-b070-dc1778ba3a13"
+ORG_ID = "7f872a72-b657-4a15-9cef-7eef29daf974"
 
 FIELDS = [
     {
@@ -216,14 +216,14 @@ def main():
     client = httpx.Client(base_url=args.api_url, headers=h, timeout=120)
 
     random.seed(42)
-    org_id = ORG_ID
+    ORG_ID = "7f872a72-b657-4a15-9cef-7eef29daf974"
 
     # Verify org exists
     print("Verifying organization...")
+    org_id = ORG_ID
     resp = client.get(f"/api/organizations/{org_id}")
     if resp.status_code != 200:
         print(f"  ERROR: Org {org_id} not found ({resp.status_code}). Run seed_demo.py first.")
-        return
     org = resp.json()
     print(f"  OK: {org['name']}")
 
@@ -270,7 +270,6 @@ def main():
         print(f"  + Season: {season['name']} ({season['start_date']} to {season['end_date']}) — status: {season['status']}")
     else:
         print(f"  ERROR: {resp.status_code} {resp.text[:200]}")
-        return
 
     # ========== PROGRAMS ==========
     print("\n--- SEEDING PROGRAMS ---")
