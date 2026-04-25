@@ -2858,3 +2858,8 @@ function esc(str) {
     await loadOrgSelector();
     navigateTo('overview');
 })();
+
+
+// Refresh Lucide icons after DOM updates
+var _origSetInnerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML').set;
+setInterval(function() { if (typeof lucide !== 'undefined') try { lucide.createIcons(); } catch(e){} }, 1000);

@@ -24,11 +24,12 @@
   .error{color:#FA6E82;font-size:13px;margin-top:8px}
   .empty{color:#999;font-size:14px;margin-top:16px}
 </style>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body>
 <div class="container">
   <div class="card">
-    <h1>📊 Parent Portal</h1>
+    <h1><i data-lucide="file-bar-chart" style="width:28px;height:28px;vertical-align:middle;margin-right:8px;"></i>Parent Portal</h1>
     <p>Enter your email to view your player's evaluation reports</p>
     <input type="email" id="email" placeholder="Your email address" onkeydown="if(event.key==='Enter')lookup()">
     <button onclick="lookup()">View Reports</button>
@@ -63,5 +64,6 @@
     } catch(e) { results.innerHTML = '<p class="error">Could not find reports. Please try again.</p>'; }
   }
 </script>
+<script>if(typeof lucide!=="undefined")lucide.createIcons();</script>
 </body>
 </html>

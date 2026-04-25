@@ -17,10 +17,11 @@
   button{width:100%;padding:14px;background:#09A1A1;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;margin-top:12px}
   #msg{text-align:center;margin-top:12px;font-size:14px}
 </style>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body>
 <div class="card">
-  <h1>⚽ Player Self-Assessment</h1>
+  <h1><i data-lucide="clipboard-check" style="width:28px;height:28px;vertical-align:middle;margin-right:8px;"></i>Player Self-Assessment</h1>
   <p>Rate yourself on each skill below</p>
   <div id="skills"></div>
   <button onclick="submit()">Submit Self-Assessment</button>
@@ -60,5 +61,6 @@
 
   load();
 </script>
+<script>if(typeof lucide!=="undefined")lucide.createIcons();</script>
 </body>
 </html>
