@@ -3568,70 +3568,205 @@ document.getElementById('btn-ai-predict-dev').addEventListener('click', async fu
 
 
 // ===================================================================
-// INTELLIGENCE — Competition
+// INTELLIGENCE — Competition & League Intelligence
 // ===================================================================
+
+var _competitionLeagues = {};
 
 async function loadIntelCompetition(orgId) {
     if (!orgId) return;
+
+    // Load leagues for filter dropdown
+    try {
+        var leagueData = await api('GET', '/api/organizations/' + orgId + '/competition/leagues');
+        _competitionLeagues = leagueData.leagues || {};
+        var filterEl = document.getElementById('competition-league-filter');
+        var opts = '<option value="">All Leagues</option>';
+        for (var key in _competitionLeagues) {
+            var lg = _competitionLeagues[key];
+            opts += '<option value="' + lg.name + '">' + lg.name + '</option>';
+        }
+        // Also add specific division options
+        opts += '<option value="NCSL Division 1">NCSL Division 1</option>';
+        opts += '<option value="NCSL Division 2">NCSL Division 2</option>';
+        opts += '<option value="NCSL Division 3">NCSL Division 3</option>';
+        opts += '<option value="NCSL Premier">NCSL Premier</option>';
+        opts += '<option value="MDSL">MDSL</option>';
+        filterEl.innerHTML = opts;
+    } catch (e) {}
+
     // Load standings
     try {
         var standings = await api('GET', '/api/organizations/' + orgId + '/competition/standings');
         var tbody = document.getElementById('standings-table-body');
         if (standings.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No match results yet.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No match results yet. Add results to see standings.</td></tr>';
         } else {
             tbody.innerHTML = standings.map(function(s) {
-                return '<tr><td style="font-weight:600;">' + s.team_name + '</td><td>' + s.matches + '</td><td>' + s.wins + '</td><td>' + s.draws + '</td><td>' + s.losses + '</td><td>' + s.goals_for + '</td><td>' + s.goals_against + '</td><td>' + s.goal_difference + '</td><td style="font-weight:700;">' + s.points + '</td></tr>';
+                var ptsStyle = 'font-weight:800;color:#1d4ed8;';
+                var gdStyle = s.goal_difference > 0 ? 'color:#16a34a;font-weight:600;' : s.goal_difference < 0 ? 'color:#dc2626;font-weight:600;' : '';
+                var gdPrefix = s.goal_difference > 0 ? '+' : '';
+                return '<tr><td style="font-weight:600;">' + s.team_name + '</td><td style="font-size:12px;color:#6b7280;">' + (s.league || '--') + '</td><td>' + s.matches + '</td><td style="color:#16a34a;font-weight:600;">' + s.wins + '</td><td>' + s.draws + '</td><td style="color:#dc2626;">' + s.losses + '</td><td>' + s.goals_for + '</td><td>' + s.goals_against + '</td><td style="' + gdStyle + '">' + gdPrefix + s.goal_difference + '</td><td style="' + ptsStyle + '">' + s.points + '</td></tr>';
             }).join('');
+
+            // Build season summary cards from standings
+            var totalW = 0, totalD = 0, totalL = 0, totalGF = 0, totalGA = 0, totalMatches = 0;
+            standings.forEach(function(s) {
+                totalW += s.wins; totalD += s.draws; totalL += s.losses;
+                totalGF += s.goals_for; totalGA += s.goals_against; totalMatches += s.matches;
+            });
+            document.getElementById('competition-stats-bar').innerHTML =
+                '<div class="stat-card"><div class="stat-value">' + standings.length + '</div><div class="stat-label"><i data-lucide="users" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:2px;"></i> Teams</div></div>' +
+                '<div class="stat-card"><div class="stat-value">' + totalMatches + '</div><div class="stat-label"><i data-lucide="calendar" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:2px;"></i> Matches</div></div>' +
+                '<div class="stat-card"><div class="stat-value" style="color:#16a34a;">' + totalW + '</div><div class="stat-label">Wins</div></div>' +
+                '<div class="stat-card"><div class="stat-value">' + totalD + '</div><div class="stat-label">Draws</div></div>' +
+                '<div class="stat-card"><div class="stat-value" style="color:#dc2626;">' + totalL + '</div><div class="stat-label">Losses</div></div>' +
+                '<div class="stat-card"><div class="stat-value">' + totalGF + '<span style="font-size:14px;color:#6b7280;">-</span>' + totalGA + '</div><div class="stat-label"><i data-lucide="target" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:2px;"></i> Goals (F-A)</div></div>';
         }
-    } catch (e) {}
-    // Load stats
+    } catch (e) {
+        document.getElementById('standings-table-body').innerHTML = '<tr><td colspan="10" class="text-center text-muted">Error loading standings.</td></tr>';
+    }
+
+    // Load stats — scorers and assists
     try {
         var stats = await api('GET', '/api/organizations/' + orgId + '/competition/stats');
-        document.getElementById('competition-stats-bar').innerHTML =
-            '<div class="stat-card"><div class="stat-value">' + (stats.total_matches||0) + '</div><div class="stat-label">Total Matches</div></div>';
-
         var gsHtml = '';
         if (stats.top_scorers && stats.top_scorers.length > 0) {
-            gsHtml += '<h4 style="margin-bottom:8px;">Top Scorers</h4><table class="data-table"><thead><tr><th>Player</th><th>Goals</th></tr></thead><tbody>';
-            stats.top_scorers.forEach(function(ts) { gsHtml += '<tr><td>' + ts.name + '</td><td style="font-weight:700;">' + ts.goals + '</td></tr>'; });
+            gsHtml += '<h4 style="margin-bottom:8px;font-size:14px;"><i data-lucide="flame" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;color:#f59e0b;"></i> Top Scorers</h4>';
+            gsHtml += '<table class="data-table"><thead><tr><th>#</th><th>Player</th><th>Goals</th></tr></thead><tbody>';
+            stats.top_scorers.forEach(function(ts, idx) {
+                var medal = idx === 0 ? ' style="color:#f59e0b;font-weight:800;"' : idx === 1 ? ' style="color:#9ca3af;font-weight:700;"' : idx === 2 ? ' style="color:#b45309;font-weight:700;"' : '';
+                gsHtml += '<tr><td' + medal + '>' + (idx+1) + '</td><td style="font-weight:600;">' + ts.name + '</td><td style="font-weight:800;color:#1d4ed8;">' + ts.goals + '</td></tr>';
+            });
             gsHtml += '</tbody></table>';
         }
         if (stats.top_assists && stats.top_assists.length > 0) {
-            gsHtml += '<h4 style="margin:12px 0 8px;">Top Assists</h4><table class="data-table"><thead><tr><th>Player</th><th>Assists</th></tr></thead><tbody>';
-            stats.top_assists.forEach(function(ta) { gsHtml += '<tr><td>' + ta.name + '</td><td style="font-weight:700;">' + ta.assists + '</td></tr>'; });
+            gsHtml += '<h4 style="margin:16px 0 8px;font-size:14px;"><i data-lucide="handshake" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;color:#3b82f6;"></i> Top Assists</h4>';
+            gsHtml += '<table class="data-table"><thead><tr><th>#</th><th>Player</th><th>Assists</th></tr></thead><tbody>';
+            stats.top_assists.forEach(function(ta, idx) {
+                gsHtml += '<tr><td>' + (idx+1) + '</td><td style="font-weight:600;">' + ta.name + '</td><td style="font-weight:700;color:#3b82f6;">' + ta.assists + '</td></tr>';
+            });
             gsHtml += '</tbody></table>';
         }
         document.getElementById('goal-stats-body').innerHTML = gsHtml || '<p class="text-muted">No stats yet.</p>';
     } catch (e) {}
+
+    // Load recent results
+    try {
+        var results = await api('GET', '/api/organizations/' + orgId + '/competition/results');
+        var rrBody = document.getElementById('recent-results-body');
+        if (!results || results.length === 0) {
+            rrBody.innerHTML = '<p class="text-muted">No results yet. Add match results to track team performance.</p>';
+        } else {
+            var rrHtml = '<table class="data-table"><thead><tr><th>Date</th><th>Team</th><th>Result</th><th>Score</th><th>Opponent</th><th>League</th><th>Scorers</th></tr></thead><tbody>';
+            results.slice(0, 20).forEach(function(r) {
+                var resultColor = r.result === 'win' ? '#16a34a' : r.result === 'loss' ? '#dc2626' : '#f59e0b';
+                var resultLabel = r.result === 'win' ? 'W' : r.result === 'loss' ? 'L' : 'D';
+                var scorerNames = (r.goal_scorers || []).map(function(gs) {
+                    return gs.player_name + (gs.count > 1 ? ' (' + gs.count + ')' : '');
+                }).join(', ');
+                rrHtml += '<tr>' +
+                    '<td style="font-size:12px;white-space:nowrap;">' + (r.match_date || '') + '</td>' +
+                    '<td style="font-weight:600;">' + r.team_name + '</td>' +
+                    '<td><span style="background:' + resultColor + ';color:#fff;padding:2px 8px;border-radius:4px;font-weight:700;font-size:12px;">' + resultLabel + '</span></td>' +
+                    '<td style="font-weight:700;">' + r.score_for + ' - ' + r.score_against + '</td>' +
+                    '<td>' + r.opponent_name + '</td>' +
+                    '<td style="font-size:12px;color:#6b7280;">' + (r.league || '--') + '</td>' +
+                    '<td style="font-size:12px;">' + (scorerNames || '--') + '</td>' +
+                    '</tr>';
+            });
+            rrHtml += '</tbody></table>';
+            rrBody.innerHTML = rrHtml;
+        }
+    } catch (e) {}
 }
+
+// League filter change
+document.getElementById('competition-league-filter').addEventListener('change', function() {
+    var orgId = getSelectedOrg(); if (!orgId) return;
+    loadIntelCompetition(orgId);
+});
+
+// View league info modal
+document.getElementById('btn-view-leagues').addEventListener('click', async function() {
+    var orgId = requireOrg(); if (!orgId) return;
+    try {
+        var data = await api('GET', '/api/organizations/' + orgId + '/competition/leagues');
+        var leagues = data.leagues || {};
+        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
+        for (var key in leagues) {
+            var lg = leagues[key];
+            var levelColor = lg.level === 'Elite' ? '#7c3aed' : lg.level === 'Competitive' ? '#2563eb' : '#16a34a';
+            html += '<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+                '<span style="font-weight:700;font-size:14px;">' + lg.name + '</span>' +
+                '<span style="background:' + levelColor + ';color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">' + lg.level + '</span>' +
+                '</div>' +
+                '<div style="font-size:12px;color:#6b7280;margin-bottom:4px;"><i data-lucide="map-pin" style="width:11px;height:11px;display:inline;vertical-align:middle;margin-right:2px;"></i> ' + lg.region + '</div>' +
+                '<div style="font-size:12px;color:#6b7280;margin-bottom:4px;"><i data-lucide="calendar" style="width:11px;height:11px;display:inline;vertical-align:middle;margin-right:2px;"></i> ' + (lg.season || 'TBD') + '</div>' +
+                '<div style="font-size:11px;color:#9ca3af;">Age Groups: ' + (lg.age_groups || []).join(', ') + '</div>';
+            if (lg.competitors && lg.competitors.length > 0) {
+                html += '<div style="font-size:11px;color:#9ca3af;margin-top:4px;">Competitors: ' + lg.competitors.join(', ') + '</div>';
+            }
+            if (lg.member_clubs) {
+                html += '<div style="font-size:11px;color:#9ca3af;margin-top:4px;">' + lg.member_clubs + ' member clubs</div>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+        openModal('DMV League Directory (' + Object.keys(leagues).length + ' Leagues)', html, '');
+    } catch (e) { toast('Error loading leagues: ' + e.message, 'error'); }
+});
 
 document.getElementById('btn-add-match').addEventListener('click', async function() {
     var orgId = requireOrg(); if (!orgId) return;
-    // Load teams for selector
     var teams = [];
     try { teams = await api('GET', '/api/organizations/' + orgId + '/teams'); } catch(e){}
     var teamOpts = teams.map(function(t){ return '<option value="' + t.id + '">' + t.name + '</option>'; }).join('');
 
+    // Build league options from DMV_LEAGUES
+    var leagueOpts = '<option value="">Select League</option>';
+    leagueOpts += '<option value="NCSL Division 1">NCSL Division 1</option>';
+    leagueOpts += '<option value="NCSL Division 2">NCSL Division 2</option>';
+    leagueOpts += '<option value="NCSL Division 3">NCSL Division 3</option>';
+    leagueOpts += '<option value="NCSL Premier">NCSL Premier</option>';
+    leagueOpts += '<option value="MDSL">MDSL</option>';
+    leagueOpts += '<option value="CPSL">CPSL</option>';
+    leagueOpts += '<option value="EDP">EDP</option>';
+    leagueOpts += '<option value="MLS NEXT">MLS NEXT</option>';
+    leagueOpts += '<option value="GA ASPIRE">GA ASPIRE</option>';
+
+    // DMV opponent suggestions
+    var opponentOpts = '<option value="">Type or select...</option>';
+    var dmvClubs = ['Bethesda SC','Arlington SA','McLean Youth Soccer','Loudoun Soccer','Virginia Rush','FC Richmond','Potomac Soccer','Burke Athletic Club','Springfield SYC','Vienna Youth Soccer'];
+    dmvClubs.forEach(function(c) { opponentOpts += '<option value="' + c + '">' + c + '</option>'; });
+
     var formHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
-        '<div><label style="font-weight:600;">Team</label><select id="match-team" class="form-select">' + teamOpts + '</select></div>' +
-        '<div><label style="font-weight:600;">Opponent</label><input type="text" id="match-opponent" class="form-input" placeholder="Opponent name"></div>' +
-        '<div><label style="font-weight:600;">Date</label><input type="date" id="match-date" class="form-input"></div>' +
-        '<div><label style="font-weight:600;">Result</label><select id="match-result" class="form-select"><option value="win">Win</option><option value="loss">Loss</option><option value="draw">Draw</option></select></div>' +
-        '<div><label style="font-weight:600;">Score For</label><input type="number" id="match-score-for" class="form-input" value="0" min="0"></div>' +
-        '<div><label style="font-weight:600;">Score Against</label><input type="number" id="match-score-against" class="form-input" value="0" min="0"></div>' +
-        '<div><label style="font-weight:600;">League</label><input type="text" id="match-league" class="form-input" placeholder="e.g., IYSL Division 1"></div>' +
-        '<div><label style="font-weight:600;">Notes</label><input type="text" id="match-notes" class="form-input" placeholder="Optional notes"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;"><i data-lucide="users" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:2px;"></i> Team</label><select id="match-team" class="form-select">' + teamOpts + '</select></div>' +
+        '<div><label style="font-weight:600;font-size:13px;"><i data-lucide="shield" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:2px;"></i> Opponent</label><select id="match-opponent-select" class="form-select">' + opponentOpts + '</select><input type="text" id="match-opponent" class="form-input" placeholder="Or type opponent name" style="margin-top:4px;"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;"><i data-lucide="calendar" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:2px;"></i> Date</label><input type="date" id="match-date" class="form-input"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Result</label><select id="match-result" class="form-select"><option value="win">Win</option><option value="loss">Loss</option><option value="draw">Draw</option></select></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Score For</label><input type="number" id="match-score-for" class="form-input" value="0" min="0"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Score Against</label><input type="number" id="match-score-against" class="form-input" value="0" min="0"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;"><i data-lucide="trophy" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:2px;"></i> League</label><select id="match-league" class="form-select">' + leagueOpts + '</select></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Notes</label><input type="text" id="match-notes" class="form-input" placeholder="Optional notes"></div>' +
         '</div>';
 
-    openModal('Enter Match Result', formHtml, '<button class="btn btn-primary" id="btn-save-match">Save Result</button>');
+    openModal('<i data-lucide="plus-circle" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:4px;"></i> Add Match Result', formHtml, '<button class="btn btn-primary" id="btn-save-match"><i data-lucide="check" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Save Result</button>');
+
+    // Sync opponent dropdown to text input
+    document.getElementById('match-opponent-select').addEventListener('change', function() {
+        document.getElementById('match-opponent').value = this.value;
+    });
 
     document.getElementById('btn-save-match').addEventListener('click', async function() {
+        var opponent = document.getElementById('match-opponent').value || document.getElementById('match-opponent-select').value;
+        if (!opponent) { toast('Please enter an opponent name', 'error'); return; }
         showLoading();
         try {
             await api('POST', '/api/organizations/' + orgId + '/competition/results', {
                 team_id: document.getElementById('match-team').value,
-                opponent_name: document.getElementById('match-opponent').value,
+                opponent_name: opponent,
                 match_date: document.getElementById('match-date').value,
                 result: document.getElementById('match-result').value,
                 score_for: parseInt(document.getElementById('match-score-for').value) || 0,

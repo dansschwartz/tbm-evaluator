@@ -85,6 +85,61 @@ IYSL_TOP_10_ROLE_AVG = {
 
 DEVELOPMENT_LEVELS = ["Tots", "Rec", "Pre-Travel", "Select", "Travel", "Academy"]
 
+# ============================================================
+# DMV LEAGUE REFERENCE DATA
+# ============================================================
+
+DMV_LEAGUES = {
+    "MLS_NEXT": {
+        "name": "MLS NEXT Academy Division",
+        "region": "Virginia",
+        "level": "Elite",
+        "age_groups": ["U13","U14","U15","U16","U17","U18","U19"],
+        "season": "September-June (10 months)",
+        "competitors": ["Loudoun Soccer","Alexandria SA","McLean Youth Soccer","FC Richmond","Springfield/SYC","The St. James","Virginia Revolution SC","Virginia Rush"],
+        "url": "https://www.mlssoccer.com/mlsnext"
+    },
+    "GA_ASPIRE": {
+        "name": "Girls Academy ASPIRE",
+        "region": "East",
+        "level": "Elite",
+        "age_groups": ["U13","U14","U15","U16","U17","U18","U19"],
+        "season": "September-June",
+        "competitors": [],
+        "url": "https://girlsacademy.com"
+    },
+    "NCSL": {
+        "name": "National Capital Soccer League",
+        "region": "DMV",
+        "level": "Competitive",
+        "age_groups": ["U8","U9","U10","U11","U12","U13","U14","U15","U16","U17","U18","U19"],
+        "member_clubs": 72,
+        "season": "Fall + Spring",
+        "url": "https://www.ncsoccer.org"
+    },
+    "CPSL": {
+        "name": "Chesapeake Premier Soccer League",
+        "region": "DMV",
+        "level": "Competitive",
+        "age_groups": ["U8","U9","U10","U11","U12","U13","U14","U15","U16","U17","U18","U19"],
+        "season": "Fall + Spring"
+    },
+    "EDP": {
+        "name": "Elite Development Program",
+        "region": "Mid-Atlantic",
+        "level": "Competitive",
+        "age_groups": ["U8","U9","U10","U11","U12","U13","U14","U15","U16","U17","U18","U19"],
+        "url": "https://www.edpsoccer.com"
+    },
+    "MDSL": {
+        "name": "Maryland Developmental Soccer League",
+        "region": "Maryland",
+        "level": "Developmental",
+        "age_groups": ["U8","U9","U10","U11","U12","U13","U14"],
+        "season": "Fall + Spring"
+    },
+}
+
 
 # ============================================================
 # Pydantic Schemas
@@ -114,6 +169,11 @@ class MatchResultIn(BaseModel):
     goal_scorers: list = []
     assists: list = []
     notes: Optional[str] = None
+
+class DevelopmentPathIn(BaseModel):
+    current_level: str
+    path_entries: list  # [{season, level, date, notes}]
+    predicted_next_level: Optional[str] = None
 
 class ComplianceItemIn(BaseModel):
     item_type: str
@@ -684,6 +744,80 @@ async def ai_predict_all(org_id: str):
         return {"predictions": results, "total": len(results)}
 
 
+@router.post("/api/players/{player_id}/development-path")
+async def create_player_development_path(player_id: str, data: DevelopmentPathIn):
+    """Create or update a player's development path with explicit entries."""
+    async with async_session() as session:
+        player = (await session.execute(select(Player).where(Player.id == player_id))).scalars().first()
+        if not player:
+            raise HTTPException(404, "Player not found")
+
+        predicted = data.predicted_next_level
+        if not predicted:
+            level_idx = next((i for i, l in enumerate(DEVELOPMENT_LEVELS) if l.lower() == data.current_level.lower()), 1)
+            predicted = DEVELOPMENT_LEVELS[min(level_idx + 1, len(DEVELOPMENT_LEVELS) - 1)]
+
+        existing = (await session.execute(
+            select(PlayerDevelopmentPath).where(PlayerDevelopmentPath.player_id == player_id)
+        )).scalars().first()
+
+        if existing:
+            existing.path_entries = data.path_entries
+            existing.current_level = data.current_level
+            existing.predicted_next_level = predicted
+        else:
+            path = PlayerDevelopmentPath(
+                id=uuid.uuid4(), player_id=player_id, org_id=str(player.organization_id),
+                path_entries=data.path_entries, current_level=data.current_level,
+                predicted_next_level=predicted,
+            )
+            session.add(path)
+        await session.commit()
+        return {"player_id": player_id, "current_level": data.current_level, "message": "Development path saved"}
+
+
+# ============================================================
+# COMPETITION — LEAGUE REFERENCE DATA
+# ============================================================
+
+@router.get("/api/organizations/{org_id}/competition/leagues")
+async def get_leagues(org_id: str):
+    """Return all DMV league reference data."""
+    return {
+        "leagues": DMV_LEAGUES,
+        "total": len(DMV_LEAGUES),
+    }
+
+
+@router.get("/api/organizations/{org_id}/competition/results")
+async def get_competition_results(org_id: str, league: Optional[str] = None, team_id: Optional[str] = None):
+    """Return recent match results, optionally filtered by league or team."""
+    async with async_session() as session:
+        q = select(CompetitionResult).where(CompetitionResult.org_id == org_id)
+        if league:
+            q = q.where(CompetitionResult.league == league)
+        if team_id:
+            q = q.where(CompetitionResult.team_id == team_id)
+        q = q.order_by(CompetitionResult.match_date.desc()).limit(50)
+        results = (await session.execute(q)).scalars().all()
+
+        items = []
+        for r in results:
+            team = (await session.execute(select(Team).where(Team.id == r.team_id))).scalars().first()
+            items.append({
+                "id": str(r.id), "team_id": str(r.team_id),
+                "team_name": team.name if team else "Unknown",
+                "opponent_name": r.opponent_name, "league": r.league,
+                "match_date": r.match_date.isoformat() if r.match_date else None,
+                "result": r.result, "score_for": r.score_for,
+                "score_against": r.score_against,
+                "goal_scorers": r.goal_scorers or [],
+                "assists": r.assists or [],
+                "notes": r.notes,
+            })
+        return items
+
+
 # ============================================================
 # REGISTRATION FORECASTING
 # ============================================================
@@ -1093,6 +1227,7 @@ async def competition_standings(org_id: str):
 
         # Aggregate by team
         team_records = {}
+        team_leagues = {}  # track most common league per team
         for r in results:
             tid = str(r.team_id)
             if tid not in team_records:
@@ -1106,8 +1241,12 @@ async def competition_standings(org_id: str):
                 team_records[tid]["losses"] += 1
             else:
                 team_records[tid]["draws"] += 1
+            # Track league
+            if r.league:
+                team_leagues.setdefault(tid, {})
+                team_leagues[tid][r.league] = team_leagues[tid].get(r.league, 0) + 1
 
-        # Get team names
+        # Get team names and determine primary league
         standings = []
         for tid, record in team_records.items():
             team = (await session.execute(select(Team).where(Team.id == tid))).scalars().first()
@@ -1115,6 +1254,11 @@ async def competition_standings(org_id: str):
             record["team_name"] = team.name if team else "Unknown"
             record["points"] = record["wins"] * 3 + record["draws"]
             record["goal_difference"] = record["goals_for"] - record["goals_against"]
+            # Primary league = most frequent league for this team
+            if tid in team_leagues and team_leagues[tid]:
+                record["league"] = max(team_leagues[tid], key=team_leagues[tid].get)
+            else:
+                record["league"] = None
             standings.append(record)
 
         standings.sort(key=lambda x: (x["points"], x["goal_difference"]), reverse=True)

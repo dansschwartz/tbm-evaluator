@@ -619,6 +619,361 @@ def main():
     missing_count = len(player_ids) - len(players_with_docs)
     print(f"  Note: {missing_count} of {len(player_ids)} players are MISSING waivers")
 
+    # ========== DEVELOPMENT PATHS ==========
+    print("\n--- SEEDING DEVELOPMENT PATHS ---")
+    # Build a player name→id map
+    player_map = {f"{p['first_name']} {p['last_name']}": p["id"] for p in players}
+
+    # Define development journeys for all 25 players
+    # Distribution: Rec=8, Pre-Travel=3, Select=4, Travel=6, Academy=4
+    development_journeys = {
+        # TRAVEL (6 players) — current_level: Travel
+        "Marcus Johnson": {
+            "current_level": "Travel",
+            "path_entries": [
+                {"season": "Fall 2024", "level": "Rec", "date": "2024-09-01", "notes": "Started rec league"},
+                {"season": "Spring 2025", "level": "Pre-Travel", "date": "2025-03-01", "notes": "Moved to pre-travel after strong fall"},
+                {"season": "Fall 2025", "level": "Select", "date": "2025-09-01", "notes": "Selected for select team"},
+                {"season": "Spring 2026", "level": "Travel", "date": "2026-04-01", "notes": "Promoted to travel — U12 Blue"},
+            ],
+        },
+        "Ethan Williams": {
+            "current_level": "Travel",
+            "path_entries": [
+                {"season": "Fall 2024", "level": "Rec", "date": "2024-09-01", "notes": "Joined rec program"},
+                {"season": "Spring 2025", "level": "Select", "date": "2025-03-01", "notes": "Fast-tracked to select"},
+                {"season": "Fall 2025", "level": "Travel", "date": "2025-09-01", "notes": "Made travel team"},
+                {"season": "Spring 2026", "level": "Travel", "date": "2026-04-01", "notes": "Continuing on U12 Blue"},
+            ],
+        },
+        "Olivia Chen": {
+            "current_level": "Travel",
+            "path_entries": [
+                {"season": "Spring 2025", "level": "Pre-Travel", "date": "2025-03-01", "notes": "Started pre-travel"},
+                {"season": "Fall 2025", "level": "Travel", "date": "2025-09-01", "notes": "Strong tryout, made travel"},
+                {"season": "Spring 2026", "level": "Travel", "date": "2026-04-01", "notes": "U12 Red starter"},
+            ],
+        },
+        "Liam Davis": {
+            "current_level": "Travel",
+            "path_entries": [
+                {"season": "Fall 2024", "level": "Rec", "date": "2024-09-01", "notes": "Rec league start"},
+                {"season": "Spring 2025", "level": "Rec", "date": "2025-03-01", "notes": "Continued rec, improving"},
+                {"season": "Fall 2025", "level": "Select", "date": "2025-09-01", "notes": "Moved to select"},
+                {"season": "Spring 2026", "level": "Travel", "date": "2026-04-01", "notes": "U12 White roster"},
+            ],
+        },
+        "Isabella Martinez": {
+            "current_level": "Travel",
+            "path_entries": [
+                {"season": "Fall 2024", "level": "Pre-Travel", "date": "2024-09-01", "notes": "Pre-travel start"},
+                {"season": "Spring 2025", "level": "Select", "date": "2025-03-01", "notes": "Advanced to select"},
+                {"season": "Fall 2025", "level": "Travel", "date": "2025-09-01", "notes": "Travel team"},
+                {"season": "Spring 2026", "level": "Travel", "date": "2026-04-01", "notes": "U12 Red — key midfielder"},
+            ],
+        },
+        "James Wilson": {
+            "current_level": "Travel",
+            "path_entries": [
+                {"season": "Fall 2024", "level": "Rec", "date": "2024-09-01", "notes": "Started in rec"},
+                {"season": "Fall 2025", "level": "Select", "date": "2025-09-01", "notes": "Jumped to select"},
+                {"season": "Spring 2026", "level": "Travel", "date": "2026-04-01", "notes": "U12 White"},
+            ],
+        },
+        # ACADEMY (4 players) — current_level: Academy
+        "Sofia Rodriguez": {
+            "current_level": "Academy",
+            "path_entries": [
+                {"season": "Fall 2024", "level": "Rec", "date": "2024-09-01", "notes": "Rec league — showed exceptional talent"},
+                {"season": "Spring 2025", "level": "Travel", "date": "2025-03-01", "notes": "Skipped to travel"},
+                {"season": "Fall 2025", "level": "Academy", "date": "2025-09-01", "notes": "Accepted into academy program"},
+                {"season": "Spring 2026", "level": "Academy", "date": "2026-04-01", "notes": "U12 Academy — top performer"},
+            ],
+        },
+        "Aiden Thompson": {
+            "current_level": "Academy",
+            "path_entries": [
+                {"season": "Fall 2024", "level": "Travel", "date": "2024-09-01", "notes": "Entered at travel level"},
+                {"season": "Spring 2025", "level": "Travel", "date": "2025-03-01", "notes": "Strong travel season"},
+                {"season": "Fall 2025", "level": "Academy", "date": "2025-09-01", "notes": "Invited to academy"},
+                {"season": "Spring 2026", "level": "Academy", "date": "2026-04-01", "notes": "U12 Academy — captain"},
+            ],
+        },
+        "Emma Brown": {
+            "current_level": "Academy",
+            "path_entries": [
+                {"season": "Fall 2024", "level": "Select", "date": "2024-09-01", "notes": "Started at select"},
+                {"season": "Spring 2025", "level": "Travel", "date": "2025-03-01", "notes": "Promoted to travel"},
+                {"season": "Fall 2025", "level": "Academy", "date": "2025-09-01", "notes": "Academy acceptance"},
+                {"season": "Spring 2026", "level": "Academy", "date": "2026-04-01", "notes": "U12 Academy"},
+            ],
+        },
+        "Lucas Garcia": {
+            "current_level": "Academy",
+            "path_entries": [
+                {"season": "Spring 2025", "level": "Travel", "date": "2025-03-01", "notes": "Transfer from Bethesda SC"},
+                {"season": "Fall 2025", "level": "Academy", "date": "2025-09-01", "notes": "Scouted for academy"},
+                {"season": "Spring 2026", "level": "Academy", "date": "2026-04-01", "notes": "U12 Academy — GK"},
+            ],
+        },
+        # SELECT (4 players) — current_level: Select
+        "Noah Patel": {
+            "current_level": "Select",
+            "path_entries": [
+                {"season": "Spring 2025", "level": "Rec", "date": "2025-03-01", "notes": "Joined rec mid-year"},
+                {"season": "Fall 2025", "level": "Rec", "date": "2025-09-01", "notes": "Continued rec development"},
+                {"season": "Spring 2026", "level": "Select", "date": "2026-04-01", "notes": "Moved up to U12 Select"},
+            ],
+        },
+        "Ava Anderson": {
+            "current_level": "Select",
+            "path_entries": [
+                {"season": "Fall 2024", "level": "Rec", "date": "2024-09-01", "notes": "Rec start"},
+                {"season": "Spring 2025", "level": "Pre-Travel", "date": "2025-03-01", "notes": "Pre-travel program"},
+                {"season": "Fall 2025", "level": "Select", "date": "2025-09-01", "notes": "Select team placement"},
+                {"season": "Spring 2026", "level": "Select", "date": "2026-04-01", "notes": "U12 Select"},
+            ],
+        },
+        "Mason Lee": {
+            "current_level": "Select",
+            "path_entries": [
+                {"season": "Fall 2024", "level": "Rec", "date": "2024-09-01", "notes": "Started in rec"},
+                {"season": "Fall 2025", "level": "Select", "date": "2025-09-01", "notes": "Advanced to select"},
+                {"season": "Spring 2026", "level": "Select", "date": "2026-04-01", "notes": "U12 Select"},
+            ],
+        },
+        "Mia Taylor": {
+            "current_level": "Select",
+            "path_entries": [
+                {"season": "Spring 2025", "level": "Pre-Travel", "date": "2025-03-01", "notes": "Pre-travel start"},
+                {"season": "Fall 2025", "level": "Select", "date": "2025-09-01", "notes": "Made select team"},
+                {"season": "Spring 2026", "level": "Select", "date": "2026-04-01", "notes": "U12 Select — improving fast"},
+            ],
+        },
+        # PRE-TRAVEL (3 players) — current_level: Pre-Travel
+        "Charlotte White": {
+            "current_level": "Pre-Travel",
+            "path_entries": [
+                {"season": "Fall 2025", "level": "Rec", "date": "2025-09-01", "notes": "Started rec league"},
+                {"season": "Spring 2026", "level": "Pre-Travel", "date": "2026-04-01", "notes": "Moved to pre-travel"},
+            ],
+        },
+        "Benjamin Harris": {
+            "current_level": "Pre-Travel",
+            "path_entries": [
+                {"season": "Spring 2025", "level": "Rec", "date": "2025-03-01", "notes": "Rec start"},
+                {"season": "Fall 2025", "level": "Rec", "date": "2025-09-01", "notes": "Solid rec season"},
+                {"season": "Spring 2026", "level": "Pre-Travel", "date": "2026-04-01", "notes": "Pre-travel promotion"},
+            ],
+        },
+        "Amelia Clark": {
+            "current_level": "Pre-Travel",
+            "path_entries": [
+                {"season": "Fall 2025", "level": "Rec", "date": "2025-09-01", "notes": "First season"},
+                {"season": "Spring 2026", "level": "Pre-Travel", "date": "2026-04-01", "notes": "Pre-travel — showing promise"},
+            ],
+        },
+        # REC (8 players) — current_level: Rec (Recreational)
+        "Daniel Kim": {
+            "current_level": "Recreational",
+            "path_entries": [
+                {"season": "Spring 2026", "level": "Rec", "date": "2026-04-01", "notes": "First season — rec league"},
+            ],
+        },
+        "Harper Lewis": {
+            "current_level": "Recreational",
+            "path_entries": [
+                {"season": "Fall 2025", "level": "Rec", "date": "2025-09-01", "notes": "Started rec"},
+                {"season": "Spring 2026", "level": "Rec", "date": "2026-04-01", "notes": "Continuing rec — developing skills"},
+            ],
+        },
+        "Alexander Robinson": {
+            "current_level": "Recreational",
+            "path_entries": [
+                {"season": "Spring 2026", "level": "Rec", "date": "2026-04-01", "notes": "New player — rec league"},
+            ],
+        },
+        "Ella Walker": {
+            "current_level": "Recreational",
+            "path_entries": [
+                {"season": "Fall 2025", "level": "Rec", "date": "2025-09-01", "notes": "First fall season"},
+                {"season": "Spring 2026", "level": "Rec", "date": "2026-04-01", "notes": "Rec — building confidence"},
+            ],
+        },
+        "Jack Hall": {
+            "current_level": "Recreational",
+            "path_entries": [
+                {"season": "Spring 2026", "level": "Rec", "date": "2026-04-01", "notes": "First season at DCSC"},
+            ],
+        },
+        "Sophia Young": {
+            "current_level": "Recreational",
+            "path_entries": [
+                {"season": "Fall 2025", "level": "Rec", "date": "2025-09-01", "notes": "Rec league start"},
+                {"season": "Spring 2026", "level": "Rec", "date": "2026-04-01", "notes": "Continuing rec"},
+            ],
+        },
+        "William King": {
+            "current_level": "Recreational",
+            "path_entries": [
+                {"season": "Spring 2026", "level": "Rec", "date": "2026-04-01", "notes": "New to soccer — rec league"},
+            ],
+        },
+        "Grace Scott": {
+            "current_level": "Recreational",
+            "path_entries": [
+                {"season": "Fall 2025", "level": "Rec", "date": "2025-09-01", "notes": "Started rec"},
+                {"season": "Spring 2026", "level": "Rec", "date": "2026-04-01", "notes": "Rec — enjoying the game"},
+            ],
+        },
+    }
+
+    dev_path_count = 0
+    for player_name, journey in development_journeys.items():
+        pid = player_map.get(player_name)
+        if not pid:
+            print(f"  SKIP: {player_name} not found in roster")
+            continue
+        resp = client.post(f"/api/players/{pid}/development-path", json={
+            "current_level": journey["current_level"],
+            "path_entries": journey["path_entries"],
+        })
+        if resp.status_code in (200, 201):
+            dev_path_count += 1
+            level = journey["current_level"]
+            steps = len(journey["path_entries"])
+            print(f"  + {player_name}: {level} ({steps} path entries)")
+        else:
+            print(f"  ERROR {player_name}: {resp.status_code} {resp.text[:100]}")
+
+    print(f"  Total: {dev_path_count} development paths created")
+
+    # ========== COMPETITION RESULTS ==========
+    print("\n--- SEEDING COMPETITION RESULTS ---")
+
+    # Map team names to IDs: U12 Blue=5, U12 Red=6, U12 White=7, U12 Select=8, U12 Academy=9
+    team_name_to_idx = {
+        "U12 Blue": 5, "U12 Red": 6, "U12 White": 7, "U12 Select": 8, "U12 Academy": 9,
+    }
+
+    # Player names for goal scorers (from the 25-player roster, matched to teams)
+    # These are example names from the roster assigned to these teams
+    match_results = [
+        # U12 Blue (NCSL Div 1) — 4W 2L 1D
+        {"team": "U12 Blue", "opponent": "Bethesda SC", "league": "NCSL Division 1", "date": "2026-04-19", "result": "win", "sf": 3, "sa": 1,
+         "scorers": [{"player_name": "Marcus Johnson", "count": 2}, {"player_name": "Ethan Williams", "count": 1}],
+         "assists": [{"player_name": "Ethan Williams", "count": 1}, {"player_name": "Marcus Johnson", "count": 1}]},
+        {"team": "U12 Blue", "opponent": "Arlington SA", "league": "NCSL Division 1", "date": "2026-04-26", "result": "win", "sf": 2, "sa": 0,
+         "scorers": [{"player_name": "Marcus Johnson", "count": 1}, {"player_name": "Ethan Williams", "count": 1}],
+         "assists": [{"player_name": "Marcus Johnson", "count": 1}]},
+        {"team": "U12 Blue", "opponent": "McLean Youth Soccer", "league": "NCSL Division 1", "date": "2026-05-03", "result": "loss", "sf": 1, "sa": 2,
+         "scorers": [{"player_name": "Marcus Johnson", "count": 1}], "assists": []},
+        {"team": "U12 Blue", "opponent": "Vienna Youth Soccer", "league": "NCSL Division 1", "date": "2026-05-10", "result": "win", "sf": 4, "sa": 2,
+         "scorers": [{"player_name": "Ethan Williams", "count": 2}, {"player_name": "Marcus Johnson", "count": 2}],
+         "assists": [{"player_name": "Ethan Williams", "count": 1}]},
+        {"team": "U12 Blue", "opponent": "Potomac Soccer", "league": "NCSL Division 1", "date": "2026-05-17", "result": "draw", "sf": 1, "sa": 1,
+         "scorers": [{"player_name": "Marcus Johnson", "count": 1}], "assists": []},
+        {"team": "U12 Blue", "opponent": "Loudoun Soccer", "league": "NCSL Division 1", "date": "2026-05-24", "result": "win", "sf": 2, "sa": 1,
+         "scorers": [{"player_name": "Ethan Williams", "count": 1}, {"player_name": "Marcus Johnson", "count": 1}],
+         "assists": [{"player_name": "Marcus Johnson", "count": 1}]},
+        {"team": "U12 Blue", "opponent": "FC Richmond", "league": "NCSL Division 1", "date": "2026-05-31", "result": "loss", "sf": 0, "sa": 3,
+         "scorers": [], "assists": []},
+
+        # U12 Red (NCSL Div 2) — 3W 2L 2D
+        {"team": "U12 Red", "opponent": "Burke Athletic Club", "league": "NCSL Division 2", "date": "2026-04-19", "result": "win", "sf": 2, "sa": 0,
+         "scorers": [{"player_name": "Olivia Chen", "count": 1}, {"player_name": "Isabella Martinez", "count": 1}],
+         "assists": [{"player_name": "Olivia Chen", "count": 1}]},
+        {"team": "U12 Red", "opponent": "Springfield SYC", "league": "NCSL Division 2", "date": "2026-04-26", "result": "draw", "sf": 2, "sa": 2,
+         "scorers": [{"player_name": "Isabella Martinez", "count": 2}],
+         "assists": [{"player_name": "Olivia Chen", "count": 1}]},
+        {"team": "U12 Red", "opponent": "Potomac Soccer", "league": "NCSL Division 2", "date": "2026-05-03", "result": "win", "sf": 3, "sa": 1,
+         "scorers": [{"player_name": "Olivia Chen", "count": 2}, {"player_name": "Isabella Martinez", "count": 1}],
+         "assists": [{"player_name": "Isabella Martinez", "count": 1}]},
+        {"team": "U12 Red", "opponent": "Virginia Rush", "league": "NCSL Division 2", "date": "2026-05-10", "result": "loss", "sf": 0, "sa": 2,
+         "scorers": [], "assists": []},
+        {"team": "U12 Red", "opponent": "Arlington SA", "league": "NCSL Division 2", "date": "2026-05-17", "result": "win", "sf": 1, "sa": 0,
+         "scorers": [{"player_name": "Olivia Chen", "count": 1}], "assists": [{"player_name": "Isabella Martinez", "count": 1}]},
+        {"team": "U12 Red", "opponent": "Bethesda SC", "league": "NCSL Division 2", "date": "2026-05-24", "result": "draw", "sf": 1, "sa": 1,
+         "scorers": [{"player_name": "Isabella Martinez", "count": 1}], "assists": []},
+        {"team": "U12 Red", "opponent": "McLean Youth Soccer", "league": "NCSL Division 2", "date": "2026-05-31", "result": "loss", "sf": 1, "sa": 3,
+         "scorers": [{"player_name": "Olivia Chen", "count": 1}], "assists": []},
+
+        # U12 White (NCSL Div 3) — 2W 3L 2D
+        {"team": "U12 White", "opponent": "Vienna Youth Soccer", "league": "NCSL Division 3", "date": "2026-04-26", "result": "win", "sf": 2, "sa": 1,
+         "scorers": [{"player_name": "Liam Davis", "count": 1}, {"player_name": "James Wilson", "count": 1}],
+         "assists": [{"player_name": "Liam Davis", "count": 1}]},
+        {"team": "U12 White", "opponent": "Burke Athletic Club", "league": "NCSL Division 3", "date": "2026-05-03", "result": "loss", "sf": 0, "sa": 2,
+         "scorers": [], "assists": []},
+        {"team": "U12 White", "opponent": "Springfield SYC", "league": "NCSL Division 3", "date": "2026-05-17", "result": "draw", "sf": 1, "sa": 1,
+         "scorers": [{"player_name": "Liam Davis", "count": 1}], "assists": [{"player_name": "James Wilson", "count": 1}]},
+        {"team": "U12 White", "opponent": "Loudoun Soccer", "league": "NCSL Division 3", "date": "2026-05-31", "result": "win", "sf": 3, "sa": 2,
+         "scorers": [{"player_name": "James Wilson", "count": 2}, {"player_name": "Liam Davis", "count": 1}],
+         "assists": [{"player_name": "Liam Davis", "count": 1}]},
+
+        # U12 Select (MDSL) — 3W 1L 1D
+        {"team": "U12 Select", "opponent": "Potomac Soccer", "league": "MDSL", "date": "2026-04-19", "result": "win", "sf": 2, "sa": 0,
+         "scorers": [{"player_name": "Noah Patel", "count": 1}, {"player_name": "Ava Anderson", "count": 1}],
+         "assists": [{"player_name": "Noah Patel", "count": 1}]},
+        {"team": "U12 Select", "opponent": "Bethesda SC", "league": "MDSL", "date": "2026-05-03", "result": "win", "sf": 3, "sa": 1,
+         "scorers": [{"player_name": "Noah Patel", "count": 2}, {"player_name": "Ava Anderson", "count": 1}],
+         "assists": [{"player_name": "Ava Anderson", "count": 1}]},
+        {"team": "U12 Select", "opponent": "Virginia Rush", "league": "MDSL", "date": "2026-05-10", "result": "loss", "sf": 1, "sa": 2,
+         "scorers": [{"player_name": "Noah Patel", "count": 1}], "assists": []},
+        {"team": "U12 Select", "opponent": "Arlington SA", "league": "MDSL", "date": "2026-05-17", "result": "draw", "sf": 2, "sa": 2,
+         "scorers": [{"player_name": "Ava Anderson", "count": 1}, {"player_name": "Noah Patel", "count": 1}],
+         "assists": [{"player_name": "Noah Patel", "count": 1}]},
+        {"team": "U12 Select", "opponent": "Burke Athletic Club", "league": "MDSL", "date": "2026-05-24", "result": "win", "sf": 1, "sa": 0,
+         "scorers": [{"player_name": "Ava Anderson", "count": 1}], "assists": [{"player_name": "Noah Patel", "count": 1}]},
+
+        # U12 Academy (NCSL top div) — 5W 1L 1D
+        {"team": "U12 Academy", "opponent": "McLean Youth Soccer", "league": "NCSL Premier", "date": "2026-04-19", "result": "win", "sf": 3, "sa": 0,
+         "scorers": [{"player_name": "Sofia Rodriguez", "count": 2}, {"player_name": "Aiden Thompson", "count": 1}],
+         "assists": [{"player_name": "Aiden Thompson", "count": 1}, {"player_name": "Emma Brown", "count": 1}]},
+        {"team": "U12 Academy", "opponent": "Loudoun Soccer", "league": "NCSL Premier", "date": "2026-04-26", "result": "win", "sf": 2, "sa": 1,
+         "scorers": [{"player_name": "Sofia Rodriguez", "count": 1}, {"player_name": "Aiden Thompson", "count": 1}],
+         "assists": [{"player_name": "Sofia Rodriguez", "count": 1}]},
+        {"team": "U12 Academy", "opponent": "FC Richmond", "league": "NCSL Premier", "date": "2026-05-03", "result": "win", "sf": 4, "sa": 1,
+         "scorers": [{"player_name": "Aiden Thompson", "count": 2}, {"player_name": "Sofia Rodriguez", "count": 1}, {"player_name": "Emma Brown", "count": 1}],
+         "assists": [{"player_name": "Emma Brown", "count": 1}, {"player_name": "Sofia Rodriguez", "count": 1}]},
+        {"team": "U12 Academy", "opponent": "Arlington SA", "league": "NCSL Premier", "date": "2026-05-10", "result": "loss", "sf": 1, "sa": 2,
+         "scorers": [{"player_name": "Sofia Rodriguez", "count": 1}], "assists": []},
+        {"team": "U12 Academy", "opponent": "Virginia Rush", "league": "NCSL Premier", "date": "2026-05-17", "result": "win", "sf": 3, "sa": 1,
+         "scorers": [{"player_name": "Aiden Thompson", "count": 1}, {"player_name": "Sofia Rodriguez", "count": 1}, {"player_name": "Emma Brown", "count": 1}],
+         "assists": [{"player_name": "Aiden Thompson", "count": 1}, {"player_name": "Lucas Garcia", "count": 1}]},
+        {"team": "U12 Academy", "opponent": "Springfield SYC", "league": "NCSL Premier", "date": "2026-05-24", "result": "draw", "sf": 2, "sa": 2,
+         "scorers": [{"player_name": "Sofia Rodriguez", "count": 1}, {"player_name": "Aiden Thompson", "count": 1}],
+         "assists": [{"player_name": "Emma Brown", "count": 1}]},
+        {"team": "U12 Academy", "opponent": "Bethesda SC", "league": "NCSL Premier", "date": "2026-05-31", "result": "win", "sf": 2, "sa": 0,
+         "scorers": [{"player_name": "Aiden Thompson", "count": 1}, {"player_name": "Sofia Rodriguez", "count": 1}],
+         "assists": [{"player_name": "Sofia Rodriguez", "count": 1}]},
+    ]
+
+    match_count = 0
+    for m in match_results:
+        t_idx = team_name_to_idx.get(m["team"])
+        if t_idx is None or t_idx >= len(team_ids):
+            print(f"  SKIP: team {m['team']} not found")
+            continue
+        resp = client.post(f"/api/organizations/{org_id}/competition/results", json={
+            "team_id": team_ids[t_idx],
+            "opponent_name": m["opponent"],
+            "league": m["league"],
+            "match_date": m["date"],
+            "result": m["result"],
+            "score_for": m["sf"],
+            "score_against": m["sa"],
+            "goal_scorers": m["scorers"],
+            "assists": m["assists"],
+        })
+        if resp.status_code in (200, 201):
+            match_count += 1
+            emoji = "W" if m["result"] == "win" else "L" if m["result"] == "loss" else "D"
+            print(f"  + [{emoji}] {m['team']} {m['sf']}-{m['sa']} vs {m['opponent']} ({m['league']}, {m['date']})")
+        else:
+            print(f"  ERROR: {resp.status_code} {resp.text[:100]}")
+
+    print(f"  Total: {match_count} match results seeded")
+
     # ========== SUMMARY ==========
     print("\n" + "=" * 60)
     print("OPERATIONS DATA SEEDED!")
@@ -633,6 +988,8 @@ def main():
     print(f"  Messages: {len(MESSAGES)}")
     print(f"  Coach certs updated: {len(COACH_CERTS)}")
     print(f"  Documents: 2 uploaded, {missing_count} missing waivers")
+    print(f"  Development paths: {dev_path_count}")
+    print(f"  Match results: {match_count}")
     print(f"\n  Admin: {args.api_url}/admin")
     print("=" * 60)
 

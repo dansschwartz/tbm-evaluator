@@ -822,29 +822,50 @@
                 <!-- Competition -->
                 <section class="section hidden" id="section-intel-competition">
                     <div class="section-toolbar">
-                        <h2>Competition & League Intelligence</h2>
+                        <h2><i data-lucide="trophy" style="width:20px;height:20px;display:inline;vertical-align:middle;margin-right:6px;"></i> Competition & League Intelligence</h2>
                         <div class="toolbar-actions">
-                            <button class="btn btn-primary" id="btn-add-match">+ Enter Match Result</button>
+                            <button class="btn btn-primary" id="btn-add-match"><i data-lucide="plus" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Add Result</button>
                         </div>
                     </div>
+
+                    <!-- League selector -->
+                    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+                        <label style="font-weight:600;font-size:14px;"><i data-lucide="filter" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i>League:</label>
+                        <select id="competition-league-filter" class="form-select" style="max-width:300px;">
+                            <option value="">All Leagues</option>
+                        </select>
+                        <button class="btn" id="btn-view-leagues" style="font-size:13px;"><i data-lucide="info" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> League Info</button>
+                    </div>
+
+                    <!-- Season record summary -->
                     <div class="stats-grid" id="competition-stats-bar"></div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+
+                    <!-- Main grid: standings + scorers -->
+                    <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:16px;margin-top:16px;">
                         <div class="card">
-                            <div class="card-header"><h3>League Standings</h3></div>
-                            <div class="card-body">
+                            <div class="card-header"><h3><i data-lucide="list-ordered" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;"></i> League Standings</h3></div>
+                            <div class="card-body" style="overflow-x:auto;">
                                 <table class="data-table" id="standings-table">
                                     <thead>
-                                        <tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
+                                        <tr><th>Team</th><th>League</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th style="font-weight:800;">Pts</th></tr>
                                     </thead>
                                     <tbody id="standings-table-body"></tbody>
                                 </table>
                             </div>
                         </div>
                         <div class="card">
-                            <div class="card-header"><h3>Goal Stats Leaderboard</h3></div>
+                            <div class="card-header"><h3><i data-lucide="target" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;"></i> Top Scorers & Assists</h3></div>
                             <div class="card-body" id="goal-stats-body">
                                 <p class="text-muted">No match data yet.</p>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent results -->
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3><i data-lucide="calendar" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;"></i> Recent Results</h3></div>
+                        <div class="card-body" id="recent-results-body">
+                            <p class="text-muted">No results yet.</p>
                         </div>
                     </div>
                 </section>
