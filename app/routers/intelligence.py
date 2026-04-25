@@ -1376,3 +1376,40 @@ async def operational_metrics(org_id: str):
                 "players_per_coach": round(total_players / max(total_coaches, 1), 1),
             },
         }
+
+
+# ============================================================
+# IYSL Best Practice Statements with Benchmarks
+# ============================================================
+
+@router.get("/api/iysl/statements")
+async def get_iysl_statements():
+    """Return all 60 IYSL best practice statements with benchmark data from 2,500+ clubs."""
+    return {
+        "total_statements": 60,
+        "benchmarked_clubs": 2500,
+        "departments": DEPARTMENT_MAPPING,
+        "roles": ROLE_MAPPING,
+        "statements": IYSL_STATEMENTS,
+        "benchmarks": ALL_CLUBS_BENCHMARKS,
+        "top_10_benchmarks": TOP_10_BENCHMARKS,
+        "lifecycle_phases": {
+            "1": "Formation",
+            "2": "Growth", 
+            "3": "Development",
+            "4": "Performance",
+            "5": "Model Club"
+        },
+        "lifecycle_factors": [
+            "Leadership Structure",
+            "Community Connection",
+            "Right People in Right Seats",
+            "Staffing Structure",
+            "Strategic Planning",
+            "Administrative Structure",
+            "Facilities Access",
+            "Operational Planning",
+            "Program Oversight",
+            "Revenue Portfolio"
+        ]
+    }
