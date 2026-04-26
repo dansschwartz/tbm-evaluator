@@ -1355,7 +1355,7 @@ async function loadPlayers(orgId) {
         var query = [];
         if (activeFilter) query.push('active=' + activeFilter);
         if (ageFilter) query.push('age_group=' + encodeURIComponent(ageFilter));
-        if (query.length) params = '?' + query.join('&');
+        if (query.length) params = '' + query.join('&');
 
         cachedPlayers = await api('GET', '/api/organizations/' + orgId + '/players' + params);
         renderPlayers(cachedPlayers);
@@ -4819,7 +4819,7 @@ function showShortcutsModal() {
         shortcutRow('Ops Dashboard', 'Ctrl', '9') +
         shortcutRow('Close modal', 'Esc') +
         shortcutRow('Print dashboard', 'Ctrl', 'P') +
-        shortcutRow('Show shortcuts', '?') +
+        shortcutRow('Show shortcuts', '') +
     '</div>';
     openModal('Keyboard Shortcuts', body, '<button class="btn btn-primary" onclick="closeModal()">Got it</button>');
     _shortcutsVisible = true;
@@ -4879,7 +4879,7 @@ document.addEventListener('keydown', function(e) {
     }
 
     // ? — show shortcuts
-    if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+    if (e.key === '' || (e.shiftKey && e.key === '/')) {
         e.preventDefault();
         showShortcutsModal();
         return;
