@@ -58,7 +58,7 @@ def _program_dict(p, include_weeks=False):
 
 
 # ── CRUD ─────────────────────────────────────────────────────────
-@router.post("/api/organizations/{org_id}/programs", dependencies=[Depends(verify_admin_key)])
+@router.post("/api/organizations/{org_id}/training-programs", dependencies=[Depends(verify_admin_key)])
 async def create_program(org_id: uuid.UUID, data: dict, db: AsyncSession = Depends(get_db)):
     prog = TrainingProgram(
         id=uuid.uuid4(),
@@ -98,7 +98,7 @@ async def create_program(org_id: uuid.UUID, data: dict, db: AsyncSession = Depen
     return _program_dict(prog)
 
 
-@router.get("/api/organizations/{org_id}/programs", dependencies=[Depends(verify_admin_key)])
+@router.get("/api/organizations/{org_id}/training-programs", dependencies=[Depends(verify_admin_key)])
 async def list_programs(org_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(TrainingProgram)
@@ -108,7 +108,7 @@ async def list_programs(org_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     return [_program_dict(p) for p in result.scalars().all()]
 
 
-@router.get("/api/programs/{program_id}", dependencies=[Depends(verify_admin_key)])
+@router.get("/api/training-programs/{program_id}", dependencies=[Depends(verify_admin_key)])
 async def get_program(program_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(TrainingProgram)
@@ -121,7 +121,7 @@ async def get_program(program_id: uuid.UUID, db: AsyncSession = Depends(get_db))
     return _program_dict(prog, include_weeks=True)
 
 
-@router.patch("/api/programs/{program_id}", dependencies=[Depends(verify_admin_key)])
+@router.patch("/api/training-programs/{program_id}", dependencies=[Depends(verify_admin_key)])
 async def update_program(program_id: uuid.UUID, data: dict, db: AsyncSession = Depends(get_db)):
     prog = await db.get(TrainingProgram, program_id)
     if not prog:
@@ -134,7 +134,7 @@ async def update_program(program_id: uuid.UUID, data: dict, db: AsyncSession = D
     return _program_dict(prog)
 
 
-@router.delete("/api/programs/{program_id}", dependencies=[Depends(verify_admin_key)])
+@router.delete("/api/training-programs/{program_id}", dependencies=[Depends(verify_admin_key)])
 async def delete_program(program_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     prog = await db.get(TrainingProgram, program_id)
     if not prog:
@@ -143,7 +143,7 @@ async def delete_program(program_id: uuid.UUID, db: AsyncSession = Depends(get_d
     return {"status": "deleted"}
 
 
-@router.post("/api/programs/{program_id}/assign/{player_id}", dependencies=[Depends(verify_admin_key)])
+@router.post("/api/training-programs/{program_id}/assign/{player_id}", dependencies=[Depends(verify_admin_key)])
 async def assign_program(program_id: uuid.UUID, player_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     prog = await db.get(TrainingProgram, program_id)
     if not prog:
@@ -158,7 +158,7 @@ async def assign_program(program_id: uuid.UUID, player_id: uuid.UUID, db: AsyncS
     return _program_dict(prog)
 
 
-@router.get("/api/players/{player_id}/programs", dependencies=[Depends(verify_admin_key)])
+@router.get("/api/players/{player_id}/training-programs", dependencies=[Depends(verify_admin_key)])
 async def get_player_programs(player_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(TrainingProgram)
@@ -170,7 +170,7 @@ async def get_player_programs(player_id: uuid.UUID, db: AsyncSession = Depends(g
 
 
 # ── AI Generation ────────────────────────────────────────────────
-@router.post("/api/programs/{program_id}/ai-generate", dependencies=[Depends(verify_admin_key)])
+@router.post("/api/training-programs/{program_id}/ai-generate", dependencies=[Depends(verify_admin_key)])
 async def ai_generate_program(program_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     prog = await db.get(TrainingProgram, program_id)
     if not prog:

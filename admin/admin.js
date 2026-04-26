@@ -30,6 +30,44 @@ function aiPanel(title, content, startOpen) {
     '</div>';
 }
 
+
+// Universal AI output wrapper with copy + rerun + download
+function wrapAIOutput(content, rerunFn, title) {
+    title = title || 'AI Analysis';
+    var id = 'ai-out-' + Math.random().toString(36).substr(2, 9);
+    return '<div class="ai-output-wrap" style="margin:12px 0;border:1px solid #d0e8e8;border-radius:10px;overflow:hidden;background:#fafffe;">' +
+        '<div style="padding:10px 14px;display:flex;align-items:center;gap:8px;background:#e8f2f2;border-bottom:1px solid #d0e8e8;">' +
+            '<i data-lucide="sparkles" style="width:16px;height:16px;color:#09A1A1;"></i>' +
+            '<span style="font-weight:600;font-size:13px;color:#333;">' + title + '</span>' +
+            '<span style="margin-left:auto;display:flex;gap:6px;">' +
+                '<button onclick="copyAIContent(\'' + id + '\')" class="btn btn-xs btn-outline" title="Copy"><i data-lucide="copy" style="width:12px;height:12px;"></i> Copy</button>' +
+                '<button onclick="downloadAIContent(\'' + id + '\',\'' + title.replace(/'/g,'') + '\')" class="btn btn-xs btn-outline" title="Download"><i data-lucide="download" style="width:12px;height:12px;"></i></button>' +
+                (rerunFn ? '<button onclick="' + rerunFn + '" class="btn btn-xs btn-primary" title="Regenerate"><i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Rerun</button>' : '') +
+            '</span>' +
+        '</div>' +
+        '<div id="' + id + '" style="padding:14px;">' + renderMd(content) + '</div>' +
+    '</div>';
+}
+
+function copyAIContent(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = el.innerText || el.textContent;
+    navigator.clipboard.writeText(text).then(function() { toast('Copied to clipboard', 'success'); });
+}
+
+function downloadAIContent(id, title) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = el.innerText || el.textContent;
+    var blob = new Blob([text], {type: 'text/plain'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (title || 'ai-output') + '.txt';
+    a.click();
+}
+
 // Simple markdown-to-HTML renderer for AI output
 function renderMd(text) {
     if (!text) return '';
@@ -2145,7 +2183,7 @@ async function loadOpsSeasons(orgId) {
     try {
         var [seasons, programs] = await Promise.all([
             api('GET', '/api/organizations/' + orgId + '/seasons'),
-            api('GET', '/api/organizations/' + orgId + '/programs'),
+            api('GET', '/api/organizations/' + orgId + '/training-programs'),
         ]);
 
         var activeSeasons = seasons.filter(function(s) { return s.status === 'active'; }).length;
@@ -3775,7 +3813,7 @@ async function createProgram() {
     var orgId = requireOrg();
     if (!orgId) return;
     try {
-        await api('POST', '/api/organizations/' + orgId + '/programs', {
+        await api('POST', '/api/organizations/' + orgId + '/training-programs', {
             season_id: document.getElementById('prog-season').value,
             name: document.getElementById('prog-name').value,
             program_type: document.getElementById('prog-type').value,
@@ -4231,7 +4269,7 @@ async function loadIntelHealth(orgId) {
         for (var i = 1; i <= 5; i++) {
             dots += '<span style="display:inline-block;width:32px;height:32px;border-radius:50%;margin:0 4px;line-height:32px;text-align:center;font-weight:700;color:#fff;background:' + (i <= lc.overall_phase ? '#09A1A1' : '#ddd') + ';">' + i + '</span>';
         }
-        document.getElementById('lifecycle-body').innerHTML = '<div style="text-align:center;margin-bottom:12px;">' + dots + '</div><div style="text-align:center;font-size:20px;font-weight:700;">Phase ' + lc.overall_phase + ': ' + phaseName + '</div><p style="margin-top:12px;">' + aiPanel('Lifecycle Analysis', lc.ai_analysis, false);
+        document.getElementById('lifecycle-body').innerHTML = '<div style="text-align:center;margin-bottom:12px;">' + dots + '</div><div style="text-align:center;font-size:20px;font-weight:700;">Phase ' + lc.overall_phase + ': ' + phaseName + '</div><p style="margin-top:12px;">' + wrapAIOutput(lc.ai_analysis || '', '', 'Lifecycle Analysis');
     } catch (e) {
         document.getElementById('lifecycle-body').innerHTML = '<p class="text-muted">Could not load lifecycle data.</p>';
     }
@@ -4267,7 +4305,7 @@ async function loadIntelHealth(orgId) {
                 fHtml += '<tr><td>' + prog + '</td><td>' + fd.current_count + '</td><td>' + fd.predicted_count + '</td><td>' + fd.capacity + '</td><td>' + fd.fill_rate + '%</td><td>' + trendBadge + '</td></tr>';
             }
             fHtml += '</tbody></table>';
-            if (f.ai_narrative) fHtml += aiPanel('Forecast Analysis', f.ai_narrative, false);
+            if (f.ai_narrative) fHtml += wrapAIOutput(f.ai_narrative || '', '', 'Forecast Analysis');
             document.getElementById('forecast-body').innerHTML = fHtml;
         } else {
             document.getElementById('forecast-body').innerHTML = '<p class="text-muted">No forecasts yet.</p><button class="btn btn-secondary btn-sm" onclick="generateForecast()">Generate Forecast</button>';
@@ -4336,7 +4374,7 @@ function renderHealthScore(hs) {
 
     // AI narrative
     if (hs.ai_narrative) {
-        document.getElementById('health-ai-narrative').innerHTML = aiPanel('Club Health Analysis', hs.ai_narrative, true);
+        document.getElementById('health-ai-narrative').innerHTML = wrapAIOutput(hs.ai_narrative || '', 'generateHealthScore()', 'Club Health Analysis');
 if(typeof lucide!=='undefined')lucide.createIcons();
     }
 }
@@ -4523,7 +4561,7 @@ document.getElementById('btn-view-assessment-report').addEventListener('click', 
         document.getElementById('stakeholder-body').innerHTML = sHtml || '<p class="text-muted">No stakeholder data.</p>';
 
         // AI recommendations
-        document.getElementById('assessment-ai-body').innerHTML = aiPanel('AI Improvement Recommendations', report.ai_recommendations, true);
+        document.getElementById('assessment-ai-body').innerHTML = wrapAIOutput(report.ai_recommendations || '', 'loadAssessmentReport()', 'AI Improvement Recommendations');
 if(typeof lucide!=='undefined')lucide.createIcons();
 
     } catch (e) { toast('Error: ' + e.message, 'error'); }
@@ -5591,7 +5629,7 @@ document.getElementById('modal-overlay').addEventListener('keydown', function(e)
 async function loadPrograms(orgId) {
     if (!orgId) { document.getElementById('programs-table-body').innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;">Select an organization</td></tr>'; return; }
     try {
-        var programs = await api('GET', '/api/organizations/' + orgId + '/programs');
+        var programs = await api('GET', '/api/organizations/' + orgId + '/training-programs');
         var stats = document.getElementById('programs-stats');
         var total = programs.length;
         var active = programs.filter(function(p) { return p.status === 'active'; }).length;
@@ -5640,7 +5678,7 @@ function showCreateProgramModal() {
 async function createProgram() {
     var orgId = getSelectedOrg();
     try {
-        await api('POST', '/api/organizations/' + orgId + '/programs', {
+        await api('POST', '/api/organizations/' + orgId + '/training-programs', {
             template_name: document.getElementById('prog-name').value,
             sport: document.getElementById('prog-sport').value,
             phase_name: document.getElementById('prog-phase').value,
@@ -5672,14 +5710,14 @@ async function aiGenerateProgram() {
     var orgId = getSelectedOrg();
     showLoading();
     try {
-        var prog = await api('POST', '/api/organizations/' + orgId + '/programs', {
+        var prog = await api('POST', '/api/organizations/' + orgId + '/training-programs', {
             template_name: document.getElementById('aiprog-name').value,
             sport: document.getElementById('aiprog-sport').value,
             phase_name: document.getElementById('aiprog-phase').value,
             duration_weeks: parseInt(document.getElementById('aiprog-weeks').value) || 4,
             status: 'draft',
         });
-        var result = await api('POST', '/api/programs/' + prog.id + '/ai-generate');
+        var result = await api('POST', '/api/training-programs/' + prog.id + '/ai-generate');
         closeModal(); hideLoading(); toast('AI program generated with ' + (result.weeks ? result.weeks.length : 0) + ' weeks!');
         loadPrograms(orgId);
     } catch(e) { hideLoading(); toast('AI generation error: ' + e.message, 'error'); }
@@ -5687,7 +5725,7 @@ async function aiGenerateProgram() {
 
 async function viewProgram(progId) {
     try {
-        var p = await api('GET', '/api/programs/' + progId);
+        var p = await api('GET', '/api/training-programs/' + progId);
         var html = '<div class="card" style="margin-bottom:12px;"><div class="card-header"><h3>' + (p.template_name || 'Program') + ' — ' + (p.phase_name || '') + ' (' + (p.duration_weeks || 0) + ' weeks)</h3></div><div class="card-body">';
         if (p.weeks && p.weeks.length) {
             p.weeks.forEach(function(w) {
@@ -5725,7 +5763,7 @@ async function viewProgram(progId) {
 
 async function deleteProgram(progId) {
     if (!confirm('Delete this program?')) return;
-    try { await api('DELETE', '/api/programs/' + progId); toast('Deleted'); loadPrograms(getSelectedOrg()); } catch(e) { toast(e.message, 'error'); }
+    try { await api('DELETE', '/api/training-programs/' + progId); toast('Deleted'); loadPrograms(getSelectedOrg()); } catch(e) { toast(e.message, 'error'); }
 }
 
 // ===================================================================
