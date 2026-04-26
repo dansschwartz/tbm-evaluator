@@ -1,3 +1,10 @@
+
+// Override toast position to always be above everything
+(function() {
+    var style = document.createElement('style');
+    style.textContent = '#toast-container,.toast-container,[class*=toast]{position:fixed!important;top:8px!important;right:16px!important;z-index:9999999!important;}';
+    document.head.appendChild(style);
+})();
 /* ===== TBM Evaluator Admin Dashboard ===== */
 
 // ---- CONFIG ----
@@ -3606,7 +3613,7 @@ function setupOpsButtons() {
         if (!orgId) return;
         try {
             showLoading();
-            var result = await api('POST', '/api/organizations/' + orgId + '/coaches/ai-assign');
+            var result = await api('POST', '/api/organizations/' + orgId + '/coaches/ai-assign', {team_ids: (await api('GET', '/api/organizations/' + orgId + '/teams')).map(function(t){return t.id})});
             hideLoading();
             var html = '<p><strong>AI Coach Assignments:</strong></p>';
             if (result.assignments && result.assignments.length > 0) {
