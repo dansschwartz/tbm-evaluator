@@ -96,7 +96,7 @@ def main():
     args = parser.parse_args()
 
     api_url = args.api_url.rstrip("/")
-    headers = {"x-api-key": args.admin_key, "Content-Type": "application/json"}
+    headers = {"X-Admin-Key": args.admin_key, "Content-Type": "application/json"}
 
     client = httpx.Client(timeout=30)
 
