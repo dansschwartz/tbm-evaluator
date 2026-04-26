@@ -148,6 +148,26 @@ IYSL_STATEMENTS = {
 }
 
 DEVELOPMENT_LEVELS = ["Tots", "Rec", "Pre-Travel", "Select", "Travel", "Academy"]
+# Map team levels (Blue, Red, White, etc.) to development pathway levels
+TEAM_TO_DEV_LEVEL = {
+    'recreational': 'Rec', 'rec': 'Rec',
+    'pre-travel': 'Pre-Travel', 'pre travel': 'Pre-Travel',
+    'select': 'Select',
+    'blue': 'Travel', 'red': 'Travel', 'white': 'Travel', 'silver': 'Travel',
+    'travel': 'Travel',
+    'academy': 'Academy',
+    'camp': 'Rec',
+}
+
+def resolve_dev_level(team_level):
+    if not team_level:
+        return 'Rec'
+    tl = team_level.lower().strip()
+    for key, val in TEAM_TO_DEV_LEVEL.items():
+        if key in tl:
+            return val
+    return 'Rec'
+
 
 # ============================================================
 # DMV LEAGUE REFERENCE DATA
@@ -752,12 +772,8 @@ async def development_summary(org_id: str):
         level_counts = {level: 0 for level in DEVELOPMENT_LEVELS}
         for p in paths:
             cl = p.current_level or "Rec"
-            for level in DEVELOPMENT_LEVELS:
-                if level.lower() in cl.lower():
-                    level_counts[level] += 1
-                    break
-            else:
-                level_counts["Rec"] += 1
+            resolved = resolve_dev_level(cl)
+            level_counts[resolved] = level_counts.get(resolved, 0) + 1
 
         return {
             "total_tracked": len(paths),
@@ -782,7 +798,7 @@ async def ai_predict_all(org_id: str):
                 .order_by(TeamRoster.joined_at.desc()).limit(1)
             )).first()
 
-            current_level = roster_entry[1].team_level if roster_entry else "Rec"
+            current_level = resolve_dev_level(roster_entry[1].team_level if roster_entry else "Rec")
             level_idx = next((i for i, l in enumerate(DEVELOPMENT_LEVELS) if l.lower() in (current_level or "rec").lower()), 1)
             predicted_next = DEVELOPMENT_LEVELS[min(level_idx + 1, len(DEVELOPMENT_LEVELS) - 1)]
 
@@ -805,7 +821,28 @@ async def ai_predict_all(org_id: str):
                 "advancement_likelihood": likelihood,
             })
 
-        return {"predictions": results, "total": len(results)}
+        # PERSIST predictions as PlayerDevelopmentPath records
+        for r in results:
+            existing = (await session.execute(
+                select(PlayerDevelopmentPath).where(PlayerDevelopmentPath.player_id == r['player_id'])
+            )).scalars().first()
+
+            if existing:
+                existing.current_level = r['current_level']
+                existing.predicted_next_level = r['predicted_next_level']
+            else:
+                path = PlayerDevelopmentPath(
+                    id=uuid.uuid4(),
+                    player_id=r['player_id'],
+                    org_id=str(org_id),
+                    path_entries=[{'level': r['current_level'], 'season': 'Spring 2026'}],
+                    current_level=r['current_level'],
+                    predicted_next_level=r['predicted_next_level'],
+                )
+                session.add(path)
+        await session.commit()
+
+        return {'predictions': results, 'total': len(results)}
 
 
 @router.post("/api/players/{player_id}/development-path")
