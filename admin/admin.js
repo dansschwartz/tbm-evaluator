@@ -2177,6 +2177,10 @@ async function loadOpsTeams(orgId) {
     if (!orgId) return;
     try {
         var teams = await api('GET', '/api/organizations/' + orgId + '/teams');
+        // Fetch evaluators for coach assignment dropdown
+        var evaluators = [];
+        try { evaluators = await api('GET', '/api/organizations/' + orgId + '/evaluators'); } catch (ee) {}
+
         var withCoach = teams.filter(function(t) { return t.head_coach_id; }).length;
         document.getElementById('teams-stats-bar').innerHTML = buildStatCards([
             { value: teams.length, label: 'Total Teams', cls: '' },
@@ -2186,13 +2190,18 @@ async function loadOpsTeams(orgId) {
 
         var tbody = document.getElementById('ops-teams-table-body');
         if (teams.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="users" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No teams yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-add-team\')&&document.getElementById(\'btn-add-team\').click()">Create Your First Team</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Or use AI Form Teams to auto-generate balanced teams</p></div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="users" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No teams yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-add-team\')&&document.getElementById(\'btn-add-team\').click()">Create Your First Team</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Or use AI Form Teams to auto-generate balanced teams</p></div></td></tr>';
             if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
+            var coachOpts = '<option value="">-- Select --</option>' + evaluators.map(function(ev) {
+                return '<option value="' + ev.id + '">' + esc(ev.name) + '</option>';
+            }).join('');
             tbody.innerHTML = teams.map(function(t) {
+                var selectedCoachOpts = coachOpts.replace('value="' + (t.head_coach_id || '') + '"', 'value="' + (t.head_coach_id || '') + '" selected');
                 return '<tr data-id="' + (t.id || '') + '"><td>' + esc(t.name) + '</td><td>' + esc(t.team_level || '-') + '</td>' +
                     '<td>' + esc(t.program_id ? 'Assigned' : '-') + '</td>' +
                     '<td>' + (t.head_coach_id ? '<span class="badge badge-yes">Assigned</span>' : '<span class="badge badge-no">None</span>') + '</td>' +
+                    '<td><select class="form-select form-select-sm" onchange="assignCoachToTeam(\'' + t.id + '\', this.value)" style="min-width:140px;font-size:12px;">' + selectedCoachOpts + '</select></td>' +
                     '<td><button class="btn btn-sm btn-outline" onclick="viewRoster(\'' + t.id + '\')">Roster</button></td>' +
                     '<td><button class="btn btn-sm btn-outline" onclick="deleteOpsItem(\'teams\',\'' + t.id + '\')">Delete</button></td></tr>';
             }).join('');
@@ -2200,6 +2209,16 @@ async function loadOpsTeams(orgId) {
     } catch (e) {
         toast('Error: ' + e.message, 'error');
     }
+}
+
+async function assignCoachToTeam(teamId, coachId) {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    try {
+        await api('PATCH', '/api/organizations/' + orgId + '/teams/' + teamId, { head_coach_id: coachId || null });
+        toast(coachId ? 'Coach assigned!' : 'Coach removed', 'success');
+        loadOpsTeams(orgId);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
 
 // --- Fields ---
@@ -3127,7 +3146,7 @@ function setupOpsButtons() {
             '<label>Purpose</label><input type="text" id="ai-msg-purpose" class="form-input" placeholder="e.g. Weather cancellation">' +
             '<label>Tone</label><select id="ai-msg-tone" class="form-select"><option>professional</option><option>friendly</option><option>urgent</option></select>' +
             '<label>Context</label><textarea id="ai-msg-context" class="form-input" style="height:80px;width:100%;"></textarea>',
-            '<button class="btn btn-primary" onclick="aiDraftMessage()">Generate Draft</button>'
+            '<button class="btn btn-primary" onclick="aiDraftMessage()"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Generate Draft</button>'
         );
     });
 
@@ -3402,8 +3421,39 @@ async function askAiOps() {
             html += '</ul>';
         }
         body.innerHTML = html;
+        var copyBtn = document.getElementById('btn-ai-copy-all');
+        var dlBtn = document.getElementById('btn-ai-download');
+        if (copyBtn) copyBtn.style.display = '';
+        if (dlBtn) dlBtn.style.display = '';
     } catch (e) { body.innerHTML = '<p style="color:#FA6E82;">Error: ' + esc(e && e.message ? e.message : String(e)) + '</p>'; }
     btnLoading(document.getElementById('btn-ai-ask'), false);
+}
+
+function copyAiChat() {
+    var body = document.getElementById('ai-answer-body');
+    if (!body) return;
+    var text = body.innerText || body.textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        toast('Copied to clipboard!', 'success');
+    }).catch(function() {
+        toast('Copy failed', 'error');
+    });
+}
+
+function downloadAiChat() {
+    var body = document.getElementById('ai-answer-body');
+    if (!body) return;
+    var text = body.innerText || body.textContent;
+    var blob = new Blob([text], { type: 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'ai-assistant-conversation.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Downloaded!', 'success');
 }
 
 async function draftAiEmail() {
@@ -3479,7 +3529,7 @@ async function aiPlanSeason() {
         '<label>Estimated Players</label><input type="number" id="ai-sp-players" class="form-input" value="200">' +
         '<label>Available Fields</label><input type="number" id="ai-sp-fields" class="form-input" value="6">' +
         '<label>Season Length (weeks)</label><input type="number" id="ai-sp-weeks" class="form-input" value="10">',
-        '<button class="btn btn-primary" onclick="runAiSeasonPlan()">Generate Plan</button><button class="btn btn-outline" onclick="closeModal()">Cancel</button>'
+        '<button class="btn btn-primary" onclick="runAiSeasonPlan()"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Generate Plan</button><button class="btn btn-outline" onclick="closeModal()">Cancel</button>'
     );
 }
 
@@ -3743,10 +3793,10 @@ if(typeof lucide!=='undefined')lucide.createIcons();
     }
 }
 
-document.getElementById('btn-generate-health').addEventListener('click', async function() {
+async function generateHealthScore() {
     var orgId = requireOrg(); if (!orgId) return;
-    var btn = this;
-    btnLoading(btn, true);
+    var btn = document.getElementById('btn-generate-health');
+    if (btn) btnLoading(btn, true);
     showAIThinking('health-ai-narrative');
     showSkeleton('health-breakdown-body', 6);
     showSkeleton('health-benchmarks-body', 6);
@@ -3755,8 +3805,10 @@ document.getElementById('btn-generate-health').addEventListener('click', async f
         renderHealthScore(hs);
         toast('Health score generated!');
     } catch (e) { toast('Error: ' + e.message, 'error'); }
-    btnLoading(btn, false);
-});
+    if (btn) btnLoading(btn, false);
+}
+
+document.getElementById('btn-generate-health').addEventListener('click', generateHealthScore);
 
 document.getElementById('btn-generate-report').addEventListener('click', async function() {
     var orgId = requireOrg(); if (!orgId) return;
@@ -3816,10 +3868,19 @@ async function loadIntelAssessment(orgId) {
     document.getElementById('assessment-report-area').style.display = 'none';
 }
 
-document.getElementById('btn-new-assessment').addEventListener('click', function() {
+document.getElementById('btn-new-assessment').addEventListener('click', async function() {
+    // Fetch IYSL statement texts from the API
+    var statementsData = {};
+    try {
+        var iyslData = await api('GET', '/api/iysl/statements');
+        statementsData = iyslData.statements || {};
+    } catch (e) {}
+
     var questions = '';
     for (var i = 1; i <= 60; i++) {
-        questions += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><label style="min-width:40px;font-weight:600;">Q' + i + '</label><input type="range" min="0" max="100" value="50" class="assess-slider" data-q="Q' + i + '" style="flex:1;"><span class="assess-val" style="min-width:30px;text-align:right;">50</span></div>';
+        var qKey = 'Q' + i;
+        var qText = statementsData[qKey] || ('Best practice statement ' + i);
+        questions += '<div style="margin-bottom:12px;padding:10px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px;"><span style="font-weight:700;color:#5484A4;font-size:13px;white-space:nowrap;">' + qKey + '</span><span style="font-size:13px;color:#333;line-height:1.4;">' + esc(qText) + '</span></div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="0" max="100" value="50" class="assess-slider" data-q="' + qKey + '" style="flex:1;"><span class="assess-val" style="min-width:30px;text-align:right;font-weight:600;">50</span></div></div>';
     }
     var formHtml = '<div style="margin-bottom:12px;"><label style="font-weight:600;">Respondent Name</label><input type="text" id="assess-name" class="form-input" placeholder="Your name"></div>' +
         '<div style="margin-bottom:12px;"><label style="font-weight:600;">Role</label><select id="assess-role" class="form-select"><option value="leader">Leader</option><option value="staff">Staff</option><option value="coach">Coach</option><option value="customer">Customer (Parent)</option></select></div>' +
@@ -3933,18 +3994,49 @@ async function loadIntelDevelopment(orgId) {
         var levels = summary.development_levels || ['Tots','Rec','Pre-Travel','Select','Travel','Academy'];
         var counts = summary.by_level || {};
 
-        // Visual pathway
-        var pathHtml = '<div style="display:flex;align-items:center;justify-content:center;gap:4px;margin:24px 0;">';
+        // Also try to get prediction data for player mini-cards
+        var predictions = [];
+        try {
+            var predResult = await api('POST', '/api/organizations/' + orgId + '/development-paths/ai-predict');
+            predictions = predResult.predictions || [];
+        } catch (pe) {}
+
+        // Build 6-column layout
         var colors = ['#ACC0D3','#09A1A1','#09A1A1','#09A1A1','#5484A4','#5484A4'];
+        var pathHtml = '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:12px 0;">';
         for (var li = 0; li < levels.length; li++) {
-            var cnt = counts[levels[li]] || 0;
-            pathHtml += '<div style="text-align:center;"><div style="width:80px;height:80px;border-radius:50%;background:' + colors[li] + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;margin:0 auto;">' + cnt + '</div><div style="font-size:12px;font-weight:600;margin-top:4px;">' + levels[li] + '</div></div>';
-            if (li < levels.length - 1) pathHtml += '<div style="font-size:20px;color:#9ca3af;">&rarr;</div>';
+            var lvl = levels[li];
+            var cnt = counts[lvl] || 0;
+            var lvlPlayers = predictions.filter(function(p) { return (p.current_level || 'Rec').toLowerCase() === lvl.toLowerCase(); });
+            // If no predictions loaded, use count from summary
+            if (predictions.length === 0 && cnt > 0) {
+                // show placeholder cards
+            }
+            pathHtml += '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:0;overflow:hidden;min-height:200px;">';
+            pathHtml += '<div style="background:' + colors[li] + ';color:#fff;padding:10px 12px;text-align:center;font-weight:700;font-size:14px;">' + esc(lvl) + ' <span style="background:rgba(255,255,255,0.25);padding:2px 8px;border-radius:10px;font-size:12px;margin-left:4px;">' + (lvlPlayers.length || cnt) + '</span></div>';
+            pathHtml += '<div style="padding:8px;max-height:400px;overflow-y:auto;">';
+            if (lvlPlayers.length > 0) {
+                for (var pi = 0; pi < lvlPlayers.length; pi++) {
+                    var p = lvlPlayers[pi];
+                    var scoreText = p.latest_score ? p.latest_score.toFixed(1) : '--';
+                    var likColor = p.advancement_likelihood === 'likely' ? '#09A1A1' : p.advancement_likelihood === 'developing' ? '#F6C992' : '#FA6E82';
+                    pathHtml += '<div style="background:#fff;border:1px solid #e5e7eb;border-left:3px solid ' + likColor + ';border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:12px;">';
+                    pathHtml += '<div style="font-weight:600;font-size:13px;">' + esc(p.player_name) + '</div>';
+                    pathHtml += '<div style="display:flex;justify-content:space-between;margin-top:2px;color:#6b7280;"><span>' + esc(p.age_group || '') + '</span><span style="font-weight:700;color:' + likColor + ';">' + scoreText + '</span></div>';
+                    pathHtml += '</div>';
+                }
+            } else if (cnt > 0) {
+                pathHtml += '<p style="text-align:center;color:#aaa;font-size:12px;margin-top:16px;">' + cnt + ' player' + (cnt !== 1 ? 's' : '') + '</p>';
+            } else {
+                pathHtml += '<p style="text-align:center;color:#ccc;font-size:12px;margin-top:16px;">No players</p>';
+            }
+            pathHtml += '</div></div>';
         }
-        pathHtml += '</div><div style="text-align:center;color:#6b7280;font-size:13px;">Total tracked: ' + summary.total_tracked + ' players</div>';
+        pathHtml += '</div>';
+        pathHtml += '<div style="text-align:center;color:#6b7280;font-size:13px;margin-top:8px;">Total tracked: ' + summary.total_tracked + ' players</div>';
         document.getElementById('dev-pathway-visual').innerHTML = pathHtml;
     } catch (e) {
-        document.getElementById('dev-pathway-visual').innerHTML = '<div style="text-align:center;padding:24px;"><i data-lucide="trending-up" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i><p style="color:#888;margin-bottom:12px;">No development data yet</p><button class="btn btn-primary btn-sm" onclick="runDevPredictions()">Run AI Predictions</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Predict player readiness for advancement across Rec, Select, Travel, and Academy levels</p></div>';
+        document.getElementById('dev-pathway-visual').innerHTML = '<div style="text-align:center;padding:24px;"><i data-lucide="trending-up" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i><p style="color:#888;margin-bottom:12px;">No development data yet</p><button class="btn btn-primary btn-sm" onclick="runDevPredictions()"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Run AI Predictions</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Predict player readiness for advancement across Rec, Select, Travel, and Academy levels</p></div>';
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
