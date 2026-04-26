@@ -2264,6 +2264,7 @@ async function loadOpsFields(orgId) {
         }
 
         loadFieldCalendar(orgId);
+        loadFieldUtilization(orgId);
     } catch (e) {
         toast('Error: ' + e.message, 'error');
     }
@@ -2374,6 +2375,174 @@ async function loadFieldCalendar(orgId) {
         }
     } catch (e) {
         calBody.innerHTML = '<p class="text-muted">No field calendar data available. Add fields and bookings to see the calendar.</p>';
+    }
+}
+
+// --- Smart Field Optimizer ---
+async function runFieldOptimizer() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    var strategy = document.getElementById('opt-strategy').value;
+    var wDist = parseInt(document.getElementById('opt-w-dist').value) || 40;
+    var wQual = parseInt(document.getElementById('opt-w-qual').value) || 30;
+    var wUtil = parseInt(document.getElementById('opt-w-util').value) || 30;
+    var maxTeams = parseInt(document.getElementById('opt-max-teams').value) || 3;
+    var requireLights = document.getElementById('opt-lights').checked;
+    var preferTurf = document.getElementById('opt-turf-rain').checked;
+
+    try {
+        showLoading();
+        var result = await api('POST', '/api/organizations/' + orgId + '/fields/optimize', {
+            optimize_for: strategy,
+            weights: { distance: wDist, field_quality: wQual, utilization: wUtil },
+            constraints: {
+                require_lights_after: requireLights ? '18:00' : null,
+                prefer_turf_in_rain: preferTurf,
+                max_teams_per_field: maxTeams,
+            },
+            teams: null,
+        });
+        hideLoading();
+
+        var resultsDiv = document.getElementById('optimizer-results');
+        resultsDiv.style.display = 'block';
+
+        // Ward distribution badges
+        var wardDiv = document.getElementById('optimizer-ward-dist');
+        var wardHtml = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><strong style="font-size:13px;margin-right:4px;">Ward Distribution:</strong>';
+        var wardColors = { NW: '#09A1A1', NE: '#5484A4', SW: '#FA6E82', SE: '#F6C992', Unknown: '#8c99a9' };
+        var wd = result.ward_distribution || {};
+        Object.keys(wd).forEach(function(w) {
+            wardHtml += '<span style="display:inline-block;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;color:#fff;background:' + (wardColors[w] || '#8c99a9') + ';">' + w + ': ' + wd[w] + '</span>';
+        });
+        wardHtml += '<span style="font-size:12px;color:#5a6a7e;margin-left:8px;">' + (result.total_teams || 0) + ' teams across ' + (result.total_fields_used || 0) + ' fields</span></div>';
+        wardDiv.innerHTML = wardHtml;
+
+        // Results table
+        var tbody = document.getElementById('optimizer-results-body');
+        if (result.assignments && result.assignments.length > 0) {
+            tbody.innerHTML = result.assignments.map(function(a) {
+                var surfaceBadge = a.surface === 'turf' ? 'badge-active' : a.surface === 'grass' ? 'badge-draft' : 'badge-scoring';
+                var scoreColor = a.score >= 0.7 ? '#09A1A1' : a.score >= 0.4 ? '#F6C992' : '#FA6E82';
+                return '<tr><td>' + esc(a.team_name) + '</td>' +
+                    '<td>' + esc(a.field_name) + '</td>' +
+                    '<td><span class="badge ' + surfaceBadge + '">' + esc(a.surface) + '</span></td>' +
+                    '<td>' + (a.distance_km != null ? a.distance_km + ' km' : '-') + '</td>' +
+                    '<td><strong style="color:' + scoreColor + ';">' + (a.score * 100).toFixed(0) + '%</strong></td>' +
+                    '<td style="font-size:12px;color:#5a6a7e;">' + (a.reasons || []).join(', ') + '</td></tr>';
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:20px;color:#888;">No assignments generated. Add teams first.</td></tr>';
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    } catch (e) {
+        hideLoading();
+        toast('Optimizer error: ' + e.message, 'error');
+    }
+}
+
+// --- Utilization Dashboard ---
+async function loadFieldUtilization(orgId) {
+    if (!orgId) return;
+    try {
+        var data = await api('GET', '/api/organizations/' + orgId + '/fields/utilization');
+
+        document.getElementById('utilization-stats-bar').innerHTML = buildStatCards([
+            { value: data.total_fields, label: 'Total Fields', cls: '' },
+            { value: data.total_bookings, label: 'Active Bookings', cls: 'steel' },
+            { value: data.average_utilization + '%', label: 'Avg Utilization', cls: data.average_utilization > 85 ? 'coral' : '' },
+            { value: data.total_hours + 'h', label: 'Hours Booked', cls: '' },
+        ]);
+
+        var barsDiv = document.getElementById('utilization-bars');
+        if (data.fields && data.fields.length > 0) {
+            var html = '';
+            data.fields.forEach(function(f) {
+                var pct = Math.min(f.percent_utilized, 100);
+                var barColor = f.status === 'overutilized' ? '#FA6E82' : f.status === 'underutilized' ? '#F6C992' : '#09A1A1';
+                var statusLabel = f.status === 'overutilized' ? ' (Overutilized)' : f.status === 'underutilized' ? ' (Underutilized)' : '';
+                html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+                    '<div style="width:200px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + esc(f.field_name) + '">' + esc(f.field_name) + '</div>' +
+                    '<div style="flex:1;height:18px;background:#eef1f5;border-radius:3px;overflow:hidden;">' +
+                    '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:3px;"></div></div>' +
+                    '<div style="width:80px;font-size:12px;text-align:right;color:' + barColor + ';font-weight:600;">' + f.percent_utilized + '%' + statusLabel + '</div>' +
+                    '</div>';
+            });
+            barsDiv.innerHTML = html;
+        } else {
+            barsDiv.innerHTML = '<p class="text-muted" style="padding:12px;">No field data available.</p>';
+        }
+    } catch (e) {
+        document.getElementById('utilization-stats-bar').innerHTML = '';
+        document.getElementById('utilization-bars').innerHTML = '<p class="text-muted">Utilization data unavailable.</p>';
+    }
+}
+
+// --- Weather Reassignment ---
+var _weatherReassignData = null;
+
+async function runWeatherReassign() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+    var date = document.getElementById('weather-date').value;
+    if (!date) { toast('Select a date first', 'warning'); return; }
+
+    try {
+        showLoading();
+        var result = await api('POST', '/api/organizations/' + orgId + '/fields/weather-reassign', {
+            date: date,
+            affected_fields: [],
+            reason: 'rain',
+        });
+        hideLoading();
+        _weatherReassignData = result;
+
+        var resultsDiv = document.getElementById('weather-reassign-results');
+        resultsDiv.style.display = 'block';
+
+        var tbody = document.getElementById('weather-reassign-body');
+        if (result.reassignments && result.reassignments.length > 0) {
+            tbody.innerHTML = result.reassignments.map(function(r) {
+                var hasAlt = r.suggested_field_id != null;
+                return '<tr>' +
+                    '<td>' + esc(r.booking_title) + '</td>' +
+                    '<td>' + (r.booking_time ? new Date(r.booking_time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '-') + '</td>' +
+                    '<td>' + esc(r.original_field_name) + '</td>' +
+                    '<td>' + (hasAlt ? esc(r.suggested_field_name) : '<span style="color:#FA6E82;">No alternative</span>') + '</td>' +
+                    '<td>' + (r.distance_change_km != null ? '+' + r.distance_change_km + ' km' : '-') + '</td>' +
+                    '</tr>';
+            }).join('');
+            document.getElementById('btn-apply-reassign').style.display = 'inline-flex';
+            toast(result.total_affected + ' booking(s) can be reassigned', 'success');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:20px;color:#888;">No grass-field bookings found on this date.</td></tr>';
+            document.getElementById('btn-apply-reassign').style.display = 'none';
+        }
+    } catch (e) {
+        hideLoading();
+        toast('Error: ' + e.message, 'error');
+    }
+}
+
+async function applyWeatherReassignments() {
+    var orgId = requireOrg();
+    if (!orgId || !_weatherReassignData) return;
+    if (!confirm('Apply all ' + _weatherReassignData.total_affected + ' reassignments?')) return;
+
+    var validReassignments = _weatherReassignData.reassignments.filter(function(r) { return r.suggested_field_id; });
+    try {
+        showLoading();
+        var result = await api('POST', '/api/organizations/' + orgId + '/fields/weather-reassign/apply', {
+            reassignments: validReassignments,
+        });
+        hideLoading();
+        toast('Applied ' + result.applied + ' reassignment(s)', 'success');
+        document.getElementById('btn-apply-reassign').style.display = 'none';
+        _weatherReassignData = null;
+        loadOpsFields(orgId);
+    } catch (e) {
+        hideLoading();
+        toast('Error: ' + e.message, 'error');
     }
 }
 
@@ -3174,6 +3343,22 @@ function setupOpsButtons() {
     // AI Field Allocation
     var btnAiField = document.getElementById('btn-ai-field-allocation');
     if (btnAiField) btnAiField.addEventListener('click', aiFieldAllocation);
+
+    // Smart Field Optimizer
+    var btnRunOpt = document.getElementById('btn-run-optimizer');
+    if (btnRunOpt) btnRunOpt.addEventListener('click', runFieldOptimizer);
+
+    // Weather Reassignment — default date to tomorrow
+    var weatherDateInput = document.getElementById('weather-date');
+    if (weatherDateInput) {
+        var tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        weatherDateInput.value = tomorrow.toISOString().split('T')[0];
+    }
+    var btnWeatherReassign = document.getElementById('btn-weather-reassign');
+    if (btnWeatherReassign) btnWeatherReassign.addEventListener('click', runWeatherReassign);
+    var btnApplyReassign = document.getElementById('btn-apply-reassign');
+    if (btnApplyReassign) btnApplyReassign.addEventListener('click', applyWeatherReassignments);
 
     // AI Season Plan
     var btnAiSeason = document.getElementById('btn-ai-season-plan');

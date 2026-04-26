@@ -629,6 +629,87 @@
                             <p class="text-muted">Select an organization to view field calendar.</p>
                         </div>
                     </div>
+
+                    <!-- Smart Field Allocation Optimizer -->
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+                            <h3><i data-lucide="sparkles" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:6px;"></i>Smart Field Allocation</h3>
+                        </div>
+                        <div class="card-body">
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+                                <div>
+                                    <label style="font-size:13px;font-weight:600;margin-bottom:4px;display:block;">Optimize For</label>
+                                    <select id="opt-strategy" class="form-select">
+                                        <option value="balanced">Balanced</option>
+                                        <option value="distance">Minimize Distance</option>
+                                        <option value="utilization">Maximize Utilization</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size:13px;font-weight:600;margin-bottom:4px;display:block;">Max Teams per Field</label>
+                                    <input type="number" id="opt-max-teams" class="form-input" value="3" min="1" max="10">
+                                </div>
+                                <div style="display:flex;flex-direction:column;gap:6px;justify-content:center;">
+                                    <label style="font-size:13px;cursor:pointer;"><input type="checkbox" id="opt-lights" checked> Require lights for evening</label>
+                                    <label style="font-size:13px;cursor:pointer;"><input type="checkbox" id="opt-turf-rain"> Prefer turf during rain</label>
+                                </div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+                                <div>
+                                    <label style="font-size:13px;font-weight:600;">Distance Weight: <span id="opt-w-dist-val">40</span>%</label>
+                                    <input type="range" id="opt-w-dist" min="0" max="100" value="40" style="width:100%;" oninput="document.getElementById('opt-w-dist-val').textContent=this.value">
+                                </div>
+                                <div>
+                                    <label style="font-size:13px;font-weight:600;">Quality Weight: <span id="opt-w-qual-val">30</span>%</label>
+                                    <input type="range" id="opt-w-qual" min="0" max="100" value="30" style="width:100%;" oninput="document.getElementById('opt-w-qual-val').textContent=this.value">
+                                </div>
+                                <div>
+                                    <label style="font-size:13px;font-weight:600;">Utilization Weight: <span id="opt-w-util-val">30</span>%</label>
+                                    <input type="range" id="opt-w-util" min="0" max="100" value="30" style="width:100%;" oninput="document.getElementById('opt-w-util-val').textContent=this.value">
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" id="btn-run-optimizer" style="margin-bottom:16px;"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Run Optimization</button>
+                            <div id="optimizer-results" style="display:none;">
+                                <div id="optimizer-ward-dist" style="margin-bottom:12px;"></div>
+                                <table class="data-table">
+                                    <thead><tr><th>Team</th><th>Assigned Field</th><th>Surface</th><th>Distance</th><th>Score</th><th>Reasons</th></tr></thead>
+                                    <tbody id="optimizer-results-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Utilization Dashboard -->
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3><i data-lucide="bar-chart-3" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:6px;"></i>Permit Utilization</h3></div>
+                        <div class="card-body">
+                            <div class="stats-grid" id="utilization-stats-bar"></div>
+                            <div id="utilization-bars" style="margin-top:12px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Weather Reassignment -->
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+                            <h3><i data-lucide="cloud-rain" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:6px;"></i>Weather Reassignment</h3>
+                        </div>
+                        <div class="card-body">
+                            <div style="display:flex;gap:12px;align-items:end;margin-bottom:16px;">
+                                <div>
+                                    <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date</label>
+                                    <input type="date" id="weather-date" class="form-input">
+                                </div>
+                                <button class="btn btn-coral" id="btn-weather-reassign"><i data-lucide="cloud-rain" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Find Alternatives</button>
+                                <button class="btn btn-primary" id="btn-apply-reassign" style="display:none;"><i data-lucide="check" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Apply All Reassignments</button>
+                            </div>
+                            <div id="weather-reassign-results" style="display:none;">
+                                <table class="data-table">
+                                    <thead><tr><th>Booking</th><th>Time</th><th>Original Field</th><th>Suggested Field</th><th>Distance Change</th></tr></thead>
+                                    <tbody id="weather-reassign-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- Schedule -->
