@@ -2,7 +2,7 @@ import json
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -59,7 +59,8 @@ def _program_dict(p, include_weeks=False):
 
 # ── CRUD ─────────────────────────────────────────────────────────
 @router.post("/api/organizations/{org_id}/training-programs", dependencies=[Depends(verify_admin_key)])
-async def create_program(org_id: uuid.UUID, data: dict, db: AsyncSession = Depends(get_db)):
+async def create_program(org_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db)):
+    data = await request.json()
     prog = TrainingProgram(
         id=uuid.uuid4(),
         org_id=org_id,
