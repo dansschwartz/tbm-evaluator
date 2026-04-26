@@ -597,7 +597,7 @@ function renderBadges() {
             var badge = document.createElement('span');
             badge.className = 'nav-badge';
             badge.textContent = mapping[section];
-            badge.style.cssText = 'position:absolute;top:4px;right:8px;background:#FA6E82;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;line-height:18px;text-align:center;border-radius:9px;padding:0 4px;';
+            badge.style.cssText = 'position:absolute;top:50%;right:8px;transform:translateY(-50%);background:#FA6E82;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;line-height:18px;text-align:center;border-radius:9px;padding:0 4px;';
             navEl.style.position = 'relative';
             navEl.appendChild(badge);
         }

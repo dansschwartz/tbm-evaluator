@@ -104,7 +104,7 @@ html, body {
     overflow-y: auto;
 }
 
-.nav-item {
+.nav-item { position:relative;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -1054,7 +1054,7 @@ textarea:focus-visible,
         font-size: 15px;
     }
 
-    .nav-item {
+    .nav-item { position:relative;
         padding: 8px 16px;
         font-size: 13px;
     }
