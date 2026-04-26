@@ -6,45 +6,55 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>TBM Evaluator - Scoring</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/score/static/scoring.css">
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-<style>.icon-inline{width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:4px;stroke:currentColor;}</style>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body>
 
-  <!-- Login Screen -->
+  <!-- ====== Login Screen ====== -->
   <div id="screen-login" class="screen active">
     <div class="login-container">
-      <div class="logo">
-        <div class="logo-icon">TBM</div>
-        <h1>Evaluator Login</h1>
-        <p class="subtitle">Enter your 6-character access code</p>
+      <div class="login-card">
+        <div class="logo">
+          <div class="logo-icon">
+            <i data-lucide="clipboard-check" style="width:36px;height:36px;stroke:white;"></i>
+          </div>
+          <h1>TBM Evaluator</h1>
+          <p class="subtitle">Enter your 6-character access code to begin</p>
+        </div>
+        <form id="login-form" autocomplete="off">
+          <div class="input-group">
+            <i data-lucide="key-round" class="input-icon"></i>
+            <input
+              type="text"
+              id="access-code-input"
+              maxlength="6"
+              minlength="6"
+              placeholder="ACCESS CODE"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              required
+            >
+          </div>
+          <button type="submit" class="btn btn-primary btn-full" id="login-btn">
+            <i data-lucide="log-in" style="width:18px;height:18px;"></i>
+            Sign In
+          </button>
+          <div id="login-error" class="error-msg hidden"></div>
+        </form>
       </div>
-      <form id="login-form" autocomplete="off">
-        <input
-          type="text"
-          id="access-code-input"
-          maxlength="6"
-          minlength="6"
-          placeholder="ACCESS CODE"
-          autocomplete="off"
-          autocapitalize="characters"
-          spellcheck="false"
-          requi#FA6E82
-        >
-        <button type="submit" class="btn btn-primary btn-full" id="login-btn">
-          Sign In
-        </button>
-        <div id="login-error" class="error-msg hidden"></div>
-      </form>
     </div>
   </div>
 
-  <!-- Event Selection Screen -->
+  <!-- ====== Event Selection Screen ====== -->
   <div id="screen-events" class="screen">
     <header class="top-bar">
       <button class="btn-icon" id="logout-btn" aria-label="Logout">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <i data-lucide="log-out" style="width:22px;height:22px;"></i>
       </button>
       <h2 class="top-bar-title">Select Event</h2>
       <div class="top-bar-spacer"></div>
@@ -53,54 +63,85 @@
       <div class="evaluator-badge" id="evaluator-badge"></div>
       <div id="events-list" class="card-list"></div>
       <div id="events-empty" class="empty-state hidden">
+        <div class="empty-state-icon">
+          <i data-lucide="calendar-off" style="width:48px;height:48px;stroke:#ACC0D3;"></i>
+        </div>
         <p>No active events assigned to you.</p>
       </div>
     </div>
   </div>
 
-  <!-- Player List Screen -->
+  <!-- ====== Player List Screen ====== -->
   <div id="screen-players" class="screen">
     <header class="top-bar">
       <button class="btn-icon" id="back-to-events-btn" aria-label="Back">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        <i data-lucide="chevron-left" style="width:22px;height:22px;"></i>
       </button>
       <h2 class="top-bar-title" id="event-title">Players</h2>
       <button class="btn-icon" id="sync-btn" aria-label="Sync scores">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        <i data-lucide="refresh-cw" style="width:22px;height:22px;"></i>
       </button>
     </header>
     <div class="screen-body">
-      <!-- Feature 7: Offline indicator -->
+      <!-- Offline indicator -->
       <div id="offline-indicator" class="offline-indicator hidden"></div>
-      <!-- Tab bar: Players / Check-In -->
+
+      <!-- Tab bar -->
       <div class="tab-bar" id="tab-bar">
-        <button class="tab-btn active" data-tab="players">Players</button>
-        <button class="tab-btn" data-tab="checkin">Check-In</button>
-        <button class="tab-btn" data-tab="voice">Voice</button>
+        <button class="tab-btn active" data-tab="players">
+          <i data-lucide="users" style="width:16px;height:16px;"></i>
+          Players
+        </button>
+        <button class="tab-btn" data-tab="checkin">
+          <i data-lucide="user-check" style="width:16px;height:16px;"></i>
+          Check-In
+        </button>
+        <button class="tab-btn" data-tab="voice">
+          <i data-lucide="mic" style="width:16px;height:16px;"></i>
+          Voice
+        </button>
       </div>
+
+      <!-- Search -->
       <div class="search-bar">
+        <i data-lucide="search" class="search-icon"></i>
         <input type="text" id="player-search" placeholder="Search players..." autocomplete="off">
       </div>
+
+      <!-- Progress -->
       <div class="progress-bar-container">
         <div class="progress-bar" id="scoring-progress"></div>
-        <span class="progress-label" id="progress-label">0 / 0 sco#FA6E82</span>
+        <span class="progress-label" id="progress-label">0 / 0 scored</span>
       </div>
+
       <!-- Players tab -->
       <div id="tab-players" class="tab-content active">
         <div id="players-list" class="card-list"></div>
       </div>
-      <!-- Check-In tab (Feature 1) -->
+
+      <!-- Check-In tab -->
       <div id="tab-checkin" class="tab-content">
         <div id="checkin-list" class="card-list"></div>
       </div>
-      <!-- Voice tab (Feature 23) -->
+
+      <!-- Voice tab -->
       <div id="tab-voice" class="tab-content">
         <div class="voice-container">
-          <p style="color:#666;margin-bottom:12px">Speak or type natural language scores. Example: "Marcus dribbling 4, passing 2, great attitude"</p>
+          <div class="voice-header">
+            <i data-lucide="mic" style="width:20px;height:20px;stroke:var(--teal);"></i>
+            <span>Voice Scoring</span>
+          </div>
+          <p class="voice-hint">Speak or type natural language scores. Example: "Marcus dribbling 4, passing 2, great attitude"</p>
           <textarea id="voice-input" class="voice-textarea" rows="4" placeholder="Type or use voice-to-text..."></textarea>
           <div class="voice-actions">
-            <button class="btn btn-outline" id="voice-record-btn">Start Voice</button>
-            <button class="btn btn-primary" id="voice-parse-btn">Parse Scores</button>
+            <button class="btn btn-outline" id="voice-record-btn">
+              <i data-lucide="mic" style="width:16px;height:16px;"></i>
+              Start Voice
+            </button>
+            <button class="btn btn-primary" id="voice-parse-btn">
+              <i data-lucide="wand-2" style="width:16px;height:16px;"></i>
+              Parse Scores
+            </button>
           </div>
           <div id="voice-results" class="voice-results hidden"></div>
         </div>
@@ -108,36 +149,47 @@
     </div>
   </div>
 
-  <!-- Scoring Form Screen -->
+  <!-- ====== Scoring Form Screen ====== -->
   <div id="screen-scoring" class="screen">
     <header class="top-bar">
       <button class="btn-icon" id="back-to-players-btn" aria-label="Back">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        <i data-lucide="chevron-left" style="width:22px;height:22px;"></i>
       </button>
       <h2 class="top-bar-title" id="player-name-title">Player</h2>
       <div class="top-bar-spacer"></div>
     </header>
     <div class="screen-body">
-      <!-- Player photo + info (Feature 8) -->
+      <!-- Player photo + info -->
       <div class="scoring-player-header" id="scoring-player-header"></div>
+
+      <!-- Player navigation -->
       <div class="player-nav">
         <button class="btn btn-outline btn-nav" id="prev-player-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          <i data-lucide="chevron-left" style="width:18px;height:18px;"></i>
           Prev
         </button>
         <span class="player-counter" id="player-counter">1 / 1</span>
         <button class="btn btn-outline btn-nav" id="next-player-btn">
           Next
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          <i data-lucide="chevron-right" style="width:18px;height:18px;"></i>
         </button>
       </div>
+
+      <!-- Skills form -->
       <div id="skills-form" class="skills-form"></div>
-      <!-- Feature 9: General notes -->
+
+      <!-- General notes -->
       <div class="general-notes-section">
-        <h4 style="margin:0 0 8px;color:#333">General Notes</h4>
+        <div class="general-notes-header">
+          <i data-lucide="message-square" style="width:18px;height:18px;stroke:var(--steel-blue);"></i>
+          <h4>General Notes</h4>
+        </div>
         <textarea id="general-notes-input" class="general-notes-textarea" placeholder="Overall impressions, attitude, coachability notes..." rows="3"></textarea>
       </div>
+
+      <!-- Submit -->
       <button class="btn btn-primary btn-full btn-submit" id="submit-scores-btn">
+        <i data-lucide="send" style="width:20px;height:20px;"></i>
         Submit Scores
       </button>
     </div>
@@ -152,6 +204,6 @@
   </div>
 
   <script src="/score/static/scoring.js"></script>
-<script>if(typeof lucide!=="undefined")lucide.createIcons();</script>
+  <script>if(typeof lucide!=="undefined")lucide.createIcons();</script>
 </body>
 </html>
