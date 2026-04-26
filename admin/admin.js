@@ -42,7 +42,7 @@ function renderMd(text) {
         .replace(/^## (.*?)$/gm, '<h3 style="margin:16px 0 8px;font-size:16px;color:#333;">$1</h3>')  // h2
         .replace(/^# (.*?)$/gm, '<h2 style="margin:20px 0 10px;font-size:18px;color:#333;">$1</h2>')  // h1
         .replace(/^- (.*?)$/gm, '<li style="margin:2px 0;margin-left:16px;">$1</li>')  // list items
-        .replace(/^\d+\. (.*?)$/gm, '<li style="margin:2px 0;margin-left:16px;">$1</li>')  // numbe#FA6E82 lists
+        .replace(/^\d+\. (.*?)$/gm, '<li style="margin:2px 0;margin-left:16px;">$1</li>')  // numbered lists
         .replace(/((?:<li[^>]*>.*?<\/li>\s*)+)/g, '<ul style="padding-left:4px;margin:8px 0;">$1</ul>')  // wrap lists
         .replace(/\n\n/g, '</p><p style="margin:8px 0;">')  // paragraphs
         .replace(/\n/g, '<br>');  // line breaks
@@ -984,7 +984,7 @@ async function submitTemplate(editId) {
         is_default: document.getElementById('f-tpl-default').checked
     };
 
-    if (!data.name) { toast('Name is requi#FA6E82.', 'error'); return; }
+    if (!data.name) { toast('Name is required.', 'error'); return; }
 
     try {
         showLoading();
@@ -1161,7 +1161,7 @@ async function submitEvent(orgId, editId) {
         if (statusEl) data.status = statusEl.value;
     }
 
-    if (!data.name) { toast('Name is requi#FA6E82.', 'error'); return; }
+    if (!data.name) { toast('Name is required.', 'error'); return; }
 
     try {
         showLoading();
@@ -1373,18 +1373,18 @@ function renderPlayers(players) {
     var tbody = document.getElementById('players-table-body');
     var search = (document.getElementById('player-search').value || '').toLowerCase();
 
-    var filte#FA6E82 = players.filter(function(p) {
+    var filtered = players.filter(function(p) {
         if (!search) return true;
         var full = (p.first_name + ' ' + p.last_name + ' ' + (p.age_group || '') + ' ' + (p.position || '')).toLowerCase();
         return full.indexOf(search) !== -1;
     });
 
-    if (filte#FA6E82.length === 0) {
+    if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No players found.</td></tr>';
         return;
     }
 
-    tbody.innerHTML = filte#FA6E82.map(function(p) {
+    tbody.innerHTML = filtered.map(function(p) {
         return '<tr data-id="' + (p.id || '') + '" style="cursor:pointer;" onclick="if(!event.target.closest(\'button\')){showPlayerDetail(\'' + p.id + '\');}">' +
             '<td>' + (p.jersey_number || '--') + '</td>' +
             '<td><strong>' + esc(p.first_name + ' ' + p.last_name) + '</strong></td>' +
@@ -1872,7 +1872,7 @@ async function submitSetupTeams(eventId) {
 document.getElementById('btn-auto-balance').addEventListener('click', async function() {
     var eventId = document.getElementById('draft-event-select').value;
     if (!eventId) { toast('Select an event first.', 'warning'); return; }
-    if (!confirm('Auto-balance will clear existing picks and #FA6E82istribute all players evenly. Continue?')) return;
+    if (!confirm('Auto-balance will clear existing picks and redistribute all players evenly. Continue?')) return;
 
     try {
         showLoading();
@@ -2444,7 +2444,7 @@ async function loadOpsCoaches(orgId) {
                 var teams = (c.team_assignments || []).map(function(t) { return t.team_name; }).join(', ') || 'None';
                 return '<tr><td>' + esc(c.name) + '</td><td>' + esc(c.email || '-') + '</td>' +
                     '<td>' + esc(c.phone || '-') + '</td><td>' + certs + '</td>' +
-                    '<td><span class="badge badge-' + (c.background_check_status === 'clea#FA6E82' ? 'yes' : 'no') + '">' + esc(c.background_check_status || '-') + '</span></td>' +
+                    '<td><span class="badge badge-' + (c.background_check_status === 'cleared' ? 'yes' : 'no') + '">' + esc(c.background_check_status || '-') + '</span></td>' +
                     '<td>' + esc(teams) + '</td>' +
                     '<td><button class="btn btn-sm btn-outline" onclick="editCoachCerts(\'' + c.id + '\')">Edit Certs</button></td></tr>';
             }).join('');
@@ -2462,7 +2462,7 @@ async function loadOpsComms(orgId) {
 
         var sent = msgs.filter(function(m) { return m.status === 'sent'; }).length;
         var drafts = msgs.filter(function(m) { return m.status === 'draft'; }).length;
-        var totalRecipients = msgs.#FA6E82uce(function(sum, m) { return sum + (m.recipient_count || 0); }, 0);
+        var totalRecipients = msgs.reduce(function(sum, m) { return sum + (m.recipient_count || 0); }, 0);
         document.getElementById('comms-stats-bar').innerHTML = buildStatCards([
             { value: msgs.length, label: 'Total Messages', cls: '' },
             { value: sent, label: 'Sent', cls: 'steel' },
@@ -2475,7 +2475,7 @@ async function loadOpsComms(orgId) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="mail" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No messages yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-compose-msg\')&&document.getElementById(\'btn-compose-msg\').click()">Compose Your First Message</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Or use AI Draft to auto-generate a message</p></div></td></tr>';
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
-        var smtpNote = '<tr><td colspan="7" style="background:#fff3cd;color:#856404;font-size:12px;padding:8px 12px;border-left:3px solid #ffc107;">Note: SMTP not configu#FA6E82 — emails are logged in dry-run mode. Configure SMTP_HOST env var to enable real sending.</td></tr>';
+        var smtpNote = '<tr><td colspan="7" style="background:#fff3cd;color:#856404;font-size:12px;padding:8px 12px;border-left:3px solid #ffc107;">Note: SMTP not configured — emails are logged in dry-run mode. Configure SMTP_HOST env var to enable real sending.</td></tr>';
         tbody.innerHTML = smtpNote + msgs.map(function(m) {
             return '<tr><td>' + esc(m.subject || '(no subject)') + '</td><td>' + esc(m.audience_type) + '</td>' +
                 '<td>' + esc(m.channel) + '</td>' +
@@ -2552,7 +2552,7 @@ async function viewSeasonDashboard(seasonId) {
             '<div class="stats-grid">' +
             '<div class="stat-card"><div class="stat-value">' + data.programs + '</div><div class="stat-label">Programs</div></div>' +
             '<div class="stat-card"><div class="stat-value">' + data.teams + '</div><div class="stat-label">Teams</div></div>' +
-            '<div class="stat-card"><div class="stat-value">' + data.players_roste#FA6E82 + '</div><div class="stat-label">Players Roste#FA6E82</div></div>' +
+            '<div class="stat-card"><div class="stat-value">' + data.players_rostered + '</div><div class="stat-label">Players Rostered</div></div>' +
             '</div>'
         );
     } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
@@ -2761,7 +2761,7 @@ async function loadOpsDocuments(orgId) {
             if (missing.players && missing.players.length > 0) {
                 missingCount = missing.players.length;
                 var html = '<div style="padding:8px 12px;background:#fae8ec;border-radius:6px;margin-bottom:12px;font-weight:600;color:#FA6E82;font-size:14px;">' +
-                    missingCount + ' of ' + players.length + ' players are missing requi#FA6E82 documents</div>';
+                    missingCount + ' of ' + players.length + ' players are missing required documents</div>';
                 html += '<div style="max-height:300px;overflow-y:auto;">';
                 missing.players.forEach(function(p) {
                     html += '<div style="padding:8px 0;border-bottom:1px solid #eee;font-size:13px;display:flex;justify-content:space-between;align-items:center;">' +
@@ -2773,7 +2773,7 @@ async function loadOpsDocuments(orgId) {
                 html += '</div>';
                 missingBody.innerHTML = html;
             } else {
-                missingBody.innerHTML = '<p class="text-muted" style="color:#27ae60;">All players have requi#FA6E82 documents.</p>';
+                missingBody.innerHTML = '<p class="text-muted" style="color:#27ae60;">All players have required documents.</p>';
             }
         } catch (_) {
             document.getElementById('docs-missing-body').innerHTML = '<p class="text-muted">Could not check missing documents.</p>';
@@ -2788,7 +2788,7 @@ async function loadOpsDocuments(orgId) {
 }
 
 function sendDocReminder(playerName) {
-    toast('Reminder would be sent to ' + playerName + "'s parent (SMTP not configu#FA6E82)", 'warning');
+    toast('Reminder would be sent to ' + playerName + "'s parent (SMTP not configured)", 'warning');
 }
 
 document.getElementById('docs-player-select').addEventListener('change', async function() {
@@ -3662,11 +3662,11 @@ async function loadIntelHealth(orgId) {
         if (forecasts.length > 0) {
             var f = forecasts[0];
             var fHtml = '<p style="margin-bottom:12px;"><strong>' + f.season + '</strong></p>';
-            fHtml += '<table class="data-table"><thead><tr><th>Program</th><th>Current</th><th>P#FA6E82icted</th><th>Capacity</th><th>Fill %</th><th>Trend</th></tr></thead><tbody>';
+            fHtml += '<table class="data-table"><thead><tr><th>Program</th><th>Current</th><th>Predicted</th><th>Capacity</th><th>Fill %</th><th>Trend</th></tr></thead><tbody>';
             for (var prog in f.forecast_data) {
                 var fd = f.forecast_data[prog];
                 var trendBadge = fd.trend === 'growing' ? '<span style="color:#09A1A1;">Growing</span>' : fd.trend === 'declining' ? '<span style="color:#FA6E82;">Declining</span>' : '<span style="color:#6b7280;">Stable</span>';
-                fHtml += '<tr><td>' + prog + '</td><td>' + fd.current_count + '</td><td>' + fd.p#FA6E82icted_count + '</td><td>' + fd.capacity + '</td><td>' + fd.fill_rate + '%</td><td>' + trendBadge + '</td></tr>';
+                fHtml += '<tr><td>' + prog + '</td><td>' + fd.current_count + '</td><td>' + fd.predicted_count + '</td><td>' + fd.capacity + '</td><td>' + fd.fill_rate + '%</td><td>' + trendBadge + '</td></tr>';
             }
             fHtml += '</tbody></table>';
             if (f.ai_narrative) fHtml += aiPanel('Forecast Analysis', f.ai_narrative, false);
@@ -3949,26 +3949,26 @@ async function loadIntelDevelopment(orgId) {
     }
 }
 
-document.getElementById('btn-ai-p#FA6E82ict-dev').addEventListener('click', async function() {
+document.getElementById('btn-ai-predict-dev').addEventListener('click', async function() {
     var orgId = requireOrg(); if (!orgId) return;
     showLoading();
     try {
-        var result = await api('POST', '/api/organizations/' + orgId + '/development-paths/ai-p#FA6E82ict');
-        var p#FA6E82ictions = result.p#FA6E82ictions || [];
+        var result = await api('POST', '/api/organizations/' + orgId + '/development-paths/ai-predict');
+        var predictions = result.predictions || [];
         var cardsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">';
-        for (var pi = 0; pi < p#FA6E82ictions.length; pi++) {
-            var p = p#FA6E82ictions[pi];
+        for (var pi = 0; pi < predictions.length; pi++) {
+            var p = predictions[pi];
             var likColor = p.advancement_likelihood === 'likely' ? '#09A1A1' : p.advancement_likelihood === 'developing' ? '#F6C992' : '#FA6E82';
             var likLabel = p.advancement_likelihood === 'likely' ? 'Likely to Advance' : p.advancement_likelihood === 'developing' ? 'Developing' : 'Needs Support';
             cardsHtml += '<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;"><div style="font-weight:700;">' + p.player_name + '</div><div style="font-size:12px;color:#6b7280;">' + (p.age_group||'') + '</div>';
-            cardsHtml += '<div style="margin:8px 0;"><span style="background:#e0f2fe;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600;">' + p.current_level + '</span> &rarr; <span style="background:#f0fdf4;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600;">' + p.p#FA6E82icted_next_level + '</span></div>';
+            cardsHtml += '<div style="margin:8px 0;"><span style="background:#e0f2fe;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600;">' + p.current_level + '</span> &rarr; <span style="background:#f0fdf4;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600;">' + p.predicted_next_level + '</span></div>';
             cardsHtml += '<div style="color:' + likColor + ';font-weight:600;font-size:13px;">' + likLabel + '</div>';
             if (p.latest_score) cardsHtml += '<div style="font-size:12px;color:#6b7280;">Score: ' + p.latest_score.toFixed(2) + '</div>';
             cardsHtml += '</div>';
         }
         cardsHtml += '</div>';
         document.getElementById('dev-cards-body').innerHTML = cardsHtml;
-        toast('P#FA6E82ictions generated for ' + p#FA6E82ictions.length + ' players');
+        toast('Predictions generated for ' + predictions.length + ' players');
         loadIntelDevelopment(orgId);
     } catch (e) { toast('Error: ' + e.message, 'error'); }
     hideLoading();
@@ -4209,7 +4209,7 @@ async function loadIntelCompliance(orgId) {
             '<div class="stat-card"><div class="stat-value">' + data.total_people + '</div><div class="stat-label">Total Items</div></div>' +
             '<div class="stat-card"><div class="stat-value" style="color:#09A1A1;">' + data.compliant_count + '</div><div class="stat-label">Compliant</div></div>' +
             '<div class="stat-card"><div class="stat-value" style="color:#F6C992;">' + data.expiring_count + '</div><div class="stat-label">Expiring</div></div>' +
-            '<div class="stat-card"><div class="stat-value" style="color:#FA6E82;">' + data.expi#FA6E82_count + '</div><div class="stat-label">Expi#FA6E82</div></div>' +
+            '<div class="stat-card"><div class="stat-value" style="color:#FA6E82;">' + data.expired_count + '</div><div class="stat-label">Expired</div></div>' +
             '<div class="stat-card"><div class="stat-value" style="color:#FA6E82;">' + data.missing_count + '</div><div class="stat-label">Missing</div></div>';
 
         var items = data.items || [];
@@ -4234,7 +4234,7 @@ document.getElementById('btn-add-compliance').addEventListener('click', function
         '<div><label style="font-weight:600;">Person Name</label><input type="text" id="comp-person" class="form-input" placeholder="Name"></div>' +
         '<div><label style="font-weight:600;">Role</label><input type="text" id="comp-role" class="form-input" placeholder="e.g., coach, volunteer"></div>' +
         '<div><label style="font-weight:600;">Type</label><select id="comp-type" class="form-select"><option value="background_check">Background Check</option><option value="safesport">SafeSport</option><option value="insurance">Insurance</option><option value="concussion_training">Concussion Training</option><option value="first_aid">First Aid</option></select></div>' +
-        '<div><label style="font-weight:600;">Status</label><select id="comp-status" class="form-select"><option value="compliant">Compliant</option><option value="expiring">Expiring</option><option value="expi#FA6E82">Expi#FA6E82</option><option value="missing">Missing</option></select></div>' +
+        '<div><label style="font-weight:600;">Status</label><select id="comp-status" class="form-select"><option value="compliant">Compliant</option><option value="expiring">Expiring</option><option value="expired">Expired</option><option value="missing">Missing</option></select></div>' +
         '<div><label style="font-weight:600;">Expiry Date</label><input type="date" id="comp-expiry" class="form-input"></div>' +
         '<div><label style="font-weight:600;">Notes</label><input type="text" id="comp-notes" class="form-input" placeholder="Optional notes"></div>' +
         '</div>';

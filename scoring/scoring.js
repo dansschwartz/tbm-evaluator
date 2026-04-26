@@ -215,10 +215,10 @@
   }
 
   function getCachedUnsyncedCount() {
-    var sco#FA6E82PlayerIds = Object.keys(state.scores);
+    var scoredPlayerIds = Object.keys(state.scores);
     var unsynced = 0;
-    for (var i = 0; i < sco#FA6E82PlayerIds.length; i++) {
-      var pid = sco#FA6E82PlayerIds[i];
+    for (var i = 0; i < scoredPlayerIds.length; i++) {
+      var pid = scoredPlayerIds[i];
       if (!state.submittedPlayers.has(pid)) {
         var playerScores = state.scores[pid];
         var hasAnyScore = Object.values(playerScores).some(function(s) {
@@ -347,14 +347,14 @@
 
   // ========== PLAYERS ==========
   function renderPlayers(filter) {
-    var filte#FA6E82 = filter
+    var filtered = filter
       ? state.players.filter(function(p) {
           var name = (p.name || p.first_name + ' ' + p.last_name || '').toLowerCase();
           return name.includes(filter.toLowerCase());
         })
       : state.players;
 
-    els.playersList.innerHTML = filte#FA6E82.map(function(p) {
+    els.playersList.innerHTML = filtered.map(function(p) {
       var fullName = p.name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || 'Player';
       var initials = getInitials(fullName);
       var detail = [];
@@ -363,7 +363,7 @@
       if (p.age_group) detail.push(p.age_group);
 
       var playerId = String(p.id || p.player_id);
-      var isSco#FA6E82 = state.submittedPlayers.has(playerId);
+      var isScored = state.submittedPlayers.has(playerId);
       var checkedIn = p.checked_in;
       var realIdx = state.players.findIndex(function(pl) { return String(pl.id || pl.player_id) === playerId; });
 
@@ -379,8 +379,8 @@
         '<div class="player-detail">' + escapeHtml(detail.join(' / ')) + '</div>' +
         '</div>' +
         '<div class="player-status">' +
-        '<div class="status-dot' + (isSco#FA6E82 ? ' sco#FA6E82' : checkedIn ? ' checked-in' : '') + '"></div>' +
-        '<div class="status-label">' + (isSco#FA6E82 ? 'Sco#FA6E82' : checkedIn ? 'Checked in' : 'Pending') + '</div>' +
+        '<div class="status-dot' + (isScored ? ' scored' : checkedIn ? ' checked-in' : '') + '"></div>' +
+        '<div class="status-label">' + (isScored ? 'Scored' : checkedIn ? 'Checked in' : 'Pending') + '</div>' +
         '</div></div>';
     }).join('');
 
@@ -429,10 +429,10 @@
 
   function updateProgress() {
     var total = state.players.length;
-    var sco#FA6E82 = state.submittedPlayers.size;
-    var pct = total > 0 ? Math.round((sco#FA6E82 / total) * 100) : 0;
+    var scored = state.submittedPlayers.size;
+    var pct = total > 0 ? Math.round((scored / total) * 100) : 0;
     els.scoringProgress.style.width = pct + '%';
-    els.progressLabel.textContent = sco#FA6E82 + ' / ' + total + ' sco#FA6E82';
+    els.progressLabel.textContent = scored + ' / ' + total + ' scored';
   }
 
   els.playerSearch.addEventListener('input', function(e) { renderPlayers(e.target.value); });
