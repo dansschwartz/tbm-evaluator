@@ -1284,3 +1284,8 @@ select, .form-select {
     filter: grayscale(100%) !important;
     -webkit-filter: grayscale(100%) !important;
 }
+
+/* Hide map attribution */
+.leaflet-control-attribution {
+    display: none !important;
+}
