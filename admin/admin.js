@@ -2305,23 +2305,218 @@ async function loadOpsFields(orgId) {
     }
 }
 
-// --- Field Map Rendering ---
+// --- Field Map Rendering (Leaflet) ---
+var _fieldLeafletMap = null;
+var _fieldMapMarkers = [];
+var _fieldMapSelectedMarker = null;
+var _fieldMapFieldsCache = [];
+
+function getFieldSizeLabel(size) {
+    if (size === 'full') return 'Full Field';
+    if (size === '3_4') return '3/4 Field';
+    if (size === 'half') return 'Half Field';
+    if (size === 'small') return 'Small/Mini';
+    return size || '-';
+}
+
+function getTeamLevelSuitability(size) {
+    if (size === 'full') return 'All Levels (U8-U19)';
+    if (size === '3_4') return 'Intermediate (U10-U14)';
+    if (size === 'small' || size === 'half') return 'Beginner (U6-U10)';
+    return '-';
+}
+
+function getSurfaceColor(surface) {
+    if (surface === 'turf') return '#09A1A1';
+    if (surface === 'grass') return '#27ae60';
+    return '#8c99a9';
+}
+
+function getWardFromCoords(lat, lng) {
+    var ns = lat >= 38.895 ? 'N' : 'S';
+    var ew = lng <= -77.01 ? 'W' : 'E';
+    return ns + ew;
+}
+
+function renderFieldDetailPanel(f) {
+    var panel = document.getElementById('field-detail-panel');
+    if (!panel) return;
+
+    var surfaceColor = getSurfaceColor(f.surface_type);
+    var surfaceLabel = f.surface_type ? f.surface_type.charAt(0).toUpperCase() + f.surface_type.slice(1) : '-';
+    var sizeLabel = getFieldSizeLabel(f.size);
+    var teamLevel = getTeamLevelSuitability(f.size);
+    var ward = getWardFromCoords(f.latitude || 38.91, f.longitude || -77.04);
+
+    // Stars
+    var starsHtml = '';
+    if (f.field_rating) {
+        for (var i = 1; i <= 5; i++) {
+            starsHtml += '<span style="color:' + (i <= Math.round(f.field_rating) ? '#F6C992' : '#ddd') + ';font-size:16px;">&#9733;</span>';
+        }
+        starsHtml += ' <span style="font-size:13px;color:#5a6a7e;">' + f.field_rating.toFixed(1) + ' (' + (f.rating_count || 0) + ')</span>';
+    } else {
+        starsHtml = '<span style="color:#aaa;font-size:12px;">No ratings yet</span>';
+    }
+
+    var html =
+        '<div style="margin-bottom:20px;">' +
+            '<h3 style="font-size:18px;font-weight:700;color:#1a2332;margin:0 0 4px 0;">' + esc(f.name) + '</h3>' +
+            '<div style="display:flex;align-items:center;gap:6px;color:#5a6a7e;font-size:13px;">' +
+                '<i data-lucide="map-pin" style="width:13px;height:13px;display:inline;vertical-align:middle;"></i> ' +
+                esc(f.location_address || 'No address') +
+            '</div>' +
+        '</div>' +
+
+        '<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">' +
+            '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;color:#fff;background:' + surfaceColor + ';">' + surfaceLabel + '</span>' +
+            '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;color:#1a2332;background:#eef1f5;">' + sizeLabel + '</span>' +
+            '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;color:#1a2332;background:#eef1f5;">' + ward + '</span>' +
+        '</div>' +
+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">' +
+            // Lighting
+            '<div>' +
+                '<div style="font-size:11px;text-transform:uppercase;color:#8c99a9;font-weight:600;margin-bottom:4px;">Lighting</div>' +
+                '<div style="font-size:14px;color:#1a2332;display:flex;align-items:center;gap:4px;">' +
+                    '<i data-lucide="' + (f.has_lights ? 'sun' : 'moon') + '" style="width:14px;height:14px;display:inline;vertical-align:middle;color:' + (f.has_lights ? '#F6C992' : '#8c99a9') + ';"></i> ' +
+                    (f.has_lights ? 'Yes' : 'No') +
+                '</div>' +
+            '</div>' +
+            // Team Level
+            '<div>' +
+                '<div style="font-size:11px;text-transform:uppercase;color:#8c99a9;font-weight:600;margin-bottom:4px;">Team Level</div>' +
+                '<div style="font-size:14px;color:#1a2332;">' + teamLevel + '</div>' +
+            '</div>' +
+            // Quality Rating
+            '<div>' +
+                '<div style="font-size:11px;text-transform:uppercase;color:#8c99a9;font-weight:600;margin-bottom:4px;">Quality Rating</div>' +
+                '<div>' + starsHtml + '</div>' +
+            '</div>' +
+            // Permit Cost
+            '<div>' +
+                '<div style="font-size:11px;text-transform:uppercase;color:#8c99a9;font-weight:600;margin-bottom:4px;">Permit Cost</div>' +
+                '<div style="font-size:14px;color:#1a2332;">' +
+                    '<i data-lucide="dollar-sign" style="width:13px;height:13px;display:inline;vertical-align:middle;color:#8c99a9;"></i> ' +
+                    (f.permit_cost_per_hour ? '$' + f.permit_cost_per_hour.toFixed(0) + '/hr' : '-') +
+                '</div>' +
+            '</div>' +
+            // Weather Cancellations
+            '<div>' +
+                '<div style="font-size:11px;text-transform:uppercase;color:#8c99a9;font-weight:600;margin-bottom:4px;">Weather Cancellations</div>' +
+                '<div style="font-size:14px;color:#1a2332;">' +
+                    '<i data-lucide="cloud-rain" style="width:13px;height:13px;display:inline;vertical-align:middle;color:#5484A4;"></i> ' +
+                    (f.weather_cancellations || 0) +
+                '</div>' +
+            '</div>' +
+            // Current Bookings
+            '<div>' +
+                '<div style="font-size:11px;text-transform:uppercase;color:#8c99a9;font-weight:600;margin-bottom:4px;">Current Bookings</div>' +
+                '<div style="font-size:14px;color:#1a2332;">' +
+                    '<i data-lucide="calendar" style="width:13px;height:13px;display:inline;vertical-align:middle;color:#8c99a9;"></i> ' +
+                    (f.bookings_count || 0) +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+
+        // Shared Permit
+        (f.permit_shared_with ? '<div style="margin-bottom:16px;padding:10px 14px;background:#f0f7ff;border-radius:8px;border-left:3px solid #5484A4;">' +
+            '<div style="font-size:11px;text-transform:uppercase;color:#5484A4;font-weight:600;margin-bottom:2px;">Shared Permit</div>' +
+            '<div style="font-size:13px;color:#1a2332;">' + esc(f.permit_shared_with) + '</div>' +
+        '</div>' : '') +
+
+        // Coordinates
+        '<div style="margin-bottom:20px;">' +
+            '<div style="font-size:11px;text-transform:uppercase;color:#8c99a9;font-weight:600;margin-bottom:4px;">Coordinates</div>' +
+            '<div style="font-size:13px;color:#5a6a7e;font-family:monospace;">' +
+                (f.latitude ? f.latitude.toFixed(5) : '-') + ', ' + (f.longitude ? f.longitude.toFixed(5) : '-') +
+            '</div>' +
+        '</div>' +
+
+        // Buttons
+        '<div style="display:flex;gap:8px;">' +
+            '<button class="btn btn-primary btn-sm" onclick="editFieldItem(\'' + f.id + '\')" style="flex:1;">' +
+                '<i data-lucide="pencil" style="width:13px;height:13px;display:inline;vertical-align:middle;margin-right:4px;"></i>Edit Field</button>' +
+            '<button class="btn btn-outline btn-sm" onclick="scrollToField(\'' + f.id + '\')" style="flex:1;">' +
+                '<i data-lucide="calendar" style="width:13px;height:13px;display:inline;vertical-align:middle;margin-right:4px;"></i>View Bookings</button>' +
+        '</div>';
+
+    panel.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function renderFieldMap(fields) {
-    var dotsDiv = document.getElementById('field-map-dots');
-    if (!dotsDiv) return;
-    var minLat = 38.79, maxLat = 39.04, minLng = -77.12, maxLng = -76.91;
-    var html = '';
-    fields.forEach(function(f) {
-        if (!f.latitude || !f.longitude) return;
-        var left = ((f.longitude - minLng) / (maxLng - minLng) * 100).toFixed(2);
-        var top = ((1 - (f.latitude - minLat) / (maxLat - minLat)) * 100).toFixed(2);
-        var color = f.surface_type === 'turf' ? '#09A1A1' : f.surface_type === 'grass' ? '#27ae60' : '#8c99a9';
-        html += '<div class="field-map-dot" onclick="scrollToField(\'' + f.id + '\')" ' +
-            'style="position:absolute;left:' + left + '%;top:' + top + '%;width:12px;height:12px;border-radius:50%;background:' + color + ';border:2px solid #fff;cursor:pointer;z-index:3;transform:translate(-50%,-50%);box-shadow:0 1px 3px rgba(0,0,0,0.3);" ' +
-            'title="' + esc(f.name) + (f.field_rating ? ' (' + f.field_rating.toFixed(1) + '★)' : '') + '">' +
-            '</div>';
+    var mapDiv = document.getElementById('field-leaflet-map');
+    if (!mapDiv) return;
+
+    _fieldMapFieldsCache = fields;
+
+    // Initialize map if not yet created
+    if (!_fieldLeafletMap) {
+        _fieldLeafletMap = L.map('field-leaflet-map', {
+            zoomControl: true,
+            scrollWheelZoom: true
+        }).setView([38.91, -77.04], 12);
+
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 18
+        }).addTo(_fieldLeafletMap);
+    }
+
+    // Clear existing markers
+    _fieldMapMarkers.forEach(function(m) { _fieldLeafletMap.removeLayer(m); });
+    _fieldMapMarkers = [];
+    _fieldMapSelectedMarker = null;
+
+    var fieldsWithCoords = fields.filter(function(f) { return f.latitude && f.longitude; });
+
+    fieldsWithCoords.forEach(function(f) {
+        var color = getSurfaceColor(f.surface_type);
+        var marker = L.circleMarker([f.latitude, f.longitude], {
+            radius: 8,
+            fillColor: color,
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.9
+        }).addTo(_fieldLeafletMap);
+
+        marker.bindTooltip(f.name, { direction: 'top', offset: [0, -8] });
+        marker._fieldData = f;
+
+        marker.on('click', function() {
+            // Reset previous selected marker
+            if (_fieldMapSelectedMarker) {
+                var prevColor = getSurfaceColor(_fieldMapSelectedMarker._fieldData.surface_type);
+                _fieldMapSelectedMarker.setStyle({ radius: 8, color: '#fff', weight: 2, fillColor: prevColor });
+            }
+            // Highlight this marker
+            marker.setStyle({ radius: 12, color: '#1a2332', weight: 3 });
+            _fieldMapSelectedMarker = marker;
+            // Update detail panel
+            renderFieldDetailPanel(f);
+            // Also highlight table row
+            scrollToField(f.id);
+        });
+
+        _fieldMapMarkers.push(marker);
     });
-    dotsDiv.innerHTML = html;
+
+    // Default: show first field
+    if (fieldsWithCoords.length > 0) {
+        var first = fieldsWithCoords[0];
+        var firstMarker = _fieldMapMarkers[0];
+        firstMarker.setStyle({ radius: 12, color: '#1a2332', weight: 3 });
+        _fieldMapSelectedMarker = firstMarker;
+        renderFieldDetailPanel(first);
+        _fieldLeafletMap.setView([first.latitude, first.longitude], 12);
+    }
+
+    // Fix Leaflet rendering in hidden tabs
+    setTimeout(function() {
+        if (_fieldLeafletMap) _fieldLeafletMap.invalidateSize();
+    }, 200);
 }
 
 function scrollToField(fieldId) {
