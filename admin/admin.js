@@ -1910,12 +1910,12 @@ document.getElementById('btn-export-draft').addEventListener('click', async func
                 return '<tr><td>' + (i + 1) + '</td><td>' + esc(p.first_name + ' ' + p.last_name) + '</td><td>' + esc(p.position || '--') + '</td><td>' + esc(p.age_group || '--') + '</td><td>' + (p.overall_score !== null && p.overall_score !== undefined ? p.overall_score.toFixed(2) : '--') + '</td></tr>';
             }).join('');
 
-            return '<h4 style="margin-top:16px">' + (t.team_color ? '<span class="team-color-dot" style="background:' + esc(t.team_color) + '"></span>' : '') + esc(t.team_name) + '</h4>' +
+            return '<h4 style="margin-top:60px">' + (t.team_color ? '<span class="team-color-dot" style="background:' + esc(t.team_color) + '"></span>' : '') + esc(t.team_name) + '</h4>' +
                 '<table class="data-table"><thead><tr><th>#</th><th>Player</th><th>Position</th><th>Age Group</th><th>Score</th></tr></thead><tbody>' + rows + '</tbody></table>';
         }).join('');
 
         openModal('Draft Export',
-            html + '<div style="margin-top:16px"><button class="btn btn-sm btn-outline" onclick="copyDraftExport()">Copy as Text</button></div>' +
+            html + '<div style="margin-top:60px"><button class="btn btn-sm btn-outline" onclick="copyDraftExport()">Copy as Text</button></div>' +
             '<textarea id="draft-export-text" style="display:none">' + esc(JSON.stringify(data, null, 2)) + '</textarea>',
             '<button class="btn btn-outline" onclick="closeModal()">Close</button>'
         );
@@ -4035,9 +4035,9 @@ async function loadIntelDevelopment(orgId) {
                     pathHtml += '</div>';
                 }
             } else if (cnt > 0) {
-                pathHtml += '<p style="text-align:center;color:#aaa;font-size:12px;margin-top:16px;">' + cnt + ' player' + (cnt !== 1 ? 's' : '') + '</p>';
+                pathHtml += '<p style="text-align:center;color:#aaa;font-size:12px;margin-top:60px;">' + cnt + ' player' + (cnt !== 1 ? 's' : '') + '</p>';
             } else {
-                pathHtml += '<p style="text-align:center;color:#ccc;font-size:12px;margin-top:16px;">No players</p>';
+                pathHtml += '<p style="text-align:center;color:#ccc;font-size:12px;margin-top:60px;">No players</p>';
             }
             pathHtml += '</div></div>';
         }
