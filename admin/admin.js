@@ -5659,10 +5659,10 @@ document.getElementById('modal-overlay').addEventListener('keydown', function(e)
 // TIER 2: TRAINING PROGRAMS
 // ===================================================================
 async function loadPrograms(orgId) {
-    if (!orgId) { document.getElementById('programs-table-body').innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;">Select an organization</td></tr>'; return; }
+    if (!orgId) { document.getElementById('training-programs-table-body').innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;">Select an organization</td></tr>'; return; }
     try {
         var programs = await api('GET', '/api/organizations/' + orgId + '/training-programs');
-        var stats = document.getElementById('programs-stats');
+        var stats = document.getElementById('training-programs-stats');
         var total = programs.length;
         var active = programs.filter(function(p) { return p.status === 'active'; }).length;
         var aiGen = programs.filter(function(p) { return p.ai_generated; }).length;
@@ -5672,7 +5672,7 @@ async function loadPrograms(orgId) {
             '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#2d8a5e;">' + active + '</div><div style="font-size:12px;color:#888;">Active</div></div>' +
             '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#5484A4;">' + aiGen + '</div><div style="font-size:12px;color:#888;">AI Generated</div></div>' +
             '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#e8b06e;">' + drafts + '</div><div style="font-size:12px;color:#888;">Drafts</div></div>';
-        var tbody = document.getElementById('programs-table-body');
+        var tbody = document.getElementById('training-programs-table-body');
         if (!programs.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;">No programs yet</td></tr>'; return; }
         tbody.innerHTML = programs.map(function(p) {
             var statusColor = p.status === 'active' ? '#2d8a5e' : p.status === 'completed' ? '#5484A4' : '#e8b06e';
