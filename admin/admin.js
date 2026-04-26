@@ -319,7 +319,7 @@ async function loadOrgSelector() {
         var orgs = await api('GET', '/api/organizations');
         var select = document.getElementById('global-org-select');
         var current = select.value;
-        select.innerHTML = '<option value="">-- Select Org --</option>';
+        select.innerHTML = "";
         orgs.forEach(function(org) {
             var opt = document.createElement('option');
             opt.value = org.id;
@@ -327,6 +327,11 @@ async function loadOrgSelector() {
             if (org.id === current) opt.selected = true;
             select.appendChild(opt);
         });
+        // Auto-select first org
+        if (select.options.length > 0 && !select.value) {
+            select.selectedIndex = 0;
+            select.dispatchEvent(new Event('change'));
+        }
     } catch (e) {
         // silent
     }
