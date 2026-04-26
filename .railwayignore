@@ -1,0 +1,7 @@
+.git
+__pycache__
+*.pyc
+docs/*.pdf
+docs/*.docx
+docs/*.xlsx
+scripts/

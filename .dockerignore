@@ -1,0 +1,10 @@
+.git
+__pycache__
+*.pyc
+*.pyo
+docs/*.pdf
+docs/*.docx
+docs/*.xlsx
+.deploy-trigger
+scripts/
+*.md
