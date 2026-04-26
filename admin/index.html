@@ -172,6 +172,11 @@
             <header class="top-header">
                 <button class="menu-toggle" id="menu-toggle">&#9776;</button>
                 <h1 class="page-title" id="page-title">Overview</h1>
+                <div style="position:relative;flex:1;max-width:320px;margin:0 16px;">
+                    <input type="text" id="global-search-input" class="form-input form-input-sm" placeholder="Search players, teams, events, coaches..." oninput="globalSearch(this.value)" style="width:100%;padding-left:32px;">
+                    <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#aaa;pointer-events:none;"></i>
+                    <div id="global-search-dropdown" class="hidden" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:360px;overflow-y:auto;z-index:999;margin-top:4px;"></div>
+                </div>
                 <div class="header-actions">
                     <span class="org-selector-label">Organization:</span>
                     <select id="global-org-select" class="form-select form-select-sm">
@@ -347,6 +352,7 @@
                             </select>
                             <button class="btn btn-primary" id="btn-create-player">+ New Player</button>
                             <button class="btn btn-secondary" id="btn-bulk-import">Bulk Import</button>
+                            <button class="btn btn-outline" onclick="exportPlayers()"><i data-lucide="download" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Export CSV</button>
                         </div>
                     </div>
                     <div class="card">
@@ -578,6 +584,7 @@
                             <button class="btn btn-secondary" id="btn-generate-games">Generate Games</button>
                             <button class="btn btn-secondary" id="btn-generate-practices">Generate Practices</button>
                             <button class="btn btn-outline" id="btn-check-conflicts"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Find Conflicts</button>
+                            <button class="btn btn-outline" onclick="exportSchedule()"><i data-lucide="download" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Export CSV</button>
                         </div>
                     </div>
                     <div class="stats-grid" id="schedule-stats-bar"></div>
@@ -888,6 +895,7 @@
                         <h2><i data-lucide="trophy" style="width:20px;height:20px;display:inline;vertical-align:middle;margin-right:6px;"></i> Competition & League Intelligence</h2>
                         <div class="toolbar-actions">
                             <button class="btn btn-primary" id="btn-add-match"><i data-lucide="plus" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Add Result</button>
+                            <button class="btn btn-outline" onclick="exportCompetition()"><i data-lucide="download" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Export CSV</button>
                         </div>
                     </div>
 

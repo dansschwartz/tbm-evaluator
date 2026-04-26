@@ -4,28 +4,68 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Self-Assessment — TBM Evaluator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Inter',system-ui,sans-serif;background:#f2f4f8;display:flex;justify-content:center;padding:20px}
-  .card{max-width:500px;width:100%;background:#fff;border-radius:16px;padding:32px;box-shadow:0 2px 20px rgba(0,0,0,0.08)}
-  h1{font-size:22px;color:#09A1A1;margin-bottom:16px;text-align:center}
-  p{color:#888;font-size:14px;margin-bottom:20px;text-align:center}
-  .skill{margin-bottom:16px;padding:12px;background:#f8f9fb;border-radius:8px}
-  .skill label{font-weight:600;font-size:14px;display:block;margin-bottom:6px}
-  .skill input[type=range]{width:100%}
-  .skill .val{text-align:center;font-size:18px;font-weight:700;color:#09A1A1}
-  button{width:100%;padding:14px;background:#09A1A1;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;margin-top:12px}
-  #msg{text-align:center;margin-top:12px;font-size:14px}
+  body{font-family:'Inter',system-ui,sans-serif;background:linear-gradient(135deg,#e8f4f4 0%,#f0f2f8 50%,#e8edf4 100%);min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:24px 16px}
+
+  .card{max-width:540px;width:100%;background:#fff;border-radius:20px;padding:36px 32px;box-shadow:0 4px 32px rgba(9,161,161,0.10),0 1px 4px rgba(0,0,0,0.06)}
+
+  .brand-bar{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px}
+  .brand-icon{width:36px;height:36px;background:linear-gradient(135deg,#09A1A1,#5484A4);border-radius:10px;display:flex;align-items:center;justify-content:center}
+  .brand-icon svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.5}
+  .brand-text{font-size:13px;font-weight:600;color:#5484A4;letter-spacing:0.5px}
+
+  h1{font-size:22px;color:#1a2332;margin-bottom:6px;text-align:center;font-weight:700}
+  .subtitle{color:#6b7280;font-size:14px;margin-bottom:24px;text-align:center}
+
+  .skill{margin-bottom:14px;padding:14px 16px;background:#f8fafb;border:1px solid #e8ecef;border-radius:12px;transition:border-color 0.2s}
+  .skill:hover{border-color:#09A1A1}
+  .skill-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .skill label{font-weight:600;font-size:14px;color:#1a2332}
+  .skill .val{font-size:20px;font-weight:700;color:#09A1A1;min-width:28px;text-align:center;background:linear-gradient(135deg,#e8f8f8,#dff0f0);border-radius:8px;padding:2px 8px}
+
+  .range-wrap{position:relative;padding:0 2px}
+  .range-labels{display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;margin-top:4px;padding:0 2px}
+
+  input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,#d1e7e7,#09A1A1);outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#09A1A1;border:3px solid #fff;box-shadow:0 2px 8px rgba(9,161,161,0.3);cursor:pointer;transition:transform 0.15s}
+  input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#09A1A1;border:3px solid #fff;box-shadow:0 2px 8px rgba(9,161,161,0.3);cursor:pointer}
+
+  .btn-submit{width:100%;padding:15px;background:linear-gradient(135deg,#09A1A1,#078888);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;margin-top:16px;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(9,161,161,0.25)}
+  .btn-submit:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(9,161,161,0.35)}
+  .btn-submit:active{transform:translateY(0)}
+  .btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+
+  #msg{text-align:center;margin-top:14px;font-size:14px;font-weight:500}
+  .msg-success{color:#09A1A1}
+  .msg-error{color:#FA6E82}
+
+  .footer-note{text-align:center;margin-top:20px;font-size:12px;color:#9ca3af}
+
+  @media(max-width:480px){
+    body{padding:12px 8px}
+    .card{padding:24px 18px;border-radius:16px}
+    h1{font-size:19px}
+    .skill{padding:12px}
+    .skill label{font-size:13px}
+  }
 </style>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body>
 <div class="card">
-  <h1><i data-lucide="clipboard-check" style="width:28px;height:28px;vertical-align:middle;margin-right:8px;"></i>Player Self-Assessment</h1>
-  <p>Rate yourself on each skill below</p>
+  <div class="brand-bar">
+    <div class="brand-icon"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+    <span class="brand-text">Tiny But Mighty</span>
+  </div>
+  <h1><i data-lucide="clipboard-check" style="width:24px;height:24px;vertical-align:middle;margin-right:6px;color:#09A1A1;"></i>Player Self-Assessment</h1>
+  <p class="subtitle">Rate yourself honestly on each skill — your coaches will see how your self-rating compares to their evaluations.</p>
   <div id="skills"></div>
-  <button onclick="submit()">Submit Self-Assessment</button>
+  <button class="btn-submit" onclick="submit()" id="btn-submit">Submit Self-Assessment</button>
   <div id="msg"></div>
+  <div class="footer-note">Powered by TBM Evaluator</div>
 </div>
 <script>
   const params = new URLSearchParams(window.location.search);
@@ -35,28 +75,48 @@
   let skills = [];
 
   async function load() {
-    if (!eventId) { document.getElementById('msg').textContent = 'Missing event parameter'; return; }
+    if (!eventId) { document.getElementById('msg').innerHTML = '<span class="msg-error">Missing event parameter</span>'; return; }
     try {
       const resp = await fetch(API + '/api/scoring/event/' + eventId);
       const data = await resp.json();
       skills = data.template?.skills || [];
       const el = document.getElementById('skills');
-      skills.forEach(s => {
-        el.innerHTML += '<div class="skill"><label>' + s.name + '</label><div class="val" id="v_'+s.name.replace(/\s/g,'_')+'">3</div><input type="range" min="1" max="5" value="3" oninput="document.getElementById(\'v_'+s.name.replace(/\s/g,'_')+'\').textContent=this.value" data-skill="'+s.name+'"></div>';
+      skills.forEach(function(s) {
+        var safeId = s.name.replace(/[^a-zA-Z0-9]/g, '_');
+        el.innerHTML += '<div class="skill">' +
+          '<div class="skill-header"><label>' + s.name + '</label><div class="val" id="v_' + safeId + '">3</div></div>' +
+          '<div class="range-wrap"><input type="range" min="1" max="5" value="3" oninput="document.getElementById(\'v_' + safeId + '\').textContent=this.value" data-skill="' + s.name + '"></div>' +
+          '<div class="range-labels"><span>1 — Beginner</span><span>5 — Excellent</span></div>' +
+          '</div>';
       });
-    } catch(e) { document.getElementById('msg').textContent = 'Could not load evaluation template'; }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    } catch(e) { document.getElementById('msg').innerHTML = '<span class="msg-error">Could not load evaluation template</span>'; }
   }
 
   async function submit() {
+    var btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
     const scores = {};
-    document.querySelectorAll('input[type=range]').forEach(i => { scores[i.dataset.skill] = parseInt(i.value); });
+    document.querySelectorAll('input[type=range]').forEach(function(i) { scores[i.dataset.skill] = parseInt(i.value); });
     try {
       const resp = await fetch(API + '/api/events/' + eventId + '/self-assess', {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({player_id: playerId, scores: scores})
       });
-      document.getElementById('msg').textContent = resp.ok ? '<i data-lucide="check-circle-2" class="icon-inline" style="color:currentColor;"></i> Self-assessment submitted!' : '<i data-lucide="x-circle" class="icon-inline" style="color:currentColor;"></i> Error submitting';
-    } catch(e) { document.getElementById('msg').textContent = '<i data-lucide="x-circle" class="icon-inline" style="color:currentColor;"></i> Error: ' + e.message; }
+      if (resp.ok) {
+        document.getElementById('msg').innerHTML = '<span class="msg-success">Self-assessment submitted successfully!</span>';
+        btn.textContent = 'Submitted';
+      } else {
+        document.getElementById('msg').innerHTML = '<span class="msg-error">Error submitting — please try again</span>';
+        btn.disabled = false;
+        btn.textContent = 'Submit Self-Assessment';
+      }
+    } catch(e) {
+      document.getElementById('msg').innerHTML = '<span class="msg-error">Error: ' + e.message + '</span>';
+      btn.disabled = false;
+      btn.textContent = 'Submit Self-Assessment';
+    }
   }
 
   load();

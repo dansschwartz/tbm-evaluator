@@ -239,6 +239,7 @@ document.getElementById('global-org-select').addEventListener('change', function
     // Reload current section
     var active = document.querySelector('.nav-item.active');
     if (active) navigateTo(active.getAttribute('data-section'));
+    refreshBadges();
 });
 
 // ---- LOAD ORG SELECTOR ----
@@ -458,6 +459,173 @@ function buildStatCards(items) {
             '</div>';
     }).join('');
 }
+
+// ---- CSV EXPORT ----
+function downloadCSV(data, filename) {
+    if (!data || data.length === 0) { toast('No data to export', 'warning'); return; }
+    var keys = Object.keys(data[0]);
+    var csv = keys.join(',') + '\n';
+    data.forEach(function(row) {
+        csv += keys.map(function(k) {
+            var val = row[k] == null ? '' : String(row[k]);
+            if (val.indexOf(',') !== -1 || val.indexOf('"') !== -1 || val.indexOf('\n') !== -1) {
+                val = '"' + val.replace(/"/g, '""') + '"';
+            }
+            return val;
+        }).join(',') + '\n';
+    });
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename || 'export.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast('CSV exported: ' + filename, 'success');
+}
+
+function exportPlayers() {
+    if (!cachedPlayers || cachedPlayers.length === 0) { toast('No players to export', 'warning'); return; }
+    downloadCSV(cachedPlayers.map(function(p) {
+        return { Name: p.first_name + ' ' + p.last_name, Age_Group: p.age_group || '', Position: p.position || '', Jersey: p.jersey_number || '', Parent_Email: p.parent_email || '', Active: p.active ? 'Yes' : 'No' };
+    }), 'players_export.csv');
+}
+
+function exportSchedule() {
+    var rows = document.querySelectorAll('#schedule-table-body tr');
+    if (rows.length === 0 || rows[0].cells.length < 5) { toast('No schedule data to export', 'warning'); return; }
+    var data = [];
+    rows.forEach(function(tr) {
+        if (tr.cells.length >= 6) {
+            data.push({ Date: tr.cells[0].textContent, Time: tr.cells[1].textContent, Type: tr.cells[2].textContent.trim(), Title: tr.cells[3].textContent, Field: tr.cells[4].textContent, Status: tr.cells[5].textContent.trim() });
+        }
+    });
+    downloadCSV(data, 'schedule_export.csv');
+}
+
+function exportCompetition() {
+    var rows = document.querySelectorAll('#standings-table-body tr');
+    if (rows.length === 0 || rows[0].cells.length < 10) { toast('No standings data to export', 'warning'); return; }
+    var data = [];
+    rows.forEach(function(tr) {
+        if (tr.cells.length >= 10) {
+            data.push({ Team: tr.cells[0].textContent, League: tr.cells[1].textContent, P: tr.cells[2].textContent, W: tr.cells[3].textContent, D: tr.cells[4].textContent, L: tr.cells[5].textContent, GF: tr.cells[6].textContent, GA: tr.cells[7].textContent, GD: tr.cells[8].textContent, Pts: tr.cells[9].textContent });
+        }
+    });
+    downloadCSV(data, 'competition_export.csv');
+}
+
+// ---- NOTIFICATION BADGES ----
+var _badgeCounts = { coaches: 0, documents: 0, compliance: 0 };
+
+async function refreshBadges() {
+    var orgId = getSelectedOrg();
+    if (!orgId) {
+        _badgeCounts = { coaches: 0, documents: 0, compliance: 0 };
+        renderBadges();
+        return;
+    }
+    try {
+        var coaches = await api('GET', '/api/organizations/' + orgId + '/coaches');
+        var expiring = 0;
+        var now = new Date();
+        var thirtyDays = new Date(now.getTime() + 30 * 86400000);
+        coaches.forEach(function(c) {
+            (c.certifications || []).forEach(function(cert) {
+                if (cert.expiry && new Date(cert.expiry) <= thirtyDays) expiring++;
+            });
+        });
+        _badgeCounts.coaches = expiring;
+    } catch (_) {}
+    try {
+        var missing = await api('GET', '/api/organizations/' + orgId + '/documents/missing');
+        _badgeCounts.documents = (missing.players || []).length;
+    } catch (_) {}
+    try {
+        var comp = await api('GET', '/api/organizations/' + orgId + '/compliance');
+        _badgeCounts.compliance = (comp.expiring_count || 0) + (comp.missing_count || 0);
+    } catch (_) {}
+    renderBadges();
+}
+
+function renderBadges() {
+    var mapping = { 'ops-coaches': _badgeCounts.coaches, 'ops-documents': _badgeCounts.documents, 'intel-compliance': _badgeCounts.compliance };
+    for (var section in mapping) {
+        var navEl = document.querySelector('.nav-item[data-section="' + section + '"]');
+        if (!navEl) continue;
+        var existing = navEl.querySelector('.nav-badge');
+        if (existing) existing.remove();
+        if (mapping[section] > 0) {
+            var badge = document.createElement('span');
+            badge.className = 'nav-badge';
+            badge.textContent = mapping[section];
+            badge.style.cssText = 'position:absolute;top:4px;right:8px;background:#FA6E82;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;line-height:18px;text-align:center;border-radius:9px;padding:0 4px;';
+            navEl.style.position = 'relative';
+            navEl.appendChild(badge);
+        }
+    }
+}
+
+// ---- GLOBAL SEARCH ----
+var _searchTimeout = null;
+
+function globalSearch(query) {
+    var dropdown = document.getElementById('global-search-dropdown');
+    if (!query || query.length < 2) { dropdown.classList.add('hidden'); return; }
+    var orgId = getSelectedOrg();
+    if (!orgId) { dropdown.innerHTML = '<div style="padding:12px;color:#888;">Select an organization first</div>'; dropdown.classList.remove('hidden'); return; }
+
+    clearTimeout(_searchTimeout);
+    _searchTimeout = setTimeout(async function() {
+        dropdown.innerHTML = '<div style="padding:12px;color:#888;">Searching...</div>';
+        dropdown.classList.remove('hidden');
+        var results = [];
+        try {
+            var players = await api('GET', '/api/organizations/' + orgId + '/players');
+            var q = query.toLowerCase();
+            players.forEach(function(p) {
+                var name = p.first_name + ' ' + p.last_name;
+                if (name.toLowerCase().indexOf(q) !== -1) results.push({ type: 'Player', icon: 'users', name: name, section: 'players' });
+            });
+        } catch (_) {}
+        try {
+            var teams = await api('GET', '/api/organizations/' + orgId + '/teams');
+            teams.forEach(function(t) {
+                if ((t.name || '').toLowerCase().indexOf(query.toLowerCase()) !== -1) results.push({ type: 'Team', icon: 'shirt', name: t.name, section: 'ops-teams' });
+            });
+        } catch (_) {}
+        try {
+            var events = await api('GET', '/api/organizations/' + orgId + '/events');
+            events.forEach(function(e) {
+                if ((e.name || '').toLowerCase().indexOf(query.toLowerCase()) !== -1) results.push({ type: 'Event', icon: 'calendar-days', name: e.name, section: 'events' });
+            });
+        } catch (_) {}
+        try {
+            var coaches = await api('GET', '/api/organizations/' + orgId + '/coaches');
+            coaches.forEach(function(c) {
+                if ((c.name || '').toLowerCase().indexOf(query.toLowerCase()) !== -1) results.push({ type: 'Coach', icon: 'graduation-cap', name: c.name, section: 'ops-coaches' });
+            });
+        } catch (_) {}
+
+        if (results.length === 0) {
+            dropdown.innerHTML = '<div style="padding:12px;color:#888;">No results found</div>';
+        } else {
+            dropdown.innerHTML = results.slice(0, 12).map(function(r) {
+                return '<div class="search-result-item" onclick="navigateTo(\'' + r.section + '\');document.getElementById(\'global-search-dropdown\').classList.add(\'hidden\');document.getElementById(\'global-search-input\').value=\'\';" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f0f0f0;">' +
+                    '<i data-lucide="' + r.icon + '" style="width:16px;height:16px;color:#09A1A1;"></i>' +
+                    '<div><div style="font-weight:600;font-size:13px;">' + esc(r.name) + '</div><div style="font-size:11px;color:#888;">' + r.type + '</div></div></div>';
+            }).join('');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    }, 300);
+}
+
+document.addEventListener('click', function(e) {
+    var dropdown = document.getElementById('global-search-dropdown');
+    var input = document.getElementById('global-search-input');
+    if (dropdown && input && !dropdown.contains(e.target) && e.target !== input) {
+        dropdown.classList.add('hidden');
+    }
+});
 
 // ===================================================================
 // ORGANIZATIONS
@@ -4053,6 +4221,7 @@ document.getElementById('btn-expiring-compliance').addEventListener('click', asy
 (async function init() {
     await loadOrgSelector();
     navigateTo('overview');
+    refreshBadges();
 })();
 
 
