@@ -24,37 +24,21 @@ const CONFIG = {
 // Collapsible AI insight panel
 function aiPanel(title, content, startOpen) {
     if (!content) return '';
-    var id = 'ai-panel-' + Math.random().toString(36).substr(2, 9);
-    var isOpen = startOpen !== false;
-    return '<div class="ai-insight-panel" style="margin:12px 0;border:1px solid #d0e8e8;border-radius:10px;overflow:hidden;background:#fafffe;">' +
-        '<div class="ai-insight-header" onclick="var b=document.getElementById(\'' + id + '\');var a=this.querySelector(\'i\');b.style.display=b.style.display===\'none\'?\'block\':\'none\';a.style.transform=b.style.display===\'none\'?\'rotate(-90deg)\':\'rotate(0deg)\';" style="padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;background:#e8f2f2;border-bottom:1px solid #d0e8e8;user-select:none;">' +
-            '<i data-lucide="chevron-down" style="width:16px;height:16px;color:#09A1A1;transition:transform 0.2s;' + (isOpen ? '' : 'transform:rotate(-90deg);') + '"></i>' +
-            '<i data-lucide="sparkles" style="width:16px;height:16px;color:#09A1A1;"></i>' +
-            '<span style="font-weight:600;font-size:14px;color:#333;">' + title + '</span>' +
-            '<span style="margin-left:auto;font-size:11px;color:#09A1A1;font-weight:500;">AI Generated</span>' +
-        '</div>' +
-        '<div id="' + id + '" style="padding:16px;display:' + (isOpen ? 'block' : 'none') + ';">' + renderMd(content) + '</div>' +
-    '</div>';
+    return wrapAIOutput(content, '', title);
 }
 
 
 // Universal AI output wrapper with copy + rerun + download
 function wrapAIOutput(content, rerunFn, title) {
-    // Schedule icon refresh after DOM update
     setTimeout(function() { if (typeof lucide !== 'undefined') try { lucide.createIcons(); } catch(e){} }, 100);
-    title = title || 'AI Analysis';
-    var id = 'ai-out-' + Math.random().toString(36).substr(2, 9);
-    return '<div class="ai-output-wrap" style="margin:12px 0;border:1px solid #d0e8e8;border-radius:10px;overflow:hidden;background:#fafffe;">' +
-        '<div style="padding:10px 14px;display:flex;align-items:center;gap:8px;background:#e8f2f2;border-bottom:1px solid #d0e8e8;">' +
-            '<i data-lucide="sparkles" style="width:16px;height:16px;color:#09A1A1;"></i>' +
-            '<span style="font-weight:600;font-size:13px;color:#333;">' + title + '</span>' +
-            '<span style="margin-left:auto;display:flex;gap:6px;">' +
-                '<button onclick="copyAIContent(\'' + id + '\')" class="btn btn-xs btn-outline" title="Copy"><i data-lucide="copy" style="width:12px;height:12px;"></i> Copy</button>' +
-                '<button onclick="downloadAIContent(\'' + id + '\',\'' + title.replace(/'/g,'') + '\')" class="btn btn-xs btn-outline" title="Download"><i data-lucide="download" style="width:12px;height:12px;"></i></button>' +
-                (rerunFn ? '<button onclick="' + rerunFn + '" class="btn btn-xs btn-primary" title="Regenerate"><i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Rerun</button>' : '') +
-            '</span>' +
+    if (!content) return '';
+    var id = 'ai-' + Math.random().toString(36).substr(2, 9);
+    return '<div style="position:relative;padding:12px 16px;border-left:3px solid #09A1A1;margin:8px 0;background:#fafffe;border-radius:0 8px 8px 0;">' +
+        '<div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;">' +
+            '<button onclick="navigator.clipboard.writeText(document.getElementById(\'' + id + '\').innerText);toast(\'Copied\',\'success\')" style="background:none;border:1px solid #ACC0D3;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;color:#5484A4;" title="Copy">Copy</button>' +
+            (rerunFn ? '<button onclick="' + rerunFn + '" style="background:none;border:1px solid #ACC0D3;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;color:#09A1A1;" title="Rerun AI">Rerun</button>' : '') +
         '</div>' +
-        '<div id="' + id + '" style="padding:14px;">' + renderMd(content) + '</div>' +
+        '<div id="' + id + '">' + renderMd(content) + '</div>' +
     '</div>';
 }
 
