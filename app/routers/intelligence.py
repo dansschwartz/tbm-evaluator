@@ -1532,11 +1532,11 @@ async def get_iysl_statements():
     return {
         "total_statements": 60,
         "benchmarked_clubs": 2500,
-        "departments": DEPARTMENT_MAPPING,
-        "roles": ROLE_MAPPING,
-        "statements": IYSL_STATEMENTS,
-        "benchmarks": ALL_CLUBS_BENCHMARKS,
-        "top_10_benchmarks": TOP_10_BENCHMARKS,
+        "departments": IYSL_DEPARTMENT_QUESTIONS,
+        "roles": IYSL_ROLE_QUESTIONS,
+        "statements": {f"Q{i}": f"Best practice statement {i}" for i in range(1,61)},  # placeholder text
+        "benchmarks": IYSL_ALL_CLUBS_AVG,
+        "top_10_benchmarks": IYSL_TOP_10_PCT,
         "lifecycle_phases": {
             "1": "Formation",
             "2": "Growth", 
