@@ -3646,7 +3646,7 @@ async function aiCleanData() {
         var result = await api('POST', '/api/organizations/' + orgId + '/ai/ask', {
             question: 'Analyze this CSV data for a player import and identify formatting issues, duplicates, missing fields, or data quality problems. Here is the data:\n\n' + csv.substring(0, 2000)
         });
-        resultDiv.innerHTML = '<div style="padding:12px;background:linear-gradient(135deg,#e8f2f2,#e0f5f5);border-left:4px solid #09A1A1;border-radius:6px;">' +
+        resultDiv.innerHTML = '<div style="padding:12px;background:#e8f2f2;border-left:4px solid #09A1A1;border-radius:6px;">' +
             '<strong style="color:#09A1A1;">AI Data Quality Report</strong><br><br>' +
             '<div style=";">' + esc(result.answer || 'No issues found.') + '</div></div>';
     } catch (e) {
@@ -4855,7 +4855,7 @@ async function showPlayerDetail(playerId) {
         var initials = ((player.first_name || '')[0] || '') + ((player.last_name || '')[0] || '');
         var avatarHtml = player.photo_url
             ? '<img src="' + esc(player.photo_url) + '" style="width:72px;height:72px;border-radius:50%;object-fit:cover;" alt="' + esc(player.first_name) + '">'
-            : '<div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#09A1A1,#5484A4);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;">' + esc(initials) + '</div>';
+            : '<div style="width:72px;height:72px;border-radius:50%;background:#09A1A1;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;">' + esc(initials) + '</div>';
 
         // Height display
         var heightStr = '--';
@@ -5307,7 +5307,7 @@ async function loadVideosForPlayer(playerId) {
         if (!videos.length) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;">No videos uploaded yet</div>'; return; }
         grid.innerHTML = videos.map(function(v) {
             return '<div class="card" style="overflow:hidden;">' +
-                '<div style="height:160px;background:linear-gradient(135deg,#09A1A1,#5484A4);display:flex;align-items:center;justify-content:center;">' +
+                '<div style="height:160px;background:#09A1A1;display:flex;align-items:center;justify-content:center;">' +
                 (v.thumbnail_data ? '<img src="data:image/jpeg;base64,' + v.thumbnail_data + '" style="width:100%;height:100%;object-fit:cover;">' : '<i data-lucide="video" style="width:48px;height:48px;color:white;"></i>') +
                 '</div>' +
                 '<div style="padding:12px;">' +
