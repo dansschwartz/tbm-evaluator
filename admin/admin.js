@@ -2503,7 +2503,7 @@ function renderFieldMap(fields) {
             scrollWheelZoom: true
         }).setView([38.91, -77.04], 12);
 
-        L.tileLayer('https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+        L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap contributors, CartoDB',
             maxZoom: 18
         }).addTo(_fieldLeafletMap);
