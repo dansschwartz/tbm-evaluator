@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
-from app.models import Base, EvaluationTemplate, Organization
+from app.models import *  # Import ALL models so create_all sees them
 from app.routers import (
     analytics, draft, evaluators, events, features, notifications,
     organizations, players, reports, scoring, templates,
