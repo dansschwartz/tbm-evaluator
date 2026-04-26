@@ -49,7 +49,7 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: linear-gradient(135deg, #f0f9f9 0%, #f4f6fa 40%, #faf5f6 100%);
+    background: #f0f9f9;
     position: relative;
     overflow: hidden;
   }
@@ -93,7 +93,7 @@
     width: 64px;
     height: 64px;
     border-radius: 16px;
-    background: linear-gradient(135deg, var(--teal) 0%, var(--steel) 100%);
+    background: #09A1A1 0%, var(--steel) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -302,7 +302,7 @@
     font-size: 20px;
     font-weight: 700;
     color: #fff;
-    background: linear-gradient(135deg, var(--teal) 0%, var(--steel) 100%);
+    background: #09A1A1 0%, var(--steel) 100%);
     overflow: hidden;
   }
   .avatar img {
@@ -802,10 +802,10 @@
       playerReports.forEach((r, idx) => {
         const latest = r;
         const avatarBg = [
-          'linear-gradient(135deg, #09A1A1, #5484A4)',
-          'linear-gradient(135deg, #5484A4, #ACC0D3)',
-          'linear-gradient(135deg, #FA6E82, #D396A6)',
-          'linear-gradient(135deg, #F6C992, #FA6E82)',
+          '#09A1A1',
+          '#5484A4',
+          '#FA6E82',
+          '#F6C992',
         ];
         const bgStyle = avatarBg[playerNames.indexOf(name) % avatarBg.length];
 
@@ -935,7 +935,7 @@
       section.style.display = 'block';
       list.innerHTML = videos.map(function(v) {
         return '<div style="background:#fff;border-radius:12px;border:1px solid #e8ecf0;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04);">' +
-          '<div style="height:120px;background:linear-gradient(135deg,#09A1A1,#5484A4);display:flex;align-items:center;justify-content:center;">' +
+          '<div style="height:120px;background:#09A1A1;display:flex;align-items:center;justify-content:center;">' +
           (v.thumbnail_data ? '<img src="data:image/jpeg;base64,' + v.thumbnail_data + '" style="width:100%;height:100%;object-fit:cover;">' : '<i data-lucide="video" style="width:36px;height:36px;color:white;"></i>') +
           '</div>' +
           '<div style="padding:12px;">' +

@@ -58,7 +58,7 @@ html, body {
 .sidebar {
     width: var(--sidebar-width);
     min-width: var(--sidebar-width);
-    background: linear-gradient(180deg, #1a2332 0%, #253344 100%);
+    background: #1a2332;
     color: #fff;
     display: flex;
     flex-direction: column;
@@ -1114,7 +1114,7 @@ textarea:focus-visible,
 /* ===== Skeleton Loader ===== */
 .skeleton-row {
     height: 14px;
-    background: linear-gradient(90deg, #e9ecef 25%, #f4f6f9 50%, #e9ecef 75%);
+    background: #e9ecef;
     background-size: 200% 100%;
     animation: skeletonPulse 1.5s ease-in-out infinite;
     border-radius: 4px;
@@ -1128,7 +1128,7 @@ textarea:focus-visible,
 
 .ai-thinking-indicator {
     display: flex; align-items: center; gap: 10px;
-    padding: 16px; background: linear-gradient(135deg, #e8f2f2, #e0f5f5);
+    padding: 16px; background: #e8f2f2;
     border-radius: 8px; border-left: 4px solid var(--teal);
     font-size: 14px; color: var(--teal-dark); font-weight: 500;
 }

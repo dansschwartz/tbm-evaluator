@@ -25,7 +25,7 @@
     z-index: 9999;
 ">
     <div style="display:flex;align-items:center;gap:8px;margin-right:16px;">
-        <div style="width:28px;height:28px;background:linear-gradient(135deg,#09A1A1,#5484A4);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+        <div style="width:28px;height:28px;background:#09A1A1;border-radius:8px;display:flex;align-items:center;justify-content:center;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
         </div>
         <a href="/" style="font-weight:700;color:#333;text-decoration:none;">Tiny But Mighty</a>
@@ -480,7 +480,7 @@
                             <button class="btn btn-secondary" id="btn-ai-insights"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Insights</button>
                         </div>
                     </div>
-                    <div id="ai-analytics-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:linear-gradient(135deg,#e8f2f2,#e0f5f5);border-left:4px solid #09A1A1;"></div></div>
+                    <div id="ai-analytics-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:#e8f2f2;border-left:4px solid #09A1A1;"></div></div>
                     <div class="stats-grid" id="analytics-stats"></div>
                     <div class="analytics-charts">
                         <div class="card">
@@ -552,7 +552,7 @@
                         </div>
                     </div>
                     <div class="stats-grid" id="seasons-stats-bar"></div>
-                    <div id="ai-season-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:linear-gradient(135deg,#e8f2f2,#e0f5f5);border-left:4px solid #09A1A1;"></div></div>
+                    <div id="ai-season-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:#e8f2f2;border-left:4px solid #09A1A1;"></div></div>
                     <div class="card">
                         <div class="card-header"><h3>Seasons</h3></div>
                         <div class="card-body">
@@ -591,7 +591,7 @@
                         </div>
                     </div>
                     <div class="stats-grid" id="teams-stats-bar"></div>
-                    <div id="ai-teams-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:linear-gradient(135deg,#e8f2f2,#e0f5f5);border-left:4px solid #09A1A1;"></div></div>
+                    <div id="ai-teams-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:#e8f2f2;border-left:4px solid #09A1A1;"></div></div>
                     <div class="card">
                         <div class="card-body">
                             <table class="data-table" id="ops-teams-table">
@@ -615,7 +615,7 @@
                         </div>
                     </div>
                     <div class="stats-grid" id="fields-stats-bar"></div>
-                    <div id="ai-field-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:linear-gradient(135deg,#e8f2f2,#e0f5f5);border-left:4px solid #09A1A1;"></div></div>
+                    <div id="ai-field-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:#e8f2f2;border-left:4px solid #09A1A1;"></div></div>
                     <div class="card">
                         <div class="card-body">
                             <table class="data-table" id="fields-table">
@@ -734,7 +734,7 @@
                         </div>
                     </div>
                     <div class="stats-grid" id="attendance-stats-bar"></div>
-                    <div id="ai-attendance-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:linear-gradient(135deg,#e8f2f2,#e0f5f5);border-left:4px solid #09A1A1;"></div></div>
+                    <div id="ai-attendance-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:#e8f2f2;border-left:4px solid #09A1A1;"></div></div>
                     <div class="card">
                         <div class="card-header"><h3>Mark Attendance</h3></div>
                         <div class="card-body" id="attendance-roster-body">
@@ -844,7 +844,7 @@
                     </div>
                     <div class="card" style="margin-top:16px;">
                         <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;"><h3>AI Narrative</h3><button class="btn btn-sm btn-outline" onclick="generateHealthScore()" style="font-size:12px;"><i data-lucide="refresh-cw" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:2px;"></i> Regenerate</button></div>
-                        <div class="card-body" id="health-ai-narrative" style="background:linear-gradient(135deg,#e8f2f2,#e0f5f5);border-left:4px solid #09A1A1;">
+                        <div class="card-body" id="health-ai-narrative" style="background:#e8f2f2;border-left:4px solid #09A1A1;">
                             <p class="text-muted">AI analysis will appear here after generating a health score.</p>
                         </div>
                     </div>
@@ -935,7 +935,7 @@
                         </div>
                         <div class="card" style="margin-top:16px;">
                             <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;"><h3>AI Improvement Recommendations</h3><button class="btn btn-sm btn-outline" onclick="document.getElementById('btn-view-assessment-report').click()" style="font-size:12px;"><i data-lucide="refresh-cw" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:2px;"></i> Regenerate</button></div>
-                            <div class="card-body" id="assessment-ai-body" style="background:linear-gradient(135deg,#e8f2f2,#e0f5f5);border-left:4px solid #09A1A1;"></div>
+                            <div class="card-body" id="assessment-ai-body" style="background:#e8f2f2;border-left:4px solid #09A1A1;"></div>
                         </div>
                     </div>
                 </section>
