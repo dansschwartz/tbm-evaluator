@@ -635,4 +635,168 @@ class PlayerDocument(Base):
     verified = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
 
-    player = relationship("Player")
+    doc_player = relationship("Player")
+
+
+# ══════════════════════════════════════════════════════════════════
+# TIER 1+2 FEATURES
+# ══════════════════════════════════════════════════════════════════
+
+# Feature: Training Program Builder
+class TrainingProgram(Base):
+    __tablename__ = "training_programs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    player_id = Column(UUID(as_uuid=True), ForeignKey("players.id", ondelete="SET NULL"), nullable=True)
+    template_name = Column(String(255), nullable=True)
+    sport = Column(String(100), default="soccer")
+    duration_weeks = Column(Integer, default=4)
+    phase_name = Column(String(100), nullable=True)  # Off-Season, Pre-Season, In-Season
+    status = Column(String(50), default="draft")  # draft/active/completed
+    created_by = Column(String(255), nullable=True)
+    ai_generated = Column(Boolean, default=False)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    organization = relationship("Organization")
+    assigned_player = relationship("Player")
+    weeks = relationship("ProgramWeek", back_populates="program", cascade="all, delete-orphan")
+
+
+class ProgramWeek(Base):
+    __tablename__ = "program_weeks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    program_id = Column(UUID(as_uuid=True), ForeignKey("training_programs.id", ondelete="CASCADE"), nullable=False)
+    week_number = Column(Integer, nullable=False)
+    focus = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+
+    program = relationship("TrainingProgram", back_populates="weeks")
+    sessions = relationship("ProgramSession", back_populates="week", cascade="all, delete-orphan")
+
+
+class ProgramSession(Base):
+    __tablename__ = "program_sessions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    week_id = Column(UUID(as_uuid=True), ForeignKey("program_weeks.id", ondelete="CASCADE"), nullable=False)
+    day_of_week = Column(String(20), nullable=True)
+    session_type = Column(String(50), nullable=True)  # strength/speed/skill/recovery/game
+    exercises = Column(JSONB, default=list)  # [{name, sets, reps, intensity, notes, video_url}]
+
+    week = relationship("ProgramWeek", back_populates="sessions")
+
+
+# Feature: In-App Messaging
+class ChatThread(Base):
+    __tablename__ = "chat_threads"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    thread_type = Column(String(50), default="direct")  # direct/team/announcement
+    title = Column(String(500), nullable=True)
+    participants = Column(JSONB, default=list)  # [{id, name, role}]
+    player_id = Column(UUID(as_uuid=True), ForeignKey("players.id", ondelete="SET NULL"), nullable=True)
+    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    last_message_at = Column(DateTime, nullable=True)
+
+    organization = relationship("Organization")
+    thread_player = relationship("Player")
+    messages = relationship("ChatMessage", back_populates="thread", cascade="all, delete-orphan")
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    thread_id = Column(UUID(as_uuid=True), ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False)
+    sender_name = Column(String(255), nullable=True)
+    sender_role = Column(String(50), nullable=True)  # coach/parent/admin
+    content = Column(Text, nullable=True)
+    attachments = Column(JSONB, default=list)  # [{name, url, type}]
+    read_by = Column(JSONB, default=list)
+    created_at = Column(DateTime, server_default=func.now())
+
+    thread = relationship("ChatThread", back_populates="messages")
+
+
+# Feature: Video Upload + AI Analysis
+class PlayerVideo(Base):
+    __tablename__ = "player_videos"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    player_id = Column(UUID(as_uuid=True), ForeignKey("players.id", ondelete="CASCADE"), nullable=False)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    event_id = Column(UUID(as_uuid=True), ForeignKey("evaluation_events.id", ondelete="SET NULL"), nullable=True)
+    title = Column(String(500), nullable=True)
+    description = Column(Text, nullable=True)
+    video_data = Column(Text, nullable=True)  # base64 encoded
+    thumbnail_data = Column(Text, nullable=True)  # base64 encoded
+    duration_seconds = Column(Float, nullable=True)
+    tags = Column(JSONB, default=list)
+    ai_analysis = Column(Text, nullable=True)
+    uploaded_by = Column(String(255), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    video_player = relationship("Player")
+    organization = relationship("Organization")
+
+
+# Feature: Automation Workflows
+class AutomationRule(Base):
+    __tablename__ = "automation_rules"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(255), nullable=False)
+    trigger_event = Column(String(100), nullable=False)
+    conditions = Column(JSONB, default=dict)
+    actions = Column(JSONB, default=list)  # [{type, params}]
+    enabled = Column(Boolean, default=True)
+    run_count = Column(Integer, default=0)
+    last_run_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    organization = relationship("Organization")
+
+
+# Feature: Self-Service Booking
+class BookableSlot(Base):
+    __tablename__ = "bookable_slots"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String(500), nullable=False)
+    slot_type = Column(String(50), default="camp")  # camp/clinic/training/assessment
+    capacity = Column(Integer, default=20)
+    booked_count = Column(Integer, default=0)
+    start_time = Column(DateTime, nullable=True)
+    end_time = Column(DateTime, nullable=True)
+    location = Column(String(500), nullable=True)
+    price = Column(Float, nullable=True)
+    description = Column(Text, nullable=True)
+    coach_name = Column(String(255), nullable=True)
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    organization = relationship("Organization")
+    slot_bookings = relationship("Booking", back_populates="slot", cascade="all, delete-orphan")
+
+
+class Booking(Base):
+    __tablename__ = "bookings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    slot_id = Column(UUID(as_uuid=True), ForeignKey("bookable_slots.id", ondelete="CASCADE"), nullable=False)
+    player_id = Column(UUID(as_uuid=True), ForeignKey("players.id", ondelete="SET NULL"), nullable=True)
+    parent_name = Column(String(255), nullable=True)
+    parent_email = Column(String(255), nullable=True)
+    status = Column(String(50), default="confirmed")  # confirmed/waitlisted/cancelled
+    booked_at = Column(DateTime, server_default=func.now())
+    notes = Column(Text, nullable=True)
+
+    slot = relationship("BookableSlot", back_populates="slot_bookings")
+    booking_player = relationship("Player")

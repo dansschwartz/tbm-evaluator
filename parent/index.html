@@ -622,6 +622,30 @@
   <div class="results-body" id="resultsBody">
     <!-- Populated by JS -->
   </div>
+
+  <!-- ═══ PARENT: TRAINING PROGRAMS ═══ -->
+  <div id="parentProgramsSection" style="display:none;margin-top:24px;">
+    <h3 style="color:#333;font-size:18px;font-weight:700;margin:0 0 12px;padding:0 20px;display:flex;align-items:center;gap:8px;">
+      <i data-lucide="dumbbell" style="width:20px;height:20px;color:#09A1A1;"></i> Training Programs
+    </h3>
+    <div id="parentProgramsList" style="padding:0 20px;"></div>
+  </div>
+
+  <!-- ═══ PARENT: MESSAGES ═══ -->
+  <div id="parentMessagesSection" style="display:none;margin-top:24px;">
+    <h3 style="color:#333;font-size:18px;font-weight:700;margin:0 0 12px;padding:0 20px;display:flex;align-items:center;gap:8px;">
+      <i data-lucide="message-circle" style="width:20px;height:20px;color:#09A1A1;"></i> Messages
+    </h3>
+    <div id="parentMessagesList" style="padding:0 20px;"></div>
+  </div>
+
+  <!-- ═══ PARENT: VIDEOS ═══ -->
+  <div id="parentVideosSection" style="display:none;margin-top:24px;">
+    <h3 style="color:#333;font-size:18px;font-weight:700;margin:0 0 12px;padding:0 20px;display:flex;align-items:center;gap:8px;">
+      <i data-lucide="video" style="width:20px;height:20px;color:#09A1A1;"></i> Player Videos
+    </h3>
+    <div id="parentVideosList" style="padding:0 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;"></div>
+  </div>
 </div>
 
 <script>
@@ -841,6 +865,90 @@
     return html;
   }
 
+  // ═══ PARENT PORTAL: Programs, Messages, Videos ═══
+  async function loadParentPrograms(playerId) {
+    var section = document.getElementById('parentProgramsSection');
+    var list = document.getElementById('parentProgramsList');
+    try {
+      var resp = await fetch(API + '/api/players/' + playerId + '/programs', {headers:{'X-Admin-Key':'parent-access'}});
+      if (!resp.ok) { section.style.display = 'none'; return; }
+      var programs = await resp.json();
+      if (!programs.length) { section.style.display = 'none'; return; }
+      section.style.display = 'block';
+      list.innerHTML = programs.map(function(p) {
+        var statusColor = p.status === 'active' ? '#2d8a5e' : p.status === 'completed' ? '#5484A4' : '#e8b06e';
+        var html = '<div style="background:#fff;border-radius:12px;border:1px solid #e8ecf0;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+        html += '<strong style="font-size:15px;color:#333;">' + (p.template_name || 'Training Program') + '</strong>';
+        html += '<span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:' + statusColor + '22;color:' + statusColor + ';">' + (p.status || 'draft') + '</span>';
+        html += '</div>';
+        html += '<div style="font-size:13px;color:#666;">' + (p.sport || '') + ' · ' + (p.phase_name || '') + ' · ' + (p.duration_weeks || 0) + ' weeks' + (p.ai_generated ? ' · <span style="color:#09A1A1;">AI Generated</span>' : '') + '</div>';
+        if (p.weeks && p.weeks.length) {
+          html += '<div style="margin-top:10px;">';
+          p.weeks.forEach(function(w) {
+            html += '<div style="padding:8px 12px;margin:4px 0;background:#f8f9fa;border-radius:8px;border-left:3px solid #09A1A1;">';
+            html += '<strong style="font-size:13px;">Week ' + w.week_number + ':</strong> ' + (w.focus || 'General');
+            if (w.sessions && w.sessions.length) {
+              html += '<div style="margin-top:4px;font-size:12px;color:#666;">' + w.sessions.length + ' session(s): ' + w.sessions.map(function(s){return s.day_of_week;}).join(', ') + '</div>';
+            }
+            html += '</div>';
+          });
+          html += '</div>';
+        }
+        html += '</div>';
+        return html;
+      }).join('');
+    } catch(e) { section.style.display = 'none'; }
+  }
+
+  async function loadParentMessages(playerId) {
+    var section = document.getElementById('parentMessagesSection');
+    var list = document.getElementById('parentMessagesList');
+    try {
+      var resp = await fetch(API + '/api/players/' + playerId + '/threads', {headers:{'X-Admin-Key':'parent-access'}});
+      if (!resp.ok) { section.style.display = 'none'; return; }
+      var threads = await resp.json();
+      if (!threads.length) { section.style.display = 'none'; return; }
+      section.style.display = 'block';
+      list.innerHTML = threads.map(function(t) {
+        var typeColors = {direct:'#09A1A1',team:'#5484A4',announcement:'#FA6E82'};
+        var c = typeColors[t.thread_type] || '#888';
+        return '<div style="background:#fff;border-radius:12px;border:1px solid #e8ecf0;padding:14px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<strong style="font-size:14px;color:#333;">' + (t.title || 'Message Thread') + '</strong>' +
+          '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:' + c + '22;color:' + c + ';">' + (t.thread_type || 'direct') + '</span>' +
+          '</div>' +
+          '<div style="font-size:12px;color:#888;margin-top:4px;">' + (t.participants ? t.participants.length : 0) + ' participants' + (t.last_message_at ? ' · Last message: ' + new Date(t.last_message_at).toLocaleDateString() : '') + '</div>' +
+          '</div>';
+      }).join('');
+    } catch(e) { section.style.display = 'none'; }
+  }
+
+  async function loadParentVideos(playerId) {
+    var section = document.getElementById('parentVideosSection');
+    var list = document.getElementById('parentVideosList');
+    try {
+      var resp = await fetch(API + '/api/players/' + playerId + '/videos', {headers:{'X-Admin-Key':'parent-access'}});
+      if (!resp.ok) { section.style.display = 'none'; return; }
+      var videos = await resp.json();
+      if (!videos.length) { section.style.display = 'none'; return; }
+      section.style.display = 'block';
+      list.innerHTML = videos.map(function(v) {
+        return '<div style="background:#fff;border-radius:12px;border:1px solid #e8ecf0;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04);">' +
+          '<div style="height:120px;background:linear-gradient(135deg,#09A1A1,#5484A4);display:flex;align-items:center;justify-content:center;">' +
+          (v.thumbnail_data ? '<img src="data:image/jpeg;base64,' + v.thumbnail_data + '" style="width:100%;height:100%;object-fit:cover;">' : '<i data-lucide="video" style="width:36px;height:36px;color:white;"></i>') +
+          '</div>' +
+          '<div style="padding:12px;">' +
+          '<strong style="font-size:14px;color:#333;">' + (v.title || 'Video') + '</strong>' +
+          '<div style="font-size:12px;color:#888;margin-top:4px;">' + (v.duration_seconds ? Math.round(v.duration_seconds) + 's' : '') + (v.created_at ? ' · ' + new Date(v.created_at).toLocaleDateString() : '') + '</div>' +
+          (v.ai_analysis ? '<div style="margin-top:8px;padding:8px;background:#e6f7f7;border-radius:6px;font-size:12px;color:#333;max-height:60px;overflow:hidden;">' + v.ai_analysis.substring(0,120) + '...</div>' : '') +
+          '</div></div>';
+      }).join('');
+    } catch(e) { section.style.display = 'none'; }
+  }
+
+  var _parentPlayerIds = [];
+
   async function handleLookup() {
     hideError();
     const email = document.getElementById('emailInput').value.trim();
@@ -880,6 +988,14 @@
 
       document.getElementById('resultsBody').innerHTML = buildPlayerCards(data);
       if (typeof lucide !== 'undefined') lucide.createIcons();
+
+      // Load programs, messages, videos for each player
+      const playerIds = [...new Set(data.filter(r => r.player_id).map(r => r.player_id))];
+      if (playerIds.length > 0) {
+        loadParentPrograms(playerIds[0]);
+        loadParentMessages(playerIds[0]);
+        loadParentVideos(playerIds[0]);
+      }
     } catch (e) {
       showError('Could not find reports for this email. Please double-check and try again.');
     }

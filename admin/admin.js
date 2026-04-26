@@ -168,6 +168,7 @@ document.getElementById('modal-overlay').addEventListener('click', function(e) {
 const navItems = document.querySelectorAll('.nav-item');
 const sections = ['overview', 'organizations', 'templates', 'events', 'players', 'reports', 'draft', 'analytics',
     'ops-overview', 'ops-seasons', 'ops-teams', 'ops-fields', 'ops-schedule', 'ops-coaches', 'ops-comms', 'ops-attendance', 'ops-documents', 'ops-import', 'ops-ai',
+    't2-programs', 't2-messages', 't2-videos', 't2-automations', 't2-bookings',
     'intel-health', 'intel-assessment', 'intel-development', 'intel-competition', 'intel-compliance'];
 
 const SECTION_TITLES = {
@@ -177,6 +178,8 @@ const SECTION_TITLES = {
     'ops-fields': 'Fields & Facilities', 'ops-schedule': 'Schedule', 'ops-coaches': 'Coaches & Staff',
     'ops-comms': 'Communications', 'ops-attendance': 'Attendance', 'ops-documents': 'Documents',
     'ops-import': 'PlayMetrics Import', 'ops-ai': 'AI Assistant',
+    't2-programs': 'Training Programs', 't2-messages': 'Messages', 't2-videos': 'Videos',
+    't2-automations': 'Automations', 't2-bookings': 'Bookings',
     'intel-health': 'Club Intelligence', 'intel-assessment': 'Best Practices',
     'intel-development': 'Player Development', 'intel-competition': 'Competition',
     'intel-compliance': 'Compliance',
@@ -218,6 +221,12 @@ function navigateTo(section) {
     else if (section === 'ops-documents') loadOpsDocuments(orgId);
     else if (section === 'ops-import') loadOpsImport(orgId);
     else if (section === 'ops-ai') { /* AI assistant is static but needs org context */ }
+    // Tier 2 feature sections
+    else if (section === 't2-programs') loadPrograms(orgId);
+    else if (section === 't2-messages') loadMessages(orgId);
+    else if (section === 't2-videos') loadVideos(orgId);
+    else if (section === 't2-automations') loadAutomations(orgId);
+    else if (section === 't2-bookings') loadBookings(orgId);
     // Intelligence sections
     else if (section === 'intel-health') loadIntelHealth(orgId);
     else if (section === 'intel-assessment') loadIntelAssessment(orgId);
@@ -5036,6 +5045,565 @@ document.getElementById('modal-overlay').addEventListener('keydown', function(e)
         if (document.activeElement === last) { e.preventDefault(); first.focus(); }
     }
 });
+
+// ===================================================================
+// TIER 2: TRAINING PROGRAMS
+// ===================================================================
+async function loadPrograms(orgId) {
+    if (!orgId) { document.getElementById('programs-table-body').innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;">Select an organization</td></tr>'; return; }
+    try {
+        var programs = await api('GET', '/api/organizations/' + orgId + '/programs');
+        var stats = document.getElementById('programs-stats');
+        var total = programs.length;
+        var active = programs.filter(function(p) { return p.status === 'active'; }).length;
+        var aiGen = programs.filter(function(p) { return p.ai_generated; }).length;
+        var drafts = programs.filter(function(p) { return p.status === 'draft'; }).length;
+        stats.innerHTML =
+            '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#09A1A1;">' + total + '</div><div style="font-size:12px;color:#888;">Total Programs</div></div>' +
+            '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#2d8a5e;">' + active + '</div><div style="font-size:12px;color:#888;">Active</div></div>' +
+            '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#5484A4;">' + aiGen + '</div><div style="font-size:12px;color:#888;">AI Generated</div></div>' +
+            '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#e8b06e;">' + drafts + '</div><div style="font-size:12px;color:#888;">Drafts</div></div>';
+        var tbody = document.getElementById('programs-table-body');
+        if (!programs.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;">No programs yet</td></tr>'; return; }
+        tbody.innerHTML = programs.map(function(p) {
+            var statusColor = p.status === 'active' ? '#2d8a5e' : p.status === 'completed' ? '#5484A4' : '#e8b06e';
+            return '<tr>' +
+                '<td><strong>' + (p.template_name || 'Untitled') + '</strong></td>' +
+                '<td>' + (p.sport || '-') + '</td>' +
+                '<td>' + (p.phase_name || '-') + '</td>' +
+                '<td>' + (p.duration_weeks || '-') + '</td>' +
+                '<td>' + (p.player_id ? '<span style="color:#09A1A1;">Assigned</span>' : '<span style="color:#888;">Template</span>') + '</td>' +
+                '<td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;background:' + statusColor + '22;color:' + statusColor + ';">' + (p.status || 'draft') + '</span></td>' +
+                '<td>' + (p.ai_generated ? '<i data-lucide="sparkles" style="width:14px;height:14px;color:#09A1A1;"></i>' : '-') + '</td>' +
+                '<td><button class="btn btn-sm btn-outline" onclick="viewProgram(\'' + p.id + '\')">View</button> <button class="btn btn-sm btn-outline" style="color:#FA6E82;border-color:#FA6E82;" onclick="deleteProgram(\'' + p.id + '\')">Delete</button></td>' +
+                '</tr>';
+        }).join('');
+    } catch(e) { console.error('Load programs error:', e); }
+}
+
+function showCreateProgramModal() {
+    var orgId = getSelectedOrg();
+    if (!orgId) { toast('Select an organization first', 'warning'); return; }
+    openModal('Create Training Program',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        '<div><label style="font-weight:600;font-size:13px;">Program Name</label><input type="text" id="prog-name" class="form-input" placeholder="e.g. Pre-Season Strength"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Sport</label><input type="text" id="prog-sport" class="form-input" value="soccer"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Phase</label><select id="prog-phase" class="form-select"><option>Off-Season</option><option>Pre-Season</option><option>In-Season</option><option>Post-Season</option></select></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Duration (weeks)</label><input type="number" id="prog-weeks" class="form-input" value="4"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Created By</label><input type="text" id="prog-creator" class="form-input" placeholder="Coach name"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Status</label><select id="prog-status" class="form-select"><option value="draft">Draft</option><option value="active">Active</option></select></div>' +
+        '</div>' +
+        '<div style="margin-top:12px;"><label style="font-weight:600;font-size:13px;">Notes</label><textarea id="prog-notes" class="form-input" style="width:100%;height:60px;" placeholder="Optional notes"></textarea></div>',
+        '<button class="btn btn-primary" onclick="createProgram()">Create Program</button>'
+    );
+}
+
+async function createProgram() {
+    var orgId = getSelectedOrg();
+    try {
+        await api('POST', '/api/organizations/' + orgId + '/programs', {
+            template_name: document.getElementById('prog-name').value,
+            sport: document.getElementById('prog-sport').value,
+            phase_name: document.getElementById('prog-phase').value,
+            duration_weeks: parseInt(document.getElementById('prog-weeks').value) || 4,
+            created_by: document.getElementById('prog-creator').value,
+            status: document.getElementById('prog-status').value,
+            notes: document.getElementById('prog-notes').value,
+        });
+        closeModal(); toast('Program created!'); loadPrograms(orgId);
+    } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function showAIGenerateProgramModal() {
+    var orgId = getSelectedOrg();
+    if (!orgId) { toast('Select an organization first', 'warning'); return; }
+    openModal('AI Generate Program',
+        '<p style="margin-bottom:12px;color:#666;">Create a program first, then use AI to generate the weekly plan. Optionally assign a player so AI can tailor exercises to their evaluation data.</p>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        '<div><label style="font-weight:600;font-size:13px;">Program Name</label><input type="text" id="aiprog-name" class="form-input" value="AI Training Plan"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Sport</label><input type="text" id="aiprog-sport" class="form-input" value="soccer"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Phase</label><select id="aiprog-phase" class="form-select"><option>Pre-Season</option><option>Off-Season</option><option>In-Season</option></select></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Weeks</label><input type="number" id="aiprog-weeks" class="form-input" value="4"></div>' +
+        '</div>',
+        '<button class="btn btn-primary" onclick="aiGenerateProgram()"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Generate with AI</button>'
+    );
+}
+
+async function aiGenerateProgram() {
+    var orgId = getSelectedOrg();
+    showLoading();
+    try {
+        var prog = await api('POST', '/api/organizations/' + orgId + '/programs', {
+            template_name: document.getElementById('aiprog-name').value,
+            sport: document.getElementById('aiprog-sport').value,
+            phase_name: document.getElementById('aiprog-phase').value,
+            duration_weeks: parseInt(document.getElementById('aiprog-weeks').value) || 4,
+            status: 'draft',
+        });
+        var result = await api('POST', '/api/programs/' + prog.id + '/ai-generate');
+        closeModal(); hideLoading(); toast('AI program generated with ' + (result.weeks ? result.weeks.length : 0) + ' weeks!');
+        loadPrograms(orgId);
+    } catch(e) { hideLoading(); toast('AI generation error: ' + e.message, 'error'); }
+}
+
+async function viewProgram(progId) {
+    try {
+        var p = await api('GET', '/api/programs/' + progId);
+        var html = '<div class="card" style="margin-bottom:12px;"><div class="card-header"><h3>' + (p.template_name || 'Program') + ' — ' + (p.phase_name || '') + ' (' + (p.duration_weeks || 0) + ' weeks)</h3></div><div class="card-body">';
+        if (p.weeks && p.weeks.length) {
+            p.weeks.forEach(function(w) {
+                html += '<div style="margin-bottom:16px;padding:12px;background:#f8f9fa;border-radius:8px;border-left:4px solid #09A1A1;">';
+                html += '<h4 style="margin:0 0 8px;color:#333;">Week ' + w.week_number + ': ' + (w.focus || 'General') + '</h4>';
+                if (w.notes) html += '<p style="color:#666;font-size:13px;margin:0 0 8px;">' + w.notes + '</p>';
+                if (w.sessions && w.sessions.length) {
+                    w.sessions.forEach(function(s) {
+                        html += '<div style="margin:8px 0;padding:8px 12px;background:#fff;border-radius:6px;border:1px solid #e8ecf0;">';
+                        html += '<strong style="color:#5484A4;">' + (s.day_of_week || 'TBD') + '</strong> — <span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#09A1A122;color:#09A1A1;">' + (s.session_type || 'general') + '</span>';
+                        if (s.exercises && s.exercises.length) {
+                            html += '<ul style="margin:4px 0 0 16px;font-size:13px;">';
+                            s.exercises.forEach(function(ex) {
+                                html += '<li><strong>' + (ex.name || 'Exercise') + '</strong>';
+                                if (ex.sets) html += ' — ' + ex.sets + ' x ' + (ex.reps || '');
+                                if (ex.intensity) html += ' @ ' + ex.intensity;
+                                if (ex.notes) html += ' <span style="color:#888;">(' + ex.notes + ')</span>';
+                                html += '</li>';
+                            });
+                            html += '</ul>';
+                        }
+                        html += '</div>';
+                    });
+                }
+                html += '</div>';
+            });
+        } else {
+            html += '<p style="color:#888;">No weeks defined. Use AI Generate to create a training plan.</p>';
+        }
+        html += '</div></div>';
+        document.getElementById('program-detail-panel').innerHTML = html;
+        document.getElementById('program-detail-panel').style.display = 'block';
+    } catch(e) { toast('Error loading program: ' + e.message, 'error'); }
+}
+
+async function deleteProgram(progId) {
+    if (!confirm('Delete this program?')) return;
+    try { await api('DELETE', '/api/programs/' + progId); toast('Deleted'); loadPrograms(getSelectedOrg()); } catch(e) { toast(e.message, 'error'); }
+}
+
+// ===================================================================
+// TIER 2: MESSAGES
+// ===================================================================
+var _currentThreadId = null;
+
+async function loadMessages(orgId) {
+    if (!orgId) { document.getElementById('threads-list').innerHTML = '<p style="text-align:center;color:#888;padding:20px;">Select an organization</p>'; return; }
+    try {
+        var filterType = document.getElementById('msg-filter-type') ? document.getElementById('msg-filter-type').value : '';
+        var url = '/api/organizations/' + orgId + '/threads';
+        if (filterType) url += '?thread_type=' + filterType;
+        var threads = await api('GET', url);
+        var list = document.getElementById('threads-list');
+        if (!threads.length) { list.innerHTML = '<p style="text-align:center;color:#888;padding:20px;">No threads yet</p>'; return; }
+        list.innerHTML = threads.map(function(t) {
+            var typeColors = {direct:'#09A1A1',team:'#5484A4',announcement:'#FA6E82'};
+            var color = typeColors[t.thread_type] || '#888';
+            var active = _currentThreadId === t.id ? 'background:#e6f7f7;' : '';
+            return '<div onclick="openThread(\'' + t.id + '\',\'' + (t.title||'Thread').replace(/'/g,'\\\'') + '\')" style="padding:12px;border-bottom:1px solid #f0f0f0;cursor:pointer;' + active + '">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                '<strong style="font-size:14px;">' + (t.title || 'Untitled') + '</strong>' +
+                '<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:' + color + '22;color:' + color + ';font-weight:600;">' + (t.thread_type || 'direct') + '</span>' +
+                '</div>' +
+                '<div style="font-size:12px;color:#888;margin-top:4px;">' + (t.participants ? t.participants.length : 0) + ' participants' +
+                (t.last_message_at ? ' · ' + new Date(t.last_message_at).toLocaleDateString() : '') + '</div>' +
+                '</div>';
+        }).join('');
+    } catch(e) { console.error('Load threads error:', e); }
+}
+
+async function openThread(threadId, title) {
+    _currentThreadId = threadId;
+    document.getElementById('msg-thread-title').textContent = title;
+    document.getElementById('msg-compose').style.display = 'block';
+    try {
+        var msgs = await api('GET', '/api/threads/' + threadId + '/messages');
+        var list = document.getElementById('messages-list');
+        if (!msgs.length) { list.innerHTML = '<p style="text-align:center;color:#888;padding:20px;">No messages yet. Start the conversation!</p>'; return; }
+        list.innerHTML = msgs.map(function(m) {
+            var roleColors = {admin:'#09A1A1',coach:'#5484A4',parent:'#FA6E82'};
+            var color = roleColors[m.sender_role] || '#888';
+            return '<div style="margin:8px 0;padding:10px 14px;background:#f8f9fa;border-radius:10px;border-left:3px solid ' + color + ';">' +
+                '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
+                '<strong style="color:' + color + ';">' + (m.sender_name || 'Unknown') + '</strong>' +
+                '<span style="font-size:11px;color:#aaa;">' + (m.created_at ? new Date(m.created_at).toLocaleString() : '') + '</span>' +
+                '</div>' +
+                '<div style="font-size:14px;color:#333;">' + (m.content || '').replace(/</g,'&lt;') + '</div>' +
+                '</div>';
+        }).join('');
+        list.scrollTop = list.scrollHeight;
+    } catch(e) { toast('Error loading messages: ' + e.message, 'error'); }
+    loadMessages(getSelectedOrg());
+}
+
+async function sendMessage() {
+    if (!_currentThreadId) return;
+    var content = document.getElementById('msg-content').value.trim();
+    if (!content) return;
+    try {
+        await api('POST', '/api/threads/' + _currentThreadId + '/messages', {
+            sender_name: document.getElementById('msg-sender-name').value || 'Admin',
+            sender_role: 'admin',
+            content: content,
+        });
+        document.getElementById('msg-content').value = '';
+        openThread(_currentThreadId, document.getElementById('msg-thread-title').textContent);
+    } catch(e) { toast(e.message, 'error'); }
+}
+
+function showCreateThreadModal() {
+    var orgId = getSelectedOrg();
+    if (!orgId) { toast('Select an organization first', 'warning'); return; }
+    openModal('Create Thread',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        '<div><label style="font-weight:600;font-size:13px;">Title</label><input type="text" id="thread-title" class="form-input" placeholder="Thread title"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Type</label><select id="thread-type" class="form-select"><option value="direct">Direct</option><option value="team">Team</option><option value="announcement">Announcement</option></select></div>' +
+        '</div>',
+        '<button class="btn btn-primary" onclick="createThread()">Create Thread</button>'
+    );
+}
+
+async function createThread() {
+    var orgId = getSelectedOrg();
+    try {
+        await api('POST', '/api/organizations/' + orgId + '/threads', {
+            title: document.getElementById('thread-title').value,
+            thread_type: document.getElementById('thread-type').value,
+            participants: [],
+        });
+        closeModal(); toast('Thread created!'); loadMessages(orgId);
+    } catch(e) { toast(e.message, 'error'); }
+}
+
+// ===================================================================
+// TIER 2: VIDEOS
+// ===================================================================
+async function loadVideos(orgId) {
+    if (!orgId) return;
+    try {
+        var players = await cachedApi('GET', '/api/organizations/' + orgId + '/players', null, 60000);
+        var sel = document.getElementById('video-player-select');
+        sel.innerHTML = '<option value="">-- Select Player --</option>';
+        players.forEach(function(p) {
+            sel.innerHTML += '<option value="' + p.id + '">' + p.first_name + ' ' + p.last_name + '</option>';
+        });
+    } catch(e) { console.error('Load video players:', e); }
+}
+
+async function loadVideosForPlayer(playerId) {
+    var grid = document.getElementById('videos-grid');
+    var empty = document.getElementById('video-empty');
+    if (!playerId) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    try {
+        var videos = await api('GET', '/api/players/' + playerId + '/videos');
+        if (!videos.length) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;">No videos uploaded yet</div>'; return; }
+        grid.innerHTML = videos.map(function(v) {
+            return '<div class="card" style="overflow:hidden;">' +
+                '<div style="height:160px;background:linear-gradient(135deg,#09A1A1,#5484A4);display:flex;align-items:center;justify-content:center;">' +
+                (v.thumbnail_data ? '<img src="data:image/jpeg;base64,' + v.thumbnail_data + '" style="width:100%;height:100%;object-fit:cover;">' : '<i data-lucide="video" style="width:48px;height:48px;color:white;"></i>') +
+                '</div>' +
+                '<div style="padding:12px;">' +
+                '<h4 style="margin:0 0 4px;font-size:14px;">' + (v.title || 'Untitled') + '</h4>' +
+                '<div style="font-size:12px;color:#888;margin-bottom:8px;">' +
+                (v.duration_seconds ? Math.round(v.duration_seconds) + 's' : '') +
+                (v.tags && v.tags.length ? ' · ' + v.tags.join(', ') : '') +
+                ' · ' + (v.created_at ? new Date(v.created_at).toLocaleDateString() : '') +
+                '</div>' +
+                (v.ai_analysis ? '<div style="padding:8px;background:#e6f7f7;border-radius:6px;font-size:12px;color:#333;max-height:80px;overflow:hidden;">' + v.ai_analysis.substring(0,150) + '...</div>' : '') +
+                '<div style="margin-top:8px;display:flex;gap:6px;">' +
+                '<button class="btn btn-sm btn-outline" onclick="analyzeVideo(\'' + v.id + '\')"><i data-lucide="sparkles" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:2px;"></i>AI Analyze</button>' +
+                '<button class="btn btn-sm btn-outline" style="color:#FA6E82;border-color:#FA6E82;" onclick="deleteVideo(\'' + v.id + '\',\'' + (document.getElementById('video-player-select').value) + '\')">Delete</button>' +
+                '</div></div></div>';
+        }).join('');
+    } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function showUploadVideoModal() {
+    var playerId = document.getElementById('video-player-select').value;
+    if (!playerId) { toast('Select a player first', 'warning'); return; }
+    openModal('Upload Video',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        '<div><label style="font-weight:600;font-size:13px;">Title</label><input type="text" id="vid-title" class="form-input" placeholder="Video title"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Duration (seconds)</label><input type="number" id="vid-duration" class="form-input" placeholder="120"></div>' +
+        '</div>' +
+        '<div style="margin-top:12px;"><label style="font-weight:600;font-size:13px;">Description</label><textarea id="vid-desc" class="form-input" style="width:100%;height:60px;" placeholder="What does this video show?"></textarea></div>' +
+        '<div style="margin-top:12px;"><label style="font-weight:600;font-size:13px;">Tags (comma separated)</label><input type="text" id="vid-tags" class="form-input" placeholder="e.g. shooting, dribbling, match"></div>' +
+        '<div style="margin-top:12px;"><label style="font-weight:600;font-size:13px;">Video File (base64)</label><input type="file" id="vid-file" accept="video/*" class="form-input" onchange="handleVideoFile(this)"></div>' +
+        '<input type="hidden" id="vid-data">',
+        '<button class="btn btn-primary" onclick="uploadVideo()">Upload</button>'
+    );
+}
+
+function handleVideoFile(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) { document.getElementById('vid-data').value = e.target.result.split(',')[1]; };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+async function uploadVideo() {
+    var playerId = document.getElementById('video-player-select').value;
+    var tags = document.getElementById('vid-tags').value.split(',').map(function(t){return t.trim();}).filter(Boolean);
+    try {
+        await api('POST', '/api/players/' + playerId + '/videos', {
+            title: document.getElementById('vid-title').value,
+            description: document.getElementById('vid-desc').value,
+            duration_seconds: parseFloat(document.getElementById('vid-duration').value) || null,
+            tags: tags,
+            video_data: document.getElementById('vid-data').value || null,
+        });
+        closeModal(); toast('Video uploaded!'); loadVideosForPlayer(playerId);
+    } catch(e) { toast(e.message, 'error'); }
+}
+
+async function analyzeVideo(videoId) {
+    showLoading();
+    try {
+        await api('POST', '/api/videos/' + videoId + '/ai-analyze');
+        hideLoading(); toast('AI analysis complete!');
+        loadVideosForPlayer(document.getElementById('video-player-select').value);
+    } catch(e) { hideLoading(); toast(e.message, 'error'); }
+}
+
+async function deleteVideo(videoId, playerId) {
+    if (!confirm('Delete this video?')) return;
+    try { await api('DELETE', '/api/videos/' + videoId); toast('Deleted'); loadVideosForPlayer(playerId); } catch(e) { toast(e.message, 'error'); }
+}
+
+// ===================================================================
+// TIER 2: AUTOMATIONS
+// ===================================================================
+async function loadAutomations(orgId) {
+    if (!orgId) { document.getElementById('automations-table-body').innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;">Select an organization</td></tr>'; return; }
+    try {
+        var rules = await api('GET', '/api/organizations/' + orgId + '/automations');
+        var stats = document.getElementById('automations-stats');
+        var total = rules.length;
+        var enabled = rules.filter(function(r){return r.enabled;}).length;
+        var totalRuns = rules.reduce(function(s,r){return s+(r.run_count||0);},0);
+        stats.innerHTML =
+            '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#09A1A1;">' + total + '</div><div style="font-size:12px;color:#888;">Total Rules</div></div>' +
+            '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#2d8a5e;">' + enabled + '</div><div style="font-size:12px;color:#888;">Enabled</div></div>' +
+            '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#5484A4;">' + totalRuns + '</div><div style="font-size:12px;color:#888;">Total Runs</div></div>' +
+            '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#e8b06e;">' + (total-enabled) + '</div><div style="font-size:12px;color:#888;">Disabled</div></div>';
+        var tbody = document.getElementById('automations-table-body');
+        if (!rules.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;">No automation rules</td></tr>'; return; }
+        tbody.innerHTML = rules.map(function(r) {
+            var triggerColors = {evaluation_complete:'#09A1A1',report_generated:'#5484A4',attendance_low:'#FA6E82',cert_expiring:'#e8b06e',payment_received:'#2d8a5e'};
+            var tc = triggerColors[r.trigger_event] || '#888';
+            return '<tr>' +
+                '<td><strong>' + (r.name || 'Untitled') + '</strong></td>' +
+                '<td><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:' + tc + '22;color:' + tc + ';">' + (r.trigger_event || '-') + '</span></td>' +
+                '<td>' + (r.actions ? r.actions.length : 0) + ' action(s)</td>' +
+                '<td>' + (r.enabled ? '<span style="color:#2d8a5e;font-weight:600;">Yes</span>' : '<span style="color:#888;">No</span>') + '</td>' +
+                '<td>' + (r.run_count || 0) + '</td>' +
+                '<td>' + (r.last_run_at ? new Date(r.last_run_at).toLocaleDateString() : 'Never') + '</td>' +
+                '<td><button class="btn btn-sm btn-outline" onclick="testAutomation(\'' + r.id + '\')">Test</button> <button class="btn btn-sm btn-outline" style="color:#FA6E82;border-color:#FA6E82;" onclick="deleteAutomation(\'' + r.id + '\')">Delete</button></td>' +
+                '</tr>';
+        }).join('');
+    } catch(e) { console.error('Load automations error:', e); }
+}
+
+function showCreateAutomationModal() {
+    var orgId = getSelectedOrg();
+    if (!orgId) { toast('Select an organization first', 'warning'); return; }
+    openModal('Create Automation Rule',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        '<div><label style="font-weight:600;font-size:13px;">Rule Name</label><input type="text" id="auto-name" class="form-input" placeholder="e.g. Post-Eval Report Sender"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Trigger Event</label><select id="auto-trigger" class="form-select">' +
+        '<option value="evaluation_complete">Evaluation Complete</option>' +
+        '<option value="report_generated">Report Generated</option>' +
+        '<option value="attendance_low">Attendance Low</option>' +
+        '<option value="cert_expiring">Certification Expiring</option>' +
+        '<option value="payment_received">Payment Received</option>' +
+        '</select></div>' +
+        '</div>' +
+        '<div style="margin-top:12px;"><label style="font-weight:600;font-size:13px;">Action Type</label><select id="auto-action-type" class="form-select">' +
+        '<option value="generate_reports">Generate Reports</option>' +
+        '<option value="email_parents">Email Parents</option>' +
+        '<option value="assign_program">Assign Program</option>' +
+        '<option value="create_alert">Create Alert</option>' +
+        '<option value="update_status">Update Status</option>' +
+        '</select></div>' +
+        '<div style="margin-top:12px;"><label style="font-weight:600;font-size:13px;">Action Message/Param</label><input type="text" id="auto-action-msg" class="form-input" placeholder="e.g. Reports ready for review"></div>',
+        '<button class="btn btn-primary" onclick="createAutomation()">Create Rule</button>'
+    );
+}
+
+async function createAutomation() {
+    var orgId = getSelectedOrg();
+    try {
+        await api('POST', '/api/organizations/' + orgId + '/automations', {
+            name: document.getElementById('auto-name').value,
+            trigger_event: document.getElementById('auto-trigger').value,
+            actions: [{type: document.getElementById('auto-action-type').value, params: {message: document.getElementById('auto-action-msg').value}}],
+            enabled: true,
+        });
+        closeModal(); toast('Automation created!'); loadAutomations(orgId);
+    } catch(e) { toast(e.message, 'error'); }
+}
+
+async function testAutomation(ruleId) {
+    try {
+        var result = await api('POST', '/api/automations/' + ruleId + '/test');
+        openModal('Test Results — ' + result.rule_name,
+            '<div style="padding:8px;"><p><strong>Trigger:</strong> ' + result.trigger_event + '</p><p><strong>Dry Run:</strong> Yes</p>' +
+            '<h4 style="margin-top:12px;">Actions:</h4>' +
+            (result.action_results || []).map(function(a) {
+                return '<div style="padding:8px 12px;margin:4px 0;background:#f8f9fa;border-radius:6px;border-left:3px solid #09A1A1;"><strong>' + a.action_type + '</strong>: ' + a.message + '</div>';
+            }).join('') +
+            '</div>', '');
+    } catch(e) { toast(e.message, 'error'); }
+}
+
+function showTriggerEventModal() {
+    var orgId = getSelectedOrg();
+    if (!orgId) { toast('Select an organization first', 'warning'); return; }
+    openModal('Trigger Event',
+        '<p style="color:#666;margin-bottom:12px;">Manually fire an event to test matching automation rules.</p>' +
+        '<label style="font-weight:600;font-size:13px;">Event Name</label>' +
+        '<select id="trigger-event" class="form-select">' +
+        '<option value="evaluation_complete">evaluation_complete</option>' +
+        '<option value="report_generated">report_generated</option>' +
+        '<option value="attendance_low">attendance_low</option>' +
+        '<option value="cert_expiring">cert_expiring</option>' +
+        '<option value="payment_received">payment_received</option>' +
+        '</select>',
+        '<button class="btn btn-primary" onclick="triggerEvent()"><i data-lucide="zap" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Fire Event</button>'
+    );
+}
+
+async function triggerEvent() {
+    var orgId = getSelectedOrg();
+    try {
+        var result = await api('POST', '/api/organizations/' + orgId + '/automations/trigger', {
+            event: document.getElementById('trigger-event').value,
+        });
+        closeModal();
+        toast(result.rules_matched + ' rule(s) triggered!');
+        loadAutomations(orgId);
+    } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteAutomation(ruleId) {
+    if (!confirm('Delete this automation rule?')) return;
+    try { await api('DELETE', '/api/automations/' + ruleId); toast('Deleted'); loadAutomations(getSelectedOrg()); } catch(e) { toast(e.message, 'error'); }
+}
+
+// ===================================================================
+// TIER 2: BOOKINGS
+// ===================================================================
+async function loadBookings(orgId) {
+    if (!orgId) return;
+    try {
+        var slots = await api('GET', '/api/organizations/' + orgId + '/bookings/available');
+        var bookings = await api('GET', '/api/organizations/' + orgId + '/bookings');
+
+        // Stats
+        var stats = document.getElementById('bookings-stats');
+        var totalSlots = slots.length;
+        var totalBooked = bookings.length;
+        var confirmed = bookings.filter(function(b){return b.status==='confirmed';}).length;
+        var totalCapacity = slots.reduce(function(s,sl){return s+(sl.capacity||0);},0);
+        stats.innerHTML =
+            '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#09A1A1;">' + totalSlots + '</div><div style="font-size:12px;color:#888;">Active Slots</div></div>' +
+            '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#2d8a5e;">' + totalBooked + '</div><div style="font-size:12px;color:#888;">Total Bookings</div></div>' +
+            '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#5484A4;">' + confirmed + '</div><div style="font-size:12px;color:#888;">Confirmed</div></div>' +
+            '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#e8b06e;">' + totalCapacity + '</div><div style="font-size:12px;color:#888;">Total Capacity</div></div>';
+
+        // Slots list
+        var slotsList = document.getElementById('slots-list');
+        if (!slots.length) { slotsList.innerHTML = '<p style="text-align:center;color:#888;padding:20px;">No slots created yet</p>'; }
+        else {
+            slotsList.innerHTML = slots.map(function(s) {
+                var pct = s.capacity ? Math.round((s.booked_count||0)/s.capacity*100) : 0;
+                var barColor = pct > 80 ? '#FA6E82' : pct > 50 ? '#e8b06e' : '#09A1A1';
+                return '<div style="padding:12px;border-bottom:1px solid #f0f0f0;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                    '<div><strong>' + s.title + '</strong><br><span style="font-size:12px;color:#888;">' + (s.slot_type||'') + ' · ' + (s.location||'') + (s.price ? ' · $' + s.price : '') + '</span></div>' +
+                    '<div style="text-align:right;"><span style="font-size:18px;font-weight:700;color:' + barColor + ';">' + (s.booked_count||0) + '/' + (s.capacity||0) + '</span><br><span style="font-size:11px;color:#888;">' + (s.start_time ? new Date(s.start_time).toLocaleDateString() : '') + '</span></div>' +
+                    '</div>' +
+                    '<div style="margin-top:6px;height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:2px;"></div></div>' +
+                    '<div style="margin-top:6px;display:flex;gap:6px;">' +
+                    '<button class="btn btn-sm btn-outline" style="color:#FA6E82;border-color:#FA6E82;" onclick="deleteSlot(\'' + s.id + '\')">Delete</button>' +
+                    '</div></div>';
+            }).join('');
+        }
+
+        // Bookings table
+        var tbody = document.getElementById('bookings-table-body');
+        if (!bookings.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888;">No bookings yet</td></tr>'; }
+        else {
+            tbody.innerHTML = bookings.map(function(b) {
+                var sc = b.status === 'confirmed' ? '#2d8a5e' : b.status === 'waitlisted' ? '#e8b06e' : '#FA6E82';
+                return '<tr>' +
+                    '<td>' + (b.parent_name || '-') + '</td>' +
+                    '<td>' + (b.parent_email || '-') + '</td>' +
+                    '<td><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:' + sc + '22;color:' + sc + ';">' + b.status + '</span></td>' +
+                    '<td>' + (b.booked_at ? new Date(b.booked_at).toLocaleDateString() : '-') + '</td>' +
+                    '<td>' + (b.status !== 'cancelled' ? '<button class="btn btn-sm btn-outline" style="color:#FA6E82;border-color:#FA6E82;" onclick="cancelBooking(\'' + b.id + '\')">Cancel</button>' : '-') + '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+    } catch(e) { console.error('Load bookings error:', e); }
+}
+
+function showCreateSlotModal() {
+    var orgId = getSelectedOrg();
+    if (!orgId) { toast('Select an organization first', 'warning'); return; }
+    openModal('Create Bookable Slot',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        '<div><label style="font-weight:600;font-size:13px;">Title</label><input type="text" id="slot-title" class="form-input" placeholder="e.g. Summer Camp Week 1"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Type</label><select id="slot-type" class="form-select"><option value="camp">Camp</option><option value="clinic">Clinic</option><option value="training">Training</option><option value="assessment">Assessment</option></select></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Capacity</label><input type="number" id="slot-capacity" class="form-input" value="20"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Price ($)</label><input type="number" id="slot-price" class="form-input" placeholder="0" step="0.01"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Start Time</label><input type="datetime-local" id="slot-start" class="form-input"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">End Time</label><input type="datetime-local" id="slot-end" class="form-input"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Location</label><input type="text" id="slot-location" class="form-input" placeholder="Field name"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Coach</label><input type="text" id="slot-coach" class="form-input" placeholder="Coach name"></div>' +
+        '</div>' +
+        '<div style="margin-top:12px;"><label style="font-weight:600;font-size:13px;">Description</label><textarea id="slot-desc" class="form-input" style="width:100%;height:60px;" placeholder="Slot description"></textarea></div>',
+        '<button class="btn btn-primary" onclick="createSlot()">Create Slot</button>'
+    );
+}
+
+async function createSlot() {
+    var orgId = getSelectedOrg();
+    try {
+        await api('POST', '/api/organizations/' + orgId + '/bookings/slots', {
+            title: document.getElementById('slot-title').value,
+            slot_type: document.getElementById('slot-type').value,
+            capacity: parseInt(document.getElementById('slot-capacity').value) || 20,
+            price: parseFloat(document.getElementById('slot-price').value) || null,
+            start_time: document.getElementById('slot-start').value || null,
+            end_time: document.getElementById('slot-end').value || null,
+            location: document.getElementById('slot-location').value,
+            coach_name: document.getElementById('slot-coach').value,
+            description: document.getElementById('slot-desc').value,
+        });
+        closeModal(); toast('Slot created!'); loadBookings(orgId);
+    } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteSlot(slotId) {
+    if (!confirm('Delete this slot and all its bookings?')) return;
+    try { await api('DELETE', '/api/bookings/slots/' + slotId); toast('Deleted'); loadBookings(getSelectedOrg()); } catch(e) { toast(e.message, 'error'); }
+}
+
+async function cancelBooking(bookingId) {
+    if (!confirm('Cancel this booking?')) return;
+    try { await api('POST', '/api/bookings/' + bookingId + '/cancel'); toast('Booking cancelled'); loadBookings(getSelectedOrg()); } catch(e) { toast(e.message, 'error'); }
+}
+
 
 // ===================================================================
 // INIT

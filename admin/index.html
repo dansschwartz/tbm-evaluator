@@ -142,6 +142,30 @@
                 </a>
 
                 <div class="nav-divider" style="border-top:1px solid rgba(255,255,255,0.1);margin:12px 16px;"></div>
+                <div style="padding:4px 16px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);">Engagement</div>
+
+                <a href="#" class="nav-item" data-section="t2-programs">
+                    <i data-lucide="dumbbell" class="nav-icon-lucide"></i>
+                    <span class="nav-label">Programs</span>
+                </a>
+                <a href="#" class="nav-item" data-section="t2-messages">
+                    <i data-lucide="message-circle" class="nav-icon-lucide"></i>
+                    <span class="nav-label">Messages</span>
+                </a>
+                <a href="#" class="nav-item" data-section="t2-videos">
+                    <i data-lucide="video" class="nav-icon-lucide"></i>
+                    <span class="nav-label">Videos</span>
+                </a>
+                <a href="#" class="nav-item" data-section="t2-automations">
+                    <i data-lucide="zap" class="nav-icon-lucide"></i>
+                    <span class="nav-label">Automations</span>
+                </a>
+                <a href="#" class="nav-item" data-section="t2-bookings">
+                    <i data-lucide="ticket" class="nav-icon-lucide"></i>
+                    <span class="nav-label">Bookings</span>
+                </a>
+
+                <div class="nav-divider" style="border-top:1px solid rgba(255,255,255,0.1);margin:12px 16px;"></div>
                 <div style="padding:4px 16px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);">Intelligence</div>
 
                 <a href="#" class="nav-item" data-section="intel-health">
@@ -1066,6 +1090,129 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- ═══ TRAINING PROGRAMS ═══ -->
+                <section class="section hidden" id="section-t2-programs">
+                    <div class="section-toolbar" style="margin-bottom:16px;">
+                        <h2>Training Programs</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-primary" onclick="showCreateProgramModal()"><i data-lucide="plus" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> New Program</button>
+                            <button class="btn btn-outline" onclick="showAIGenerateProgramModal()"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> AI Generate</button>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;" id="programs-stats"></div>
+                    <div class="card">
+                        <div class="card-header"><h3>All Programs</h3></div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead><tr><th>Name</th><th>Sport</th><th>Phase</th><th>Weeks</th><th>Player</th><th>Status</th><th>AI</th><th>Actions</th></tr></thead>
+                                <tbody id="programs-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="program-detail-panel" style="margin-top:16px;display:none;"></div>
+                </section>
+
+                <!-- ═══ MESSAGES ═══ -->
+                <section class="section hidden" id="section-t2-messages">
+                    <div class="section-toolbar" style="margin-bottom:16px;">
+                        <h2>Messages</h2>
+                        <div class="toolbar-actions">
+                            <select id="msg-filter-type" class="form-select form-select-sm" onchange="loadMessages(getSelectedOrg())">
+                                <option value="">All Types</option>
+                                <option value="direct">Direct</option>
+                                <option value="team">Team</option>
+                                <option value="announcement">Announcement</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="showCreateThreadModal()"><i data-lucide="plus" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> New Thread</button>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:340px 1fr;gap:16px;">
+                        <div class="card">
+                            <div class="card-header"><h3>Threads</h3></div>
+                            <div class="card-body" id="threads-list" style="max-height:600px;overflow-y:auto;"></div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3 id="msg-thread-title">Select a thread</h3></div>
+                            <div class="card-body">
+                                <div id="messages-list" style="max-height:460px;overflow-y:auto;margin-bottom:12px;"></div>
+                                <div id="msg-compose" style="display:none;">
+                                    <div style="display:flex;gap:8px;">
+                                        <input type="text" id="msg-sender-name" class="form-input" placeholder="Your name" style="width:140px;">
+                                        <input type="text" id="msg-content" class="form-input" placeholder="Type a message..." style="flex:1;">
+                                        <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ═══ VIDEOS ═══ -->
+                <section class="section hidden" id="section-t2-videos">
+                    <div class="section-toolbar" style="margin-bottom:16px;">
+                        <h2>Player Videos</h2>
+                        <div class="toolbar-actions">
+                            <select id="video-player-select" class="form-select form-select-sm" onchange="loadVideosForPlayer(this.value)">
+                                <option value="">-- Select Player --</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="showUploadVideoModal()"><i data-lucide="upload" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Upload Video</button>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;" id="videos-grid"></div>
+                    <div id="video-empty" style="text-align:center;padding:60px 20px;color:#888;">
+                        <i data-lucide="video-off" style="width:48px;height:48px;margin-bottom:12px;"></i>
+                        <p>Select a player to view their videos</p>
+                    </div>
+                </section>
+
+                <!-- ═══ AUTOMATIONS ═══ -->
+                <section class="section hidden" id="section-t2-automations">
+                    <div class="section-toolbar" style="margin-bottom:16px;">
+                        <h2>Automation Workflows</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-primary" onclick="showCreateAutomationModal()"><i data-lucide="plus" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> New Rule</button>
+                            <button class="btn btn-outline" onclick="showTriggerEventModal()"><i data-lucide="zap" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Trigger Event</button>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;" id="automations-stats"></div>
+                    <div class="card">
+                        <div class="card-header"><h3>Automation Rules</h3></div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead><tr><th>Name</th><th>Trigger</th><th>Actions</th><th>Enabled</th><th>Runs</th><th>Last Run</th><th>Actions</th></tr></thead>
+                                <tbody id="automations-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ═══ BOOKINGS ═══ -->
+                <section class="section hidden" id="section-t2-bookings">
+                    <div class="section-toolbar" style="margin-bottom:16px;">
+                        <h2>Self-Service Bookings</h2>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-primary" onclick="showCreateSlotModal()"><i data-lucide="plus" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> New Slot</button>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;" id="bookings-stats"></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                        <div class="card">
+                            <div class="card-header"><h3>Available Slots</h3></div>
+                            <div class="card-body" id="slots-list"></div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3>Recent Bookings</h3></div>
+                            <div class="card-body">
+                                <table class="data-table">
+                                    <thead><tr><th>Parent</th><th>Email</th><th>Status</th><th>Booked</th><th>Actions</th></tr></thead>
+                                    <tbody id="bookings-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>

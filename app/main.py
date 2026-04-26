@@ -19,6 +19,8 @@ from app.routers import (
     communications, coaches, attendance, ops_analytics, documents,
     intelligence,
     onboarding,
+    # Tier 1+2 features
+    programs, messaging, videos, automations, bookings,
 )
 from app.routers.templates import SPORT_PRESETS
 
@@ -70,6 +72,13 @@ app.include_router(intelligence.router)
 
 # Onboarding
 app.include_router(onboarding.router)
+
+# Tier 1+2 features
+app.include_router(programs.router)
+app.include_router(messaging.router)
+app.include_router(videos.router)
+app.include_router(automations.router)
+app.include_router(bookings.router)
 
 # Static files
 app.mount("/marketing/static", StaticFiles(directory="marketing"), name="marketing_static")
@@ -163,7 +172,7 @@ async def shutdown():
 @app.get("/health")
 async def health():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "tbm-operations", "version": "4.0.0", "features": 100}
+    return {"status": "healthy", "service": "tbm-operations", "version": "5.0.0", "features": 105}
 
 
 # Serve frontend pages
