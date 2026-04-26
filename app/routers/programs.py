@@ -60,8 +60,12 @@ def _program_dict(p, include_weeks=False):
 # ── CRUD ─────────────────────────────────────────────────────────
 @router.post("/api/organizations/{org_id}/training-programs", dependencies=[Depends(verify_admin_key)])
 async def create_program(org_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db)):
-    data = await request.json()
-    prog = TrainingProgram(
+    try:
+        data = await request.json()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f'Bad JSON: {str(e)}')
+    try:
+        prog = TrainingProgram(
         id=uuid.uuid4(),
         org_id=org_id,
         player_id=data.get("player_id"),
