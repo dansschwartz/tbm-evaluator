@@ -40,6 +40,8 @@ function aiPanel(title, content, startOpen) {
 
 // Universal AI output wrapper with copy + rerun + download
 function wrapAIOutput(content, rerunFn, title) {
+    // Schedule icon refresh after DOM update
+    setTimeout(function() { if (typeof lucide !== 'undefined') try { lucide.createIcons(); } catch(e){} }, 100);
     title = title || 'AI Analysis';
     var id = 'ai-out-' + Math.random().toString(36).substr(2, 9);
     return '<div class="ai-output-wrap" style="margin:12px 0;border:1px solid #d0e8e8;border-radius:10px;overflow:hidden;background:#fafffe;">' +
@@ -1732,10 +1734,10 @@ async function viewReport(reportId) {
                 '<div class="stat-card"><div class="stat-value">' + (r.overall_score !== null ? r.overall_score.toFixed(2) : '--') + '</div><div class="stat-label">Overall Score</div></div>' +
                 '<div class="stat-card steel"><div class="stat-value">' + (r.rank || '--') + ' / ' + (r.total_players || '--') + '</div><div class="stat-label">Rank</div></div>' +
             '</div>' +
-            (r.ai_summary ? '<div style="margin-bottom:12px"><strong>AI Summary:</strong>' + renderMd(r.ai_summary) + '</div>' : '') +
+            (r.ai_summary ? wrapAIOutput(r.ai_summary, '', 'Player AI Summary') : '') +
             (r.ai_strengths && r.ai_strengths.length > 0 ? '<div style="margin-bottom:12px"><strong>Strengths:</strong><ul>' + r.ai_strengths.map(function(s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></div>' : '') +
             (r.ai_improvements && r.ai_improvements.length > 0 ? '<div style="margin-bottom:12px"><strong>Areas for Improvement:</strong><ul>' + r.ai_improvements.map(function(s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></div>' : '') +
-            (r.ai_recommendation ? '<div style="margin-bottom:12px"><strong>Recommendation:</strong>' + renderMd(r.ai_recommendation) + '</div>' : '') +
+            (r.ai_recommendation ? wrapAIOutput(r.ai_recommendation, '', 'Recommendation') : '') +
             (skillRows ? '<h4 style="margin-top:12px">Skill Scores</h4><table class="data-table"><thead><tr><th>Skill</th><th>Score</th></tr></thead><tbody>' + skillRows + '</tbody></table>' : ''),
             '<button class="btn btn-outline" onclick="closeModal()">Close</button>'
         );
@@ -4099,14 +4101,41 @@ async function aiFieldAllocation() {
     if (!orgId) return;
     var resultDiv = document.getElementById('ai-field-result');
     resultDiv.style.display = 'block';
-    resultDiv.querySelector('.card-body').innerHTML = '<p style="color:#999;">AI is analyzing field allocation...</p>';
+    resultDiv.querySelector('.card-body').innerHTML = '<p style="color:#999;">Running field optimization algorithm...</p>';
     try {
-        var result = await api('POST', '/api/organizations/' + orgId + '/ai/ask', {
-            question: 'Analyze our fields and teams. Recommend optimal field assignments for each team based on practice schedules, field size, lighting availability, and team level. Show a table of recommended assignments.'
+        var result = await api('POST', '/api/organizations/' + orgId + '/fields/optimize', {
+            optimize_for: 'balanced',
+            weights: {distance: 0.4, field_quality: 0.3, utilization: 0.3},
+            constraints: {max_teams_per_field: 3, require_lights_after: '18:00', prefer_turf_in_rain: true}
         });
-        resultDiv.querySelector('.card-body').innerHTML =
-            '<strong style="color:#09A1A1;">AI Field Allocation Recommendation</strong><br><br>' +
-            '<div style=";">' + esc(result.answer || 'No recommendation available.') + '</div>';
+        var assignments = result.assignments || [];
+        if (assignments.length === 0) {
+            resultDiv.querySelector('.card-body').innerHTML = '<p style="color:#888;">No assignments generated. Make sure you have teams and fields set up.</p>';
+            return;
+        }
+        var html = '<table class="data-table" style="font-size:12px;"><thead><tr><th>Team</th><th>Assigned Field</th><th>Surface</th><th>Size</th><th>Lights</th><th>Score</th></tr></thead><tbody>';
+        assignments.forEach(function(a) {
+            html += '<tr><td><strong>' + esc(a.team_name || '') + '</strong></td>' +
+                '<td>' + esc(a.field_name || '') + '</td>' +
+                '<td><span class="badge badge-' + (a.surface === 'turf' ? 'yes' : 'no') + '">' + esc(a.surface || '') + '</span></td>' +
+                '<td>' + esc(a.field_size || '') + '</td>' +
+                '<td>' + (a.has_lights ? 'Yes' : 'No') + '</td>' +
+                '<td>' + (a.score ? a.score.toFixed(1) : '-') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        if (result.ward_distribution) {
+            html += '<div style="margin-top:12px;font-size:12px;"><strong>Ward Distribution:</strong> ';
+            Object.entries(result.ward_distribution).forEach(function(e) {
+                html += e[0] + ': ' + e[1] + ' fields  ';
+            });
+            html += '</div>';
+        }
+        resultDiv.querySelector('.card-body').innerHTML = wrapAIOutput(
+            '<div>' + html + '</div>',
+            'aiFieldAllocation()',
+            'Field Allocation Results'
+        );
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     } catch (e) {
         resultDiv.querySelector('.card-body').innerHTML = '<p style="color:#FA6E82;">Error: ' + esc(e.message) + '</p>';
     }
@@ -4381,7 +4410,8 @@ function renderHealthScore(hs) {
 
     // AI narrative
     if (hs.ai_narrative) {
-        document.getElementById('health-ai-narrative').innerHTML = wrapAIOutput(hs.ai_narrative || '', 'generateHealthScore()', 'Club Health Analysis');
+        // Use wrapAIOutput for copy/rerun/download
+        document.getElementById('health-ai-narrative').innerHTML = wrapAIOutput(hs.ai_narrative || '', 'generateHealthScore()', 'Club Health Analysis');if(typeof lucide!=='undefined')lucide.createIcons();
 if(typeof lucide!=='undefined')lucide.createIcons();
     }
 }
