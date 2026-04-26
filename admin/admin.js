@@ -2503,8 +2503,8 @@ function renderFieldMap(fields) {
             scrollWheelZoom: true
         }).setView([38.91, -77.04], 12);
 
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
+        L.tileLayer('https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors, CartoDB',
             maxZoom: 18
         }).addTo(_fieldLeafletMap);
     }
@@ -2567,7 +2567,7 @@ function renderFieldMap(fields) {
 function scrollToField(fieldId) {
     var row = document.getElementById('field-row-' + fieldId);
     if (row) {
-        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row;
         row.style.background = '#e8f2f2';
         setTimeout(function() { row.style.background = ''; }, 2000);
     }

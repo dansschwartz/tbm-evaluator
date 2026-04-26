@@ -1278,3 +1278,9 @@ select, .form-select {
     border-color: #09A1A1;
     transform: translateY(-2px);
 }
+
+/* Grayscale map tiles */
+.leaflet-tile-pane {
+    filter: grayscale(100%) !important;
+    -webkit-filter: grayscale(100%) !important;
+}
