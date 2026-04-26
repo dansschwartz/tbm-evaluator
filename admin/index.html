@@ -613,20 +613,30 @@
                     </div>
                     <div class="stats-grid" id="fields-stats-bar"></div>
                     <div id="ai-field-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:#e8f2f2;border-left:4px solid #09A1A1;"></div></div>
+
+                    <!-- FIELD MAP — First -->
                     <div class="card">
-                        <div class="card-body">
-                            <table class="data-table" id="fields-table">
-                                <thead>
-                                    <tr><th>Name</th><th>Address</th><th>Surface</th><th>Size</th><th>Lights</th><th>Actions</th></tr>
-                                </thead>
-                                <tbody id="fields-table-body"></tbody>
-                            </table>
+                        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+                            <h3><i data-lucide="map" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:6px;"></i>DC Field Map</h3>
+                            <div id="field-map-legend" style="display:flex;gap:12px;align-items:center;font-size:12px;">
+                                <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#09A1A1;margin-right:4px;vertical-align:middle;"></span>Turf</span>
+                                <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#27ae60;margin-right:4px;vertical-align:middle;"></span>Grass</span>
+                                <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#8c99a9;margin-right:4px;vertical-align:middle;"></span>Hardcourt/Indoor</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="card" style="margin-top:16px;">
-                        <div class="card-header"><h3>Field Calendar</h3></div>
-                        <div class="card-body" id="field-calendar-body">
-                            <p class="text-muted">Select an organization to view field calendar.</p>
+                        <div class="card-body" style="display:flex;justify-content:center;">
+                            <div id="field-map-container" style="position:relative;width:600px;height:500px;background:#eef1f5;border-radius:6px;border:1px solid #dce3eb;overflow:hidden;">
+                                <!-- Ward boundary lines -->
+                                <div style="position:absolute;top:0;bottom:0;left:52.9%;width:1px;background:#b0bec5;z-index:1;" title="North Capitol St (NW/NE divide)"></div>
+                                <div style="position:absolute;left:0;right:0;top:60%;height:1px;background:#b0bec5;z-index:1;" title="~Mall area (N/S divide)"></div>
+                                <!-- Ward labels -->
+                                <div style="position:absolute;top:8px;left:8px;font-size:11px;font-weight:700;color:#5a6a7e;z-index:2;">NW</div>
+                                <div style="position:absolute;top:8px;right:8px;font-size:11px;font-weight:700;color:#5a6a7e;z-index:2;">NE</div>
+                                <div style="position:absolute;bottom:8px;left:8px;font-size:11px;font-weight:700;color:#5a6a7e;z-index:2;">SW</div>
+                                <div style="position:absolute;bottom:8px;right:8px;font-size:11px;font-weight:700;color:#5a6a7e;z-index:2;">SE</div>
+                                <!-- Field dots rendered by JS -->
+                                <div id="field-map-dots"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -671,10 +681,22 @@
                             <button class="btn btn-primary" id="btn-run-optimizer" style="margin-bottom:16px;"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Run Optimization</button>
                             <div id="optimizer-results" style="display:none;">
                                 <div id="optimizer-ward-dist" style="margin-bottom:12px;"></div>
-                                <table class="data-table">
-                                    <thead><tr><th>Team</th><th>Assigned Field</th><th>Surface</th><th>Distance</th><th>Score</th><th>Reasons</th></tr></thead>
-                                    <tbody id="optimizer-results-body"></tbody>
-                                </table>
+                                <div style="max-height:400px;overflow-y:auto;">
+                                    <table class="data-table">
+                                        <thead><tr><th>Team</th><th>Assigned Field</th><th>Surface</th><th>Distance</th><th>Score</th><th>Reasons</th></tr></thead>
+                                        <tbody id="optimizer-results-body"></tbody>
+                                    </table>
+                                </div>
+                                <!-- Drive Analysis (loaded after optimization) -->
+                                <div id="optimizer-drive-analysis" style="margin-top:16px;display:none;">
+                                    <h4 style="font-size:14px;font-weight:600;margin-bottom:8px;"><i data-lucide="car" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;"></i>Family Drive Time Analysis</h4>
+                                    <div style="max-height:400px;overflow-y:auto;">
+                                        <table class="data-table">
+                                            <thead><tr><th>Team</th><th>Field</th><th>Players</th><th>Avg Distance</th><th>Est. Drive</th><th>Status</th></tr></thead>
+                                            <tbody id="drive-analysis-body"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -684,7 +706,40 @@
                         <div class="card-header"><h3><i data-lucide="bar-chart-3" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:6px;"></i>Permit Utilization</h3></div>
                         <div class="card-body">
                             <div class="stats-grid" id="utilization-stats-bar"></div>
-                            <div id="utilization-bars" style="margin-top:12px;"></div>
+                            <div id="utilization-bars" style="margin-top:12px;max-height:400px;overflow-y:auto;"></div>
+                            <!-- Season Comparison -->
+                            <div id="season-comparison" style="margin-top:16px;display:none;">
+                                <h4 style="font-size:14px;font-weight:600;margin-bottom:8px;"><i data-lucide="git-compare" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;"></i>Season Comparison</h4>
+                                <div style="max-height:400px;overflow-y:auto;">
+                                    <table class="data-table">
+                                        <thead><tr><th>Season</th><th>Fields Used</th><th>Total Hours</th><th>Bookings</th></tr></thead>
+                                        <tbody id="season-comparison-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fields List -->
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3><i data-lucide="list" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:6px;"></i>All Fields</h3></div>
+                        <div class="card-body">
+                            <div style="max-height:400px;overflow-y:auto;">
+                                <table class="data-table" id="fields-table">
+                                    <thead>
+                                        <tr><th>Name</th><th>Rating</th><th>Surface</th><th>Size</th><th>Cost/hr</th><th>Lights</th><th>Weather</th><th>Actions</th></tr>
+                                    </thead>
+                                    <tbody id="fields-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Field Calendar -->
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header"><h3>Field Calendar</h3></div>
+                        <div class="card-body" id="field-calendar-body">
+                            <p class="text-muted">Select an organization to view field calendar.</p>
                         </div>
                     </div>
 
@@ -703,10 +758,12 @@
                                 <button class="btn btn-primary" id="btn-apply-reassign" style="display:none;"><i data-lucide="check" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Apply All Reassignments</button>
                             </div>
                             <div id="weather-reassign-results" style="display:none;">
-                                <table class="data-table">
-                                    <thead><tr><th>Booking</th><th>Time</th><th>Original Field</th><th>Suggested Field</th><th>Distance Change</th></tr></thead>
-                                    <tbody id="weather-reassign-body"></tbody>
-                                </table>
+                                <div style="max-height:400px;overflow-y:auto;">
+                                    <table class="data-table">
+                                        <thead><tr><th>Booking</th><th>Time</th><th>Original Field</th><th>Suggested Field</th><th>Distance Change</th></tr></thead>
+                                        <tbody id="weather-reassign-body"></tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>

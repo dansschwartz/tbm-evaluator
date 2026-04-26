@@ -86,6 +86,7 @@ class Player(Base):
     years_playing = Column(Integer, nullable=True)   # Years of experience
     school = Column(String(255), nullable=True)
     medical_notes = Column(Text, nullable=True)      # Allergies, conditions (private)
+    home_ward = Column(String(10), nullable=True)    # NW/NE/SW/SE — for drive-time analysis
     parent_name = Column(String(255), nullable=True)
     parent_email = Column(String(255), nullable=True)
     parent_phone = Column(String(50), nullable=True)
@@ -297,6 +298,16 @@ class Field(Base):
     notes = Column(Text, nullable=True)
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
+    # Feature: Field Quality Ratings
+    field_rating = Column(Float, nullable=True)
+    rating_count = Column(Integer, default=0)
+    # Feature: Permit Cost Tracking
+    permit_cost_per_hour = Column(Float, nullable=True)
+    # Feature: Shared Permit Tracking
+    permit_shared_with = Column(String(500), nullable=True)
+    permit_notes = Column(Text, nullable=True)
+    # Feature: Historical Weather Cancellations
+    weather_cancellations = Column(Integer, default=0)
 
     bookings = relationship("FieldBooking", back_populates="field", cascade="all, delete-orphan")
 

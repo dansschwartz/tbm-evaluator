@@ -117,6 +117,15 @@ async def run_migrations(conn):
         "ALTER TABLE evaluators ADD COLUMN IF NOT EXISTS background_check_status VARCHAR(50)",
         "ALTER TABLE evaluators ADD COLUMN IF NOT EXISTS volunteer_hours FLOAT",
         "ALTER TABLE evaluators ADD COLUMN IF NOT EXISTS phone VARCHAR(50)",
+        # Fields enhancements
+        "ALTER TABLE fields ADD COLUMN IF NOT EXISTS field_rating FLOAT",
+        "ALTER TABLE fields ADD COLUMN IF NOT EXISTS rating_count INTEGER DEFAULT 0",
+        "ALTER TABLE fields ADD COLUMN IF NOT EXISTS permit_cost_per_hour FLOAT",
+        "ALTER TABLE fields ADD COLUMN IF NOT EXISTS permit_shared_with VARCHAR(500)",
+        "ALTER TABLE fields ADD COLUMN IF NOT EXISTS permit_notes TEXT",
+        "ALTER TABLE fields ADD COLUMN IF NOT EXISTS weather_cancellations INTEGER DEFAULT 0",
+        # Player home ward for drive-time analysis
+        "ALTER TABLE players ADD COLUMN IF NOT EXISTS home_ward VARCHAR(10)",
     ]
     for sql in migrations:
         try:

@@ -2241,21 +2241,55 @@ async function loadOpsFields(orgId) {
         // Stats bar
         var withLights = fields.filter(function(f) { return f.has_lights; }).length;
         var turfCount = fields.filter(function(f) { return f.surface_type === 'turf'; }).length;
+        var avgRating = 0;
+        var ratedFields = fields.filter(function(f) { return f.field_rating; });
+        if (ratedFields.length > 0) avgRating = (ratedFields.reduce(function(s, f) { return s + f.field_rating; }, 0) / ratedFields.length).toFixed(1);
         document.getElementById('fields-stats-bar').innerHTML = buildStatCards([
             { value: fields.length, label: 'Total Fields', cls: '' },
             { value: turfCount, label: 'Turf Fields', cls: 'steel' },
             { value: withLights, label: 'With Lights', cls: 'coral' },
+            { value: avgRating || '-', label: 'Avg Rating', cls: '' },
         ]);
 
+        // --- FIELD MAP ---
+        renderFieldMap(fields);
+
+        // --- FIELD LIST with ratings, cost, weather ---
         var tbody = document.getElementById('fields-table-body');
         if (fields.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="map-pin" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No fields yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-add-field\')&&document.getElementById(\'btn-add-field\').click()">Add Your First Field</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Or use the AI Assistant to import from your permit list</p></div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="map-pin" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No fields yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-add-field\')&&document.getElementById(\'btn-add-field\').click()">Add Your First Field</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Or use the AI Assistant to import from your permit list</p></div></td></tr>';
             if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             tbody.innerHTML = fields.map(function(f) {
-                return '<tr><td>' + esc(f.name) + '</td><td>' + esc(f.location_address || '-') + '</td>' +
-                    '<td>' + esc(f.surface_type || '-') + '</td><td>' + esc(f.size || '-') + '</td>' +
+                // Star rating display
+                var starsHtml = '';
+                if (f.field_rating) {
+                    var full = Math.floor(f.field_rating);
+                    for (var s = 0; s < 5; s++) {
+                        starsHtml += '<span style="color:' + (s < full ? '#F6C992' : '#dce3eb') + ';font-size:14px;">&#9733;</span>';
+                    }
+                    starsHtml += '<span style="font-size:11px;color:#5a6a7e;margin-left:2px;">' + f.field_rating.toFixed(1) + ' (' + (f.rating_count || 0) + ')</span>';
+                } else {
+                    starsHtml = '<span style="color:#aaa;font-size:11px;">No ratings</span>';
+                }
+                // Weather cancellations
+                var weatherHtml = '';
+                if (f.weather_cancellations > 0) {
+                    weatherHtml = '<span style="color:#5484A4;font-size:12px;" title="' + f.weather_cancellations + ' weather cancellations"><i data-lucide="cloud-rain" style="width:13px;height:13px;display:inline;vertical-align:middle;"></i> ' + f.weather_cancellations + '</span>';
+                } else {
+                    weatherHtml = '<span style="color:#ccc;font-size:11px;">-</span>';
+                }
+                // Shared permit indicator
+                var nameExtra = '';
+                if (f.permit_shared_with) nameExtra = ' <span style="font-size:10px;color:#5484A4;" title="Shared with: ' + esc(f.permit_shared_with) + '">[shared]</span>';
+
+                return '<tr id="field-row-' + f.id + '"><td>' + esc(f.name) + nameExtra + '</td>' +
+                    '<td>' + starsHtml + ' <button class="btn btn-xs btn-outline" onclick="openRateField(\'' + f.id + '\',\'' + esc(f.name) + '\')">Rate</button></td>' +
+                    '<td><span class="badge ' + (f.surface_type === 'turf' ? 'badge-active' : f.surface_type === 'grass' ? 'badge-draft' : 'badge-scoring') + '">' + esc(f.surface_type || '-') + '</span></td>' +
+                    '<td>' + esc(f.size || '-') + '</td>' +
+                    '<td>' + (f.permit_cost_per_hour ? '$' + f.permit_cost_per_hour.toFixed(0) + '/hr' : '-') + '</td>' +
                     '<td>' + (f.has_lights ? 'Yes' : 'No') + '</td>' +
+                    '<td>' + weatherHtml + '</td>' +
                     '<td class="btn-group">' +
                         '<button class="btn btn-xs btn-outline" onclick="editFieldItem(\'' + f.id + '\')">Edit</button>' +
                         '<button class="btn btn-xs btn-danger" onclick="deleteOpsFieldItem(\'' + f.id + '\')">Delete</button>' +
@@ -2265,9 +2299,67 @@ async function loadOpsFields(orgId) {
 
         loadFieldCalendar(orgId);
         loadFieldUtilization(orgId);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     } catch (e) {
         toast('Error: ' + e.message, 'error');
     }
+}
+
+// --- Field Map Rendering ---
+function renderFieldMap(fields) {
+    var dotsDiv = document.getElementById('field-map-dots');
+    if (!dotsDiv) return;
+    var minLat = 38.79, maxLat = 39.04, minLng = -77.12, maxLng = -76.91;
+    var html = '';
+    fields.forEach(function(f) {
+        if (!f.latitude || !f.longitude) return;
+        var left = ((f.longitude - minLng) / (maxLng - minLng) * 100).toFixed(2);
+        var top = ((1 - (f.latitude - minLat) / (maxLat - minLat)) * 100).toFixed(2);
+        var color = f.surface_type === 'turf' ? '#09A1A1' : f.surface_type === 'grass' ? '#27ae60' : '#8c99a9';
+        html += '<div class="field-map-dot" onclick="scrollToField(\'' + f.id + '\')" ' +
+            'style="position:absolute;left:' + left + '%;top:' + top + '%;width:12px;height:12px;border-radius:50%;background:' + color + ';border:2px solid #fff;cursor:pointer;z-index:3;transform:translate(-50%,-50%);box-shadow:0 1px 3px rgba(0,0,0,0.3);" ' +
+            'title="' + esc(f.name) + (f.field_rating ? ' (' + f.field_rating.toFixed(1) + '★)' : '') + '">' +
+            '</div>';
+    });
+    dotsDiv.innerHTML = html;
+}
+
+function scrollToField(fieldId) {
+    var row = document.getElementById('field-row-' + fieldId);
+    if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.style.background = '#e8f2f2';
+        setTimeout(function() { row.style.background = ''; }, 2000);
+    }
+}
+
+// --- Field Rating ---
+function openRateField(fieldId, fieldName) {
+    var starsHtml = '';
+    for (var i = 1; i <= 5; i++) {
+        starsHtml += '<span onclick="submitFieldRating(\'' + fieldId + '\',' + i + ')" style="cursor:pointer;font-size:28px;color:#F6C992;margin:0 2px;">&#9733;</span>';
+    }
+    openModal('Rate ' + fieldName,
+        '<div style="text-align:center;padding:12px 0;">' +
+        '<p style="margin-bottom:12px;">Select a rating:</p>' +
+        '<div>' + starsHtml + '</div>' +
+        '<label style="margin-top:12px;display:block;">Comment (optional)</label>' +
+        '<input type="text" id="field-rate-comment" class="form-input" placeholder="Any notes...">' +
+        '</div>',
+        '<button class="btn btn-outline" onclick="closeModal()">Cancel</button>'
+    );
+}
+
+async function submitFieldRating(fieldId, rating) {
+    try {
+        await api('POST', '/api/fields/' + fieldId + '/rate', {
+            rating: rating,
+            comment: document.getElementById('field-rate-comment') ? document.getElementById('field-rate-comment').value : '',
+        });
+        closeModal();
+        toast('Rated ' + rating + ' star' + (rating > 1 ? 's' : ''), 'success');
+        loadOpsFields(requireOrg());
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
 
 async function editFieldItem(fieldId) {
@@ -2285,7 +2377,10 @@ async function editFieldItem(fieldId) {
             '<label>Surface</label><select id="field-edit-surface" class="form-select"><option value="grass"' + (f.surface_type === 'grass' ? ' selected' : '') + '>Grass</option><option value="turf"' + (f.surface_type === 'turf' ? ' selected' : '') + '>Turf</option><option value="indoor"' + (f.surface_type === 'indoor' ? ' selected' : '') + '>Indoor</option></select>' +
             '<label>Size</label><select id="field-edit-size" class="form-select"><option value="full"' + (f.size === 'full' ? ' selected' : '') + '>Full</option><option value="3_4"' + (f.size === '3_4' ? ' selected' : '') + '>3/4</option><option value="half"' + (f.size === 'half' ? ' selected' : '') + '>Half</option><option value="small"' + (f.size === 'small' ? ' selected' : '') + '>Small</option></select>' +
             '<label><input type="checkbox" id="field-edit-lights"' + (f.has_lights ? ' checked' : '') + '> Has Lights</label>' +
-            '<label>Permitted Hours</label><input type="text" id="field-edit-hours" class="form-input" placeholder="e.g. 8:00-21:00" value="' + esc(f.permitted_hours || '') + '">',
+            '<label>Permitted Hours</label><input type="text" id="field-edit-hours" class="form-input" placeholder="e.g. 8:00-21:00" value="' + esc(f.permitted_hours || '') + '">' +
+            '<label>Permit Cost ($/hr)</label><input type="number" id="field-edit-cost" class="form-input" placeholder="e.g. 75" step="0.01" value="' + (f.permit_cost_per_hour || '') + '">' +
+            '<label>Shared Permit With</label><input type="text" id="field-edit-shared" class="form-input" placeholder="e.g. Soccer league, DCPR" value="' + esc(f.permit_shared_with || '') + '">' +
+            '<label>Permit Notes</label><textarea id="field-edit-permit-notes" class="form-input" style="height:60px;">' + esc(f.permit_notes || '') + '</textarea>',
             '<button class="btn btn-primary" onclick="submitEditField(\'' + fieldId + '\')">Save</button><button class="btn btn-outline" onclick="closeModal()">Cancel</button>'
         );
     } catch (e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
@@ -2302,6 +2397,9 @@ async function submitEditField(fieldId) {
             size: document.getElementById('field-edit-size').value,
             has_lights: document.getElementById('field-edit-lights').checked,
             permitted_hours: document.getElementById('field-edit-hours').value || null,
+            permit_cost_per_hour: parseFloat(document.getElementById('field-edit-cost').value) || null,
+            permit_shared_with: document.getElementById('field-edit-shared').value || null,
+            permit_notes: document.getElementById('field-edit-permit-notes').value || null,
         });
         closeModal();
         toast('Field updated', 'success');
@@ -2435,9 +2533,41 @@ async function runFieldOptimizer() {
             tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:20px;color:#888;">No assignments generated. Add teams first.</td></tr>';
         }
         if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        // Load drive analysis
+        loadDriveAnalysis(orgId);
     } catch (e) {
         hideLoading();
         toast('Optimizer error: ' + e.message, 'error');
+    }
+}
+
+async function loadDriveAnalysis(orgId) {
+    try {
+        var data = await api('GET', '/api/organizations/' + orgId + '/fields/drive-analysis');
+        var container = document.getElementById('optimizer-drive-analysis');
+        var tbody = document.getElementById('drive-analysis-body');
+        if (data.teams && data.teams.length > 0) {
+            container.style.display = 'block';
+            tbody.innerHTML = data.teams.map(function(t) {
+                var statusColor = t.flag ? '#FA6E82' : '#09A1A1';
+                var statusText = t.flag ? '<strong style="color:#FA6E82;">Long Drive</strong>' : '<span style="color:#09A1A1;">OK</span>';
+                return '<tr><td>' + esc(t.team_name) + '</td>' +
+                    '<td>' + esc(t.field_name || '-') + '</td>' +
+                    '<td>' + t.player_count + (t.players_with_ward ? ' (' + t.players_with_ward + ' with ward)' : '') + '</td>' +
+                    '<td>' + (t.avg_distance_km != null ? t.avg_distance_km + ' km' : '-') + '</td>' +
+                    '<td>' + (t.est_drive_min != null ? t.est_drive_min + ' min' : '-') + '</td>' +
+                    '<td>' + statusText + '</td></tr>';
+            }).join('');
+            if (data.total_flagged > 0) {
+                toast(data.total_flagged + ' team(s) have long average drives', 'warning');
+            }
+        } else {
+            container.style.display = 'none';
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    } catch (e) {
+        // silently fail — drive analysis is supplemental
     }
 }
 
@@ -2447,12 +2577,21 @@ async function loadFieldUtilization(orgId) {
     try {
         var data = await api('GET', '/api/organizations/' + orgId + '/fields/utilization');
 
+        var costCards = [];
+        if (data.total_permit_cost > 0) {
+            costCards = [
+                { value: '$' + data.total_permit_cost.toLocaleString(), label: 'Total Permit Cost', cls: '' },
+                { value: '$' + data.cost_per_team, label: 'Cost/Team', cls: '' },
+                { value: '$' + data.cost_efficiency + '/hr', label: 'Cost Efficiency', cls: '' },
+            ];
+        }
+
         document.getElementById('utilization-stats-bar').innerHTML = buildStatCards([
             { value: data.total_fields, label: 'Total Fields', cls: '' },
             { value: data.total_bookings, label: 'Active Bookings', cls: 'steel' },
             { value: data.average_utilization + '%', label: 'Avg Utilization', cls: data.average_utilization > 85 ? 'coral' : '' },
             { value: data.total_hours + 'h', label: 'Hours Booked', cls: '' },
-        ]);
+        ].concat(costCards));
 
         var barsDiv = document.getElementById('utilization-bars');
         if (data.fields && data.fields.length > 0) {
@@ -2461,17 +2600,31 @@ async function loadFieldUtilization(orgId) {
                 var pct = Math.min(f.percent_utilized, 100);
                 var barColor = f.status === 'overutilized' ? '#FA6E82' : f.status === 'underutilized' ? '#F6C992' : '#09A1A1';
                 var statusLabel = f.status === 'overutilized' ? ' (Overutilized)' : f.status === 'underutilized' ? ' (Underutilized)' : '';
+                var costLabel = f.permit_cost > 0 ? ' — $' + f.permit_cost : '';
                 html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
                     '<div style="width:200px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + esc(f.field_name) + '">' + esc(f.field_name) + '</div>' +
                     '<div style="flex:1;height:18px;background:#eef1f5;border-radius:3px;overflow:hidden;">' +
                     '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:3px;"></div></div>' +
-                    '<div style="width:80px;font-size:12px;text-align:right;color:' + barColor + ';font-weight:600;">' + f.percent_utilized + '%' + statusLabel + '</div>' +
+                    '<div style="width:120px;font-size:12px;text-align:right;color:' + barColor + ';font-weight:600;">' + f.percent_utilized + '%' + statusLabel + costLabel + '</div>' +
                     '</div>';
             });
             barsDiv.innerHTML = html;
         } else {
             barsDiv.innerHTML = '<p class="text-muted" style="padding:12px;">No field data available.</p>';
         }
+
+        // Season Comparison
+        var scDiv = document.getElementById('season-comparison');
+        var scBody = document.getElementById('season-comparison-body');
+        if (data.season_comparison && data.season_comparison.length > 1) {
+            scDiv.style.display = 'block';
+            scBody.innerHTML = data.season_comparison.map(function(s) {
+                return '<tr><td><strong>' + esc(s.season) + '</strong></td><td>' + s.fields_used + '</td><td>' + s.total_hours + 'h</td><td>' + s.bookings + '</td></tr>';
+            }).join('');
+        } else {
+            scDiv.style.display = 'none';
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     } catch (e) {
         document.getElementById('utilization-stats-bar').innerHTML = '';
         document.getElementById('utilization-bars').innerHTML = '<p class="text-muted">Utilization data unavailable.</p>';
@@ -3127,7 +3280,10 @@ function setupOpsButtons() {
             '<label>Address</label><input type="text" id="field-address" class="form-input" placeholder="123 Sports Ave">' +
             '<label>Surface</label><select id="field-surface" class="form-select"><option value="grass">Grass</option><option value="turf">Turf</option><option value="indoor">Indoor</option></select>' +
             '<label>Size</label><select id="field-size" class="form-select"><option value="full">Full</option><option value="3_4">3/4</option><option value="half">Half</option><option value="small">Small</option></select>' +
-            '<label><input type="checkbox" id="field-lights"> Has Lights</label>',
+            '<label><input type="checkbox" id="field-lights"> Has Lights</label>' +
+            '<label>Permit Cost ($/hr)</label><input type="number" id="field-cost" class="form-input" placeholder="e.g. 75" step="0.01">' +
+            '<label>Shared Permit With</label><input type="text" id="field-shared" class="form-input" placeholder="e.g. Soccer league, DCPR">' +
+            '<label>Permit Notes</label><textarea id="field-permit-notes" class="form-input" style="height:60px;" placeholder="Any permit details..."></textarea>',
             '<button class="btn btn-primary" onclick="createField()">Create</button>'
         );
     });
@@ -3464,6 +3620,9 @@ async function createField() {
             surface_type: document.getElementById('field-surface').value,
             size: document.getElementById('field-size').value,
             has_lights: document.getElementById('field-lights').checked,
+            permit_cost_per_hour: parseFloat(document.getElementById('field-cost').value) || null,
+            permit_shared_with: document.getElementById('field-shared').value || null,
+            permit_notes: document.getElementById('field-permit-notes').value || null,
         });
         closeModal();
         toast('Field created', 'success');

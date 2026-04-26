@@ -421,6 +421,9 @@ class FieldCreate(BaseModel):
     capacity: Optional[int] = None
     permitted_hours: Optional[dict] = None
     notes: Optional[str] = None
+    permit_cost_per_hour: Optional[float] = None
+    permit_shared_with: Optional[str] = None
+    permit_notes: Optional[str] = None
 
 
 class FieldUpdate(BaseModel):
@@ -435,6 +438,9 @@ class FieldUpdate(BaseModel):
     permitted_hours: Optional[dict] = None
     notes: Optional[str] = None
     active: Optional[bool] = None
+    permit_cost_per_hour: Optional[float] = None
+    permit_shared_with: Optional[str] = None
+    permit_notes: Optional[str] = None
 
 
 class FieldResponse(BaseModel):
@@ -452,6 +458,12 @@ class FieldResponse(BaseModel):
     notes: Optional[str] = None
     active: bool = True
     created_at: Optional[datetime] = None
+    field_rating: Optional[float] = None
+    rating_count: int = 0
+    permit_cost_per_hour: Optional[float] = None
+    permit_shared_with: Optional[str] = None
+    permit_notes: Optional[str] = None
+    weather_cancellations: int = 0
 
     model_config = {"from_attributes": True}
 

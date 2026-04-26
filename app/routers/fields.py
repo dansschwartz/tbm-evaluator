@@ -8,7 +8,7 @@ from sqlalchemy import select, and_, or_, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Field, FieldBooking, Team
+from app.models import Field, FieldBooking, Team, TeamRoster, Player
 from app.routers.auth import verify_admin_key
 from app.schemas import (
     FieldBookingCreate, FieldBookingResponse, FieldBookingUpdate,
@@ -359,8 +359,18 @@ async def optimize_field_allocation(org_id: uuid.UUID, request: dict, db: AsyncS
             elif field_bookings <= 2:
                 reasons.append("Low utilization")
 
+            # Weather reliability penalty — fields with high cancellations score lower
+            weather_penalty = 0.0
+            cancellations = field.weather_cancellations or 0
+            if cancellations >= 5:
+                weather_penalty = 0.15
+                reasons.append(f"{cancellations} weather cancellations")
+            elif cancellations >= 2:
+                weather_penalty = 0.05
+                reasons.append(f"{cancellations} weather cancellations")
+
             # Combined score
-            total_score = w_dist * dist_score + w_qual * qual_score + w_util * util_score
+            total_score = w_dist * dist_score + w_qual * qual_score + w_util * util_score - weather_penalty
 
             if total_score > best_score:
                 best_score = total_score
@@ -410,7 +420,11 @@ async def field_utilization(org_id: uuid.UUID, db: AsyncSession = Depends(get_db
 
     total_bookings = 0
     total_hours = 0.0
+    total_cost = 0.0
     field_stats = []
+
+    # Season comparison: group bookings by season (quarter)
+    season_buckets = {}
 
     for field in fields:
         bookings = (await db.execute(
@@ -428,6 +442,19 @@ async def field_utilization(org_id: uuid.UUID, db: AsyncSession = Depends(get_db
         total_bookings += booking_count
         total_hours += hours_used
 
+        # Permit cost tracking
+        field_cost = round(hours_used * (field.permit_cost_per_hour or 0), 2)
+        total_cost += field_cost
+
+        # Season comparison buckets
+        for b in bookings:
+            season_key = f"{b.start_time.year}-Q{(b.start_time.month - 1) // 3 + 1}"
+            if season_key not in season_buckets:
+                season_buckets[season_key] = {"fields_used": set(), "total_hours": 0.0, "bookings": 0}
+            season_buckets[season_key]["fields_used"].add(str(field.id))
+            season_buckets[season_key]["total_hours"] += (b.end_time - b.start_time).total_seconds() / 3600.0
+            season_buckets[season_key]["bookings"] += 1
+
         # Assume 60 available hours/week (Mon-Sat 8am-6pm ≈ 60h)
         available_hours = 60.0
         pct = round((hours_used / available_hours) * 100, 1) if available_hours > 0 else 0
@@ -441,9 +468,27 @@ async def field_utilization(org_id: uuid.UUID, db: AsyncSession = Depends(get_db
             "available_hours": available_hours,
             "percent_utilized": pct,
             "status": "overutilized" if pct > 85 else ("underutilized" if pct < 40 else "normal"),
+            "permit_cost": field_cost,
+            "cost_per_hour": field.permit_cost_per_hour,
         })
 
     avg_util = round(sum(f["percent_utilized"] for f in field_stats) / len(field_stats), 1) if field_stats else 0
+
+    # Cost per team
+    teams = (await db.execute(select(Team).where(Team.org_id == org_id))).scalars().all()
+    cost_per_team = round(total_cost / len(teams), 2) if teams else 0
+    cost_efficiency = round(total_cost / total_hours, 2) if total_hours > 0 else 0
+
+    # Season comparison: serialize
+    season_comparison = []
+    for sk in sorted(season_buckets.keys()):
+        sb = season_buckets[sk]
+        season_comparison.append({
+            "season": sk,
+            "fields_used": len(sb["fields_used"]),
+            "total_hours": round(sb["total_hours"], 1),
+            "bookings": sb["bookings"],
+        })
 
     return {
         "total_fields": len(fields),
@@ -451,6 +496,10 @@ async def field_utilization(org_id: uuid.UUID, db: AsyncSession = Depends(get_db
         "total_hours": round(total_hours, 1),
         "average_utilization": avg_util,
         "fields": field_stats,
+        "total_permit_cost": round(total_cost, 2),
+        "cost_per_team": cost_per_team,
+        "cost_efficiency": cost_efficiency,
+        "season_comparison": season_comparison,
     }
 
 
@@ -574,6 +623,118 @@ async def apply_weather_reassignments(org_id: uuid.UUID, request: dict, db: Asyn
         applied += 1
 
     return {"applied": applied, "total_requested": len(reassignments)}
+
+
+# ===================================================================
+# FIELD QUALITY RATINGS
+# ===================================================================
+
+@router.post("/api/fields/{field_id}/rate")
+async def rate_field(field_id: uuid.UUID, request: dict, db: AsyncSession = Depends(get_db)):
+    """Submit a 1-5 star rating for a field."""
+    rating = request.get("rating")
+    if not rating or not (1 <= rating <= 5):
+        raise HTTPException(400, "rating must be between 1 and 5")
+
+    field = (await db.execute(select(Field).where(Field.id == field_id))).scalars().first()
+    if not field:
+        raise HTTPException(404, "Field not found")
+
+    old_count = field.rating_count or 0
+    old_rating = field.field_rating or 0.0
+    new_count = old_count + 1
+    new_rating = ((old_rating * old_count) + rating) / new_count
+
+    field.field_rating = round(new_rating, 2)
+    field.rating_count = new_count
+    await db.flush()
+    await db.refresh(field)
+
+    return {
+        "field_id": str(field.id),
+        "field_rating": field.field_rating,
+        "rating_count": field.rating_count,
+        "comment": request.get("comment", ""),
+    }
+
+
+# ===================================================================
+# FAMILY DRIVE TIME ANALYSIS
+# ===================================================================
+
+# Ward center coordinates for distance estimation
+WARD_CENTERS = {
+    "NW": (38.93, -77.05),
+    "NE": (38.93, -76.98),
+    "SW": (38.87, -77.03),
+    "SE": (38.87, -76.98),
+}
+
+
+@router.get("/api/organizations/{org_id}/fields/drive-analysis")
+async def drive_analysis(org_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Analyze average drive distance from player home wards to assigned fields."""
+    teams = (await db.execute(
+        select(Team).where(Team.org_id == org_id)
+    )).scalars().all()
+
+    fields = (await db.execute(
+        select(Field).where(Field.org_id == org_id, Field.active == True)
+    )).scalars().all()
+    field_map = {f.id: f for f in fields}
+
+    analysis = []
+    for team in teams:
+        roster = (await db.execute(
+            select(TeamRoster).where(TeamRoster.team_id == team.id)
+        )).scalars().all()
+
+        player_ids = [r.player_id for r in roster]
+        if not player_ids:
+            continue
+
+        players = (await db.execute(
+            select(Player).where(Player.id.in_(player_ids))
+        )).scalars().all()
+
+        field = field_map.get(team.practice_field_id)
+        if not field or not field.latitude or not field.longitude:
+            analysis.append({
+                "team_id": str(team.id),
+                "team_name": team.name,
+                "player_count": len(players),
+                "avg_distance_km": None,
+                "est_drive_min": None,
+                "flag": False,
+                "note": "No assigned field with coordinates",
+            })
+            continue
+
+        distances = []
+        for p in players:
+            ward = p.home_ward or detect_ward(field.latitude, field.longitude)
+            center = WARD_CENTERS.get(ward)
+            if center:
+                dist = haversine(center[0], center[1], field.latitude, field.longitude)
+                distances.append(dist)
+
+        avg_dist = round(sum(distances) / len(distances), 2) if distances else 0
+        est_min = round(avg_dist * 3, 0)  # ~3 min per km in DC traffic
+        flagged = avg_dist > 5.0  # > 5km ≈ > 15 min
+
+        analysis.append({
+            "team_id": str(team.id),
+            "team_name": team.name,
+            "field_name": field.name,
+            "player_count": len(players),
+            "players_with_ward": sum(1 for p in players if p.home_ward),
+            "avg_distance_km": avg_dist,
+            "est_drive_min": est_min,
+            "flag": flagged,
+            "note": "Long average drive" if flagged else "OK",
+        })
+
+    return {"teams": analysis, "total_flagged": sum(1 for a in analysis if a.get("flag"))}
 
 
 # --- Weather Cancel (legacy) ---
