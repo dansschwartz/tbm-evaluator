@@ -899,14 +899,47 @@ html, body {
     border-color: var(--teal);
 }
 
+/* ===== Focus Indicators (Accessibility) ===== */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid #09A1A1;
+    outline-offset: 2px;
+}
+
+.nav-item:focus-visible {
+    outline: 2px solid rgba(255,255,255,0.8);
+    outline-offset: -2px;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 10000;
+        height: 100vh;
     }
 
     .sidebar.open {
         transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+    }
+
+    .sidebar.open::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 220px;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: -1;
     }
 
     .main-content {

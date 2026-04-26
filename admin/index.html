@@ -10,7 +10,8 @@
 </style>
 </head>
 <body>
-<div id="tbm-app-bar" style="
+<a href="#content-area" class="skip-to-content" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:99999;padding:12px 24px;background:#09A1A1;color:#fff;font-weight:600;text-decoration:none;border-radius:0 0 8px 0;" onfocus="this.style.left='0';this.style.width='auto';this.style.height='auto';" onblur="this.style.left='-9999px';this.style.width='1px';this.style.height='1px';">Skip to main content</a>
+<div id="tbm-app-bar" role="banner" style="
     background: #f0f2f5;
     border-bottom: 1px solid #ACC0D3;
     padding: 8px 24px;
@@ -51,7 +52,7 @@
 
     <div class="app-layout">
         <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
+        <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
             <div class="sidebar-header">
                 <div class="brand-logo">TBM</div>
                 <div class="brand-text">Operations Admin</div>
@@ -175,18 +176,18 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="main-content">
-            <header class="top-header">
-                <button class="menu-toggle" id="menu-toggle">&#9776;</button>
+        <main class="main-content" role="main">
+            <header class="top-header" role="toolbar" aria-label="Page header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">&#9776;</button>
                 <h1 class="page-title" id="page-title">Overview</h1>
                 <div style="position:relative;flex:1;max-width:320px;margin:0 16px;">
-                    <input type="text" id="global-search-input" class="form-input form-input-sm" placeholder="Search players, teams, events, coaches..." oninput="globalSearch(this.value)" style="width:100%;padding-left:32px;">
+                    <input type="text" id="global-search-input" class="form-input form-input-sm" placeholder="Search players, teams, events, coaches..." oninput="globalSearch(this.value)" style="width:100%;padding-left:32px;" aria-label="Global search" role="searchbox">
                     <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#aaa;pointer-events:none;"></i>
                     <div id="global-search-dropdown" class="hidden" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:360px;overflow-y:auto;z-index:999;margin-top:4px;"></div>
                 </div>
                 <div class="header-actions">
                     <span class="org-selector-label">Organization:</span>
-                    <select id="global-org-select" class="form-select form-select-sm">
+                    <select id="global-org-select" class="form-select form-select-sm" aria-label="Select organization">
                         <option value="">-- Select Org --</option>
                     </select>
                 </div>
@@ -469,6 +470,27 @@
                         <div class="card">
                             <div class="card-header"><h3>Top Performers</h3></div>
                             <div class="card-body" id="analytics-top"></div>
+                        </div>
+                    </div>
+                    <!-- Season Comparison -->
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header">
+                            <h3><i data-lucide="git-compare" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;"></i> Season Comparison</h3>
+                        </div>
+                        <div class="card-body">
+                            <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+                                <select id="season-compare-1" class="form-select form-select-sm" aria-label="First season to compare">
+                                    <option value="">-- Season 1 --</option>
+                                </select>
+                                <span style="font-weight:600;color:#888;">vs</span>
+                                <select id="season-compare-2" class="form-select form-select-sm" aria-label="Second season to compare">
+                                    <option value="">-- Season 2 --</option>
+                                </select>
+                                <button class="btn btn-primary btn-sm" onclick="loadSeasonComparison(getSelectedOrg())" aria-label="Compare selected seasons">Compare</button>
+                            </div>
+                            <div id="season-comparison-body">
+                                <p class="text-muted">Select two seasons to compare.</p>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -1031,11 +1053,11 @@
     </div>
 
     <!-- Modal -->
-    <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal-overlay hidden" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal" id="modal">
             <div class="modal-header">
                 <h3 id="modal-title">Modal</h3>
-                <button class="modal-close" id="modal-close">&times;</button>
+                <button class="modal-close" id="modal-close" aria-label="Close modal">&times;</button>
             </div>
             <div class="modal-body" id="modal-body"></div>
             <div class="modal-footer" id="modal-footer"></div>

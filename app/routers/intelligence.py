@@ -23,6 +23,7 @@ from app.models import (
     Player, Evaluator, Team, TeamRoster, Program, Season,
     AttendanceRecord, Message, MessageRecipient, Score,
     PlayerReport, EvaluationEvent, Organization,
+    PlayerDocument,
 )
 from app.services.ai import call_openai
 
@@ -1539,7 +1540,7 @@ async def get_iysl_statements():
         "top_10_benchmarks": IYSL_TOP_10_PCT,
         "lifecycle_phases": {
             "1": "Formation",
-            "2": "Growth", 
+            "2": "Growth",
             "3": "Development",
             "4": "Performance",
             "5": "Model Club"
@@ -1557,3 +1558,250 @@ async def get_iysl_statements():
             "Revenue Portfolio"
         ]
     }
+
+
+# ============================================================
+# RECENT ACTIVITY FEED
+# ============================================================
+
+@router.get("/api/organizations/{org_id}/activity")
+async def get_recent_activity(org_id: str):
+    """Return the last 20 activities across all modules for an organization."""
+    activities = []
+    async with async_session() as session:
+        # Player registrations
+        rows = (await session.execute(
+            select(Player).where(Player.organization_id == org_id)
+            .order_by(Player.created_at.desc()).limit(20)
+        )).scalars().all()
+        for r in rows:
+            activities.append({
+                "type": "player",
+                "description": f"{r.first_name} {r.last_name} registered",
+                "timestamp": r.created_at.isoformat() if r.created_at else None,
+                "icon": "user-plus",
+            })
+
+        # Score submissions
+        rows = (await session.execute(
+            select(Score).join(Player, Score.player_id == Player.id)
+            .join(Evaluator, Score.evaluator_id == Evaluator.id)
+            .where(Player.organization_id == org_id)
+            .order_by(Score.scored_at.desc()).limit(20)
+        )).scalars().all()
+        # Group scores by evaluator + time (within 5 min) to summarize
+        eval_batches = {}
+        for s in rows:
+            key = str(s.evaluator_id)
+            if key not in eval_batches:
+                eval_batches[key] = {"count": 0, "timestamp": s.scored_at, "evaluator_id": s.evaluator_id}
+            eval_batches[key]["count"] += 1
+        for key, batch in eval_batches.items():
+            # Fetch evaluator name
+            ev = (await session.execute(
+                select(Evaluator).where(Evaluator.id == batch["evaluator_id"])
+            )).scalar()
+            name = ev.name if ev else "Unknown"
+            activities.append({
+                "type": "score",
+                "description": f"Coach {name} scored {batch['count']} players",
+                "timestamp": batch["timestamp"].isoformat() if batch["timestamp"] else None,
+                "icon": "clipboard-check",
+            })
+
+        # Report generations
+        rows = (await session.execute(
+            select(PlayerReport).where(PlayerReport.organization_id == org_id)
+            .order_by(PlayerReport.created_at.desc()).limit(20)
+        )).scalars().all()
+        for r in rows:
+            activities.append({
+                "type": "report",
+                "description": "Player report generated",
+                "timestamp": r.created_at.isoformat() if r.created_at else None,
+                "icon": "file-bar-chart",
+            })
+
+        # Match results added
+        rows = (await session.execute(
+            select(CompetitionResult).where(CompetitionResult.org_id == org_id)
+            .order_by(CompetitionResult.created_at.desc()).limit(20)
+        )).scalars().all()
+        for r in rows:
+            activities.append({
+                "type": "match",
+                "description": f"Match result: {r.result} vs {r.opponent_name} ({r.score_for}-{r.score_against})",
+                "timestamp": r.created_at.isoformat() if r.created_at else None,
+                "icon": "swords",
+            })
+
+        # Messages sent
+        rows = (await session.execute(
+            select(Message).where(
+                and_(Message.org_id == org_id, Message.status == "sent")
+            ).order_by(Message.sent_at.desc()).limit(20)
+        )).scalars().all()
+        for r in rows:
+            activities.append({
+                "type": "message",
+                "description": f"Message sent: {r.subject or 'No subject'}",
+                "timestamp": (r.sent_at or r.created_at).isoformat() if (r.sent_at or r.created_at) else None,
+                "icon": "mail",
+            })
+
+        # Attendance recorded
+        rows = (await session.execute(
+            select(AttendanceRecord).where(AttendanceRecord.org_id == org_id)
+            .order_by(AttendanceRecord.created_at.desc()).limit(20)
+        )).scalars().all()
+        for r in rows:
+            activities.append({
+                "type": "attendance",
+                "description": f"Attendance recorded ({r.status})",
+                "timestamp": r.created_at.isoformat() if r.created_at else None,
+                "icon": "clipboard-check",
+            })
+
+        # Document uploads
+        rows = (await session.execute(
+            select(PlayerDocument).where(PlayerDocument.org_id == org_id)
+            .order_by(PlayerDocument.created_at.desc()).limit(20)
+        )).scalars().all()
+        for r in rows:
+            activities.append({
+                "type": "document",
+                "description": f"Document uploaded: {r.document_type} ({r.file_name or 'unnamed'})",
+                "timestamp": r.created_at.isoformat() if r.created_at else None,
+                "icon": "folder-open",
+            })
+
+    # Sort all activities by timestamp descending, take top 20
+    activities.sort(key=lambda a: a["timestamp"] or "", reverse=True)
+    return activities[:20]
+
+
+# ============================================================
+# SEASON COMPARISON ANALYTICS
+# ============================================================
+
+@router.get("/api/organizations/{org_id}/analytics/season-comparison")
+async def get_season_comparison(org_id: str, season1: str, season2: str):
+    """Compare two seasons side-by-side with change metrics."""
+    async with async_session() as session:
+        async def season_stats(season_name: str):
+            # Find season record
+            season_row = (await session.execute(
+                select(Season).where(
+                    and_(Season.org_id == org_id, Season.name == season_name)
+                )
+            )).scalar()
+
+            if not season_row:
+                return {
+                    "name": season_name,
+                    "total_players": 0,
+                    "total_teams": 0,
+                    "avg_score": 0,
+                    "retention_rate": 0,
+                    "match_record": {"wins": 0, "losses": 0, "draws": 0},
+                }
+
+            sid = season_row.id
+
+            # Teams in this season
+            teams = (await session.execute(
+                select(Team).where(Team.season_id == sid)
+            )).scalars().all()
+            team_ids = [t.id for t in teams]
+            total_teams = len(teams)
+
+            # Players in those teams
+            total_players = 0
+            if team_ids:
+                total_players = (await session.execute(
+                    select(func.count(func.distinct(TeamRoster.player_id)))
+                    .where(TeamRoster.team_id.in_(team_ids))
+                )).scalar() or 0
+
+            # Avg score from competition results
+            avg_score = 0.0
+            wins = losses = draws = 0
+            if team_ids:
+                results = (await session.execute(
+                    select(CompetitionResult).where(
+                        CompetitionResult.team_id.in_(team_ids)
+                    )
+                )).scalars().all()
+                for r in results:
+                    if r.result == "win":
+                        wins += 1
+                    elif r.result == "loss":
+                        losses += 1
+                    elif r.result == "draw":
+                        draws += 1
+
+                # Avg evaluation score for players in this season
+                if total_players > 0:
+                    player_ids_q = select(TeamRoster.player_id).where(
+                        TeamRoster.team_id.in_(team_ids)
+                    )
+                    avg_val = (await session.execute(
+                        select(func.avg(Score.score_value)).where(
+                            Score.player_id.in_(player_ids_q)
+                        )
+                    )).scalar()
+                    avg_score = round(float(avg_val), 2) if avg_val else 0.0
+
+            # Retention: players who were also in any other season
+            retention_rate = 0.0
+            if total_players > 0:
+                current_player_ids = (await session.execute(
+                    select(TeamRoster.player_id).where(TeamRoster.team_id.in_(team_ids))
+                )).scalars().all()
+                other_season_teams = (await session.execute(
+                    select(Team.id).where(
+                        and_(Team.org_id == org_id, Team.season_id != sid)
+                    )
+                )).scalars().all()
+                if other_season_teams:
+                    retained = (await session.execute(
+                        select(func.count(func.distinct(TeamRoster.player_id)))
+                        .where(
+                            and_(
+                                TeamRoster.team_id.in_(other_season_teams),
+                                TeamRoster.player_id.in_(current_player_ids),
+                            )
+                        )
+                    )).scalar() or 0
+                    retention_rate = round(retained / total_players * 100, 1)
+
+            return {
+                "name": season_name,
+                "total_players": total_players,
+                "total_teams": total_teams,
+                "avg_score": avg_score,
+                "retention_rate": retention_rate,
+                "match_record": {"wins": wins, "losses": losses, "draws": draws},
+            }
+
+        s1 = await season_stats(season1)
+        s2 = await season_stats(season2)
+
+        def pct_change(new, old):
+            if old == 0:
+                return "+100%" if new > 0 else "0%"
+            change = round((new - old) / old * 100)
+            return f"+{change}%" if change >= 0 else f"{change}%"
+
+        def diff(new, old):
+            d = new - old
+            return f"+{d}" if d >= 0 else str(d)
+
+        changes = {
+            "players": pct_change(s2["total_players"], s1["total_players"]),
+            "teams": diff(s2["total_teams"], s1["total_teams"]),
+            "avg_score": diff(round(s2["avg_score"] - s1["avg_score"], 1), 0).replace("+0", "0"),
+            "retention": diff(round(s2["retention_rate"] - s1["retention_rate"], 1), 0).replace("+0", "0") + "%",
+        }
+
+        return {"season1": s1, "season2": s2, "changes": changes}

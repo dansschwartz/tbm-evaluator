@@ -62,6 +62,19 @@ function promptAdminKey() {
     }
 }
 
+// ---- API CACHE (Performance Optimization) ----
+var apiCache = {};
+function cachedApi(method, url, body, ttl) {
+    var key = method + url + JSON.stringify(body || '');
+    if (apiCache[key] && Date.now() - apiCache[key].time < (ttl || 30000)) return Promise.resolve(apiCache[key].data);
+    return api(method, url, body).then(function(d) { apiCache[key] = {data: d, time: Date.now()}; return d; });
+}
+
+// ---- LAZY TAB LOADING ----
+var _tabLoaded = {};
+function markTabLoaded(section) { _tabLoaded[section] = true; }
+function isTabLoaded(section) { return !!_tabLoaded[section]; }
+
 // ---- API HELPER ----
 async function api(method, path, body) {
     const opts = {
@@ -224,7 +237,9 @@ navItems.forEach(function(item) {
 
 // Mobile menu toggle
 document.getElementById('menu-toggle').addEventListener('click', function() {
-    document.getElementById('sidebar').classList.toggle('open');
+    var sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('open');
+    this.setAttribute('aria-expanded', sidebar.classList.contains('open') ? 'true' : 'false');
 });
 
 // Change API key button
@@ -248,6 +263,9 @@ function requireOrg() {
 
 // Org selector change
 document.getElementById('global-org-select').addEventListener('change', function() {
+    // Clear cache and tab-loaded state on org change
+    apiCache = {};
+    _tabLoaded = {};
     // Reload current section
     var active = document.querySelector('.nav-item.active');
     if (active) navigateTo(active.getAttribute('data-section'));
@@ -363,21 +381,29 @@ async function loadOverview(orgId) {
             { value: ratio, label: 'Coach / Player Ratio', cls: 'gold', icon: 'user-check' },
         ]);
 
-        // --- Activity Feed ---
-        if (data.recent_events && data.recent_events.length > 0) {
-            var activityHtml = '<ul style="list-style:none;padding:0;margin:0;">';
-            data.recent_events.slice(0, 8).forEach(function(ev) {
-                activityHtml += '<li style="padding:8px 0;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px;">' +
-                    '<i data-lucide="circle-dot" style="width:14px;height:14px;color:var(--steel);flex-shrink:0;"></i>' +
-                    '<div style="flex:1;min-width:0;">' +
-                    '<strong style="font-size:13px;">' + esc(ev.name) + '</strong>' +
-                    '<div style="font-size:12px;color:#6c757d;">' + esc(ev.event_type || '') + ' &middot; ' + (ev.event_date || '--') +
-                    ' <span class="badge badge-' + (ev.status || 'draft') + '" style="font-size:11px;">' + esc(ev.status || '') + '</span></div>' +
-                    '</div></li>';
-            });
-            activityHtml += '</ul>';
-            activityBody.innerHTML = activityHtml;
-        } else {
+        // --- Activity Feed (from /activity endpoint) ---
+        try {
+            var activityData = await cachedApi('GET', '/api/organizations/' + orgId + '/activity');
+            if (activityData && activityData.length > 0) {
+                var activityHtml = '<ul style="list-style:none;padding:0;margin:0;">';
+                activityData.slice(0, 10).forEach(function(a) {
+                    var iconName = a.icon || 'circle-dot';
+                    var iconColors = {player:'#09A1A1', score:'var(--steel)', report:'var(--gold-dark)', match:'var(--coral)', message:'#5484A4', attendance:'#0a7a6e', document:'#6c757d'};
+                    var iconColor = iconColors[a.type] || 'var(--steel)';
+                    var timeAgo = a.timestamp ? formatTimeAgo(a.timestamp) : '';
+                    activityHtml += '<li style="padding:8px 0;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px;">' +
+                        '<i data-lucide="' + iconName + '" style="width:14px;height:14px;color:' + iconColor + ';flex-shrink:0;"></i>' +
+                        '<div style="flex:1;min-width:0;">' +
+                        '<span style="font-size:13px;">' + esc(a.description) + '</span>' +
+                        '<div style="font-size:11px;color:#adb5bd;">' + timeAgo + '</div>' +
+                        '</div></li>';
+                });
+                activityHtml += '</ul>';
+                activityBody.innerHTML = activityHtml;
+            } else {
+                activityBody.innerHTML = '<p class="text-muted">No recent activity.</p>';
+            }
+        } catch (_) {
             activityBody.innerHTML = '<p class="text-muted">No recent activity.</p>';
         }
 
@@ -1358,7 +1384,7 @@ function renderPlayers(players) {
     }
 
     tbody.innerHTML = filte#FA6E82.map(function(p) {
-        return '<tr data-id="' + (p.id || '') + '">' +
+        return '<tr data-id="' + (p.id || '') + '" style="cursor:pointer;" onclick="if(!event.target.closest(\'button\')){showPlayerDetail(\'' + p.id + '\');}">' +
             '<td>' + (p.jersey_number || '--') + '</td>' +
             '<td><strong>' + esc(p.first_name + ' ' + p.last_name) + '</strong></td>' +
             '<td>' + esc(p.age_group || '--') + '</td>' +
@@ -1925,6 +1951,19 @@ async function loadAnalyticsSection(orgId) {
     } catch (_) {}
 
     loadOrgAnalytics(orgId);
+
+    // Populate season comparison dropdowns
+    try {
+        var seasons = await cachedApi('GET', '/api/organizations/' + orgId + '/seasons');
+        var s1 = document.getElementById('season-compare-1');
+        var s2 = document.getElementById('season-compare-2');
+        if (s1 && s2 && Array.isArray(seasons)) {
+            var opts = '<option value="">-- Select Season --</option>' +
+                seasons.map(function(s) { return '<option value="' + esc(s.name) + '">' + esc(s.name) + '</option>'; }).join('');
+            s1.innerHTML = opts;
+            s2.innerHTML = opts;
+        }
+    } catch (_) {}
 }
 
 document.getElementById('analytics-event-select').addEventListener('change', function() {
@@ -4658,6 +4697,252 @@ function injectSortingAndEditing(section) {
     if (section === 'organizations') enableTableSorting('orgs-table', [6]);
     if (section === 'templates') enableTableSorting('templates-table', [5]);
 }
+
+// ===================================================================
+// TIME AGO HELPER
+// ===================================================================
+function formatTimeAgo(isoStr) {
+    if (!isoStr) return '';
+    var then = new Date(isoStr);
+    var now = new Date();
+    var diff = Math.floor((now - then) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return then.toLocaleDateString();
+}
+
+// ===================================================================
+// PLAYER DETAIL MODAL
+// ===================================================================
+async function showPlayerDetail(playerId) {
+    var orgId = getSelectedOrg();
+    if (!orgId || !playerId) return;
+
+    openModal('Player Details', '<div style="text-align:center;padding:24px;"><div class="spinner" style="width:32px;height:32px;margin:0 auto;"></div><p class="text-muted">Loading player data...</p></div>', '');
+
+    try {
+        var results = await Promise.allSettled([
+            api('GET', '/api/organizations/' + orgId + '/players/' + playerId),
+            api('GET', '/api/players/' + playerId + '/development-path').catch(function() { return null; }),
+            api('GET', '/api/documents/' + orgId + '/players/' + playerId).catch(function() { return []; }),
+            api('GET', '/api/organizations/' + orgId + '/teams').catch(function() { return []; }),
+        ]);
+
+        var player = results[0].status === 'fulfilled' ? results[0].value : null;
+        var devPath = results[1].status === 'fulfilled' ? results[1].value : null;
+        var docs = results[2].status === 'fulfilled' ? results[2].value : [];
+        var allTeams = results[3].status === 'fulfilled' ? results[3].value : [];
+
+        if (!player) { toast('Player not found', 'error'); closeModal(); return; }
+
+        // Find team assignment
+        var teamName = '--';
+        if (Array.isArray(allTeams)) {
+            allTeams.forEach(function(t) {
+                if (t.roster && Array.isArray(t.roster)) {
+                    t.roster.forEach(function(r) {
+                        if (r.player_id === playerId) teamName = t.name;
+                    });
+                }
+            });
+        }
+
+        // Player initials or photo
+        var initials = ((player.first_name || '')[0] || '') + ((player.last_name || '')[0] || '');
+        var avatarHtml = player.photo_url
+            ? '<img src="' + esc(player.photo_url) + '" style="width:72px;height:72px;border-radius:50%;object-fit:cover;" alt="' + esc(player.first_name) + '">'
+            : '<div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#09A1A1,#5484A4);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;">' + esc(initials) + '</div>';
+
+        // Height display
+        var heightStr = '--';
+        if (player.height_inches) {
+            var ft = Math.floor(player.height_inches / 12);
+            var inches = player.height_inches % 12;
+            heightStr = ft + "'" + inches + '"';
+        }
+
+        // Evaluation history from reports
+        var evalHtml = '<p class="text-muted">No evaluation history.</p>';
+        try {
+            var reports = await api('GET', '/api/organizations/' + orgId + '/reports?player_id=' + playerId).catch(function() { return []; });
+            if (Array.isArray(reports) && reports.length > 0) {
+                evalHtml = '<table class="data-table" style="min-width:auto;"><thead><tr><th>Event</th><th>Score</th><th>Rank</th></tr></thead><tbody>';
+                reports.forEach(function(r) {
+                    evalHtml += '<tr><td style="font-size:12px;">' + (r.event_name || '--') + '</td><td>' + (r.overall_score != null ? r.overall_score.toFixed(2) : '--') + '</td><td>' + (r.rank || '--') + '</td></tr>';
+                });
+                evalHtml += '</tbody></table>';
+            }
+        } catch (_) {}
+
+        // Development path
+        var devHtml = '<p class="text-muted">No development path.</p>';
+        if (devPath && devPath.current_level) {
+            devHtml = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+                '<span style="font-weight:600;">Current Level:</span> <span class="badge badge-active">' + esc(devPath.current_level) + '</span>';
+            if (devPath.predicted_next_level) {
+                devHtml += ' <i data-lucide="arrow-right" style="width:14px;height:14px;"></i> <span class="badge badge-draft">' + esc(devPath.predicted_next_level) + '</span>';
+            }
+            devHtml += '</div>';
+            if (devPath.ai_prediction) {
+                devHtml += '<p style="font-size:12px;color:#666;">' + esc(devPath.ai_prediction).substring(0, 200) + '</p>';
+            }
+        }
+
+        // Documents status
+        var docHtml = '<p class="text-muted">No documents.</p>';
+        var docTypes = ['waiver', 'medical', 'birth_cert', 'photo_id'];
+        if (Array.isArray(docs) && docs.length > 0) {
+            docHtml = '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+            docTypes.forEach(function(dt) {
+                var found = docs.find(function(d) { return d.document_type === dt; });
+                var color = found ? (found.verified ? '#0a7a6e' : '#e8b06e') : '#dc3545';
+                var icon = found ? (found.verified ? 'check-circle' : 'clock') : 'x-circle';
+                var label = dt.replace(/_/g, ' ');
+                docHtml += '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:4px;font-size:11px;background:#f8f9fa;border:1px solid #e0e0e0;">' +
+                    '<i data-lucide="' + icon + '" style="width:12px;height:12px;color:' + color + ';"></i> ' + label + '</span>';
+            });
+            docHtml += '</div>';
+        }
+
+        var html = '<div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">' +
+            // Left column: avatar + bio
+            '<div style="text-align:center;min-width:120px;">' +
+                avatarHtml +
+                '<h3 style="margin:12px 0 4px;font-size:18px;">' + esc(player.first_name + ' ' + player.last_name) + '</h3>' +
+                '<div style="color:#6c757d;font-size:13px;">' + esc(player.position || 'No position') + ' &middot; ' + esc(player.age_group || '--') + '</div>' +
+                '<div style="margin-top:6px;"><span class="badge badge-' + (player.active ? 'yes' : 'no') + '">' + (player.active ? 'Active' : 'Inactive') + '</span></div>' +
+            '</div>' +
+            // Right column: details
+            '<div style="flex:1;min-width:260px;">' +
+                // Bio details
+                '<div class="card" style="margin-bottom:12px;"><div class="card-body" style="padding:12px;">' +
+                '<h4 style="margin:0 0 8px;font-size:14px;"><i data-lucide="info" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Bio</h4>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:13px;">' +
+                    '<div><span style="color:#888;">Height:</span> ' + heightStr + '</div>' +
+                    '<div><span style="color:#888;">Weight:</span> ' + (player.weight_lbs ? player.weight_lbs + ' lbs' : '--') + '</div>' +
+                    '<div><span style="color:#888;">Foot:</span> ' + esc(player.dominant_foot || '--') + '</div>' +
+                    '<div><span style="color:#888;">DOB:</span> ' + esc(player.date_of_birth || '--') + '</div>' +
+                    '<div><span style="color:#888;">Jersey:</span> #' + (player.jersey_number || '--') + '</div>' +
+                    '<div><span style="color:#888;">Team:</span> ' + esc(teamName) + '</div>' +
+                '</div></div></div>' +
+                // Parent contact
+                '<div class="card" style="margin-bottom:12px;"><div class="card-body" style="padding:12px;">' +
+                '<h4 style="margin:0 0 8px;font-size:14px;"><i data-lucide="phone" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Parent Contact</h4>' +
+                '<div style="font-size:13px;">' +
+                    '<div>' + esc(player.parent_name || '--') + '</div>' +
+                    '<div style="color:#09A1A1;">' + esc(player.parent_email || '--') + '</div>' +
+                    '<div>' + esc(player.parent_phone || '--') + '</div>' +
+                '</div></div></div>' +
+                // Evaluation history
+                '<div class="card" style="margin-bottom:12px;"><div class="card-body" style="padding:12px;">' +
+                '<h4 style="margin:0 0 8px;font-size:14px;"><i data-lucide="bar-chart-3" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Evaluation History</h4>' +
+                evalHtml + '</div></div>' +
+                // Development path
+                '<div class="card" style="margin-bottom:12px;"><div class="card-body" style="padding:12px;">' +
+                '<h4 style="margin:0 0 8px;font-size:14px;"><i data-lucide="trending-up" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Development Path</h4>' +
+                devHtml + '</div></div>' +
+                // Documents
+                '<div class="card" style="margin-bottom:0;"><div class="card-body" style="padding:12px;">' +
+                '<h4 style="margin:0 0 8px;font-size:14px;"><i data-lucide="folder-open" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Documents</h4>' +
+                docHtml + '</div></div>' +
+            '</div>' +
+        '</div>';
+
+        document.getElementById('modal-body').innerHTML = html;
+        document.getElementById('modal-title').textContent = 'Player Card';
+        document.getElementById('modal-footer').innerHTML = '<button class="btn btn-outline" onclick="closeModal()">Close</button>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    } catch (e) {
+        toast('Error loading player details: ' + (e.message || e), 'error');
+        closeModal();
+    }
+}
+
+// ===================================================================
+// SEASON COMPARISON ANALYTICS
+// ===================================================================
+async function loadSeasonComparison(orgId) {
+    var el = document.getElementById('season-comparison-body');
+    if (!el) return;
+    var s1 = document.getElementById('season-compare-1');
+    var s2 = document.getElementById('season-compare-2');
+    if (!s1 || !s2 || !s1.value || !s2.value) {
+        el.innerHTML = '<p class="text-muted">Select two seasons to compare.</p>';
+        return;
+    }
+
+    el.innerHTML = '<div style="text-align:center;padding:16px;"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
+
+    try {
+        var data = await api('GET', '/api/organizations/' + orgId + '/analytics/season-comparison?season1=' + encodeURIComponent(s1.value) + '&season2=' + encodeURIComponent(s2.value));
+
+        function changeColor(val) {
+            if (!val) return '#666';
+            return val.startsWith('+') && val !== '+0' && val !== '+0%' && val !== '+0.0%' ? '#0a7a6e' : (val.startsWith('-') ? '#dc3545' : '#666');
+        }
+
+        function changeBadge(val) {
+            var color = changeColor(val);
+            var bg = color === '#0a7a6e' ? '#e6f7f5' : (color === '#dc3545' ? '#fef2f2' : '#f0f0f0');
+            return '<span style="font-weight:700;color:' + color + ';background:' + bg + ';padding:2px 8px;border-radius:12px;font-size:12px;">' + esc(val) + '</span>';
+        }
+
+        var metrics = [
+            {label: 'Players', k: 'total_players', change: data.changes.players},
+            {label: 'Teams', k: 'total_teams', change: data.changes.teams},
+            {label: 'Avg Score', k: 'avg_score', change: data.changes.avg_score},
+            {label: 'Retention', k: 'retention_rate', change: data.changes.retention, suffix: '%'},
+        ];
+
+        var html = '<table class="data-table" style="min-width:auto;">' +
+            '<thead><tr><th>Metric</th><th>' + esc(data.season1.name) + '</th><th>' + esc(data.season2.name) + '</th><th>Change</th></tr></thead><tbody>';
+        metrics.forEach(function(m) {
+            var v1 = data.season1[m.k];
+            var v2 = data.season2[m.k];
+            var suffix = m.suffix || '';
+            html += '<tr><td style="font-weight:600;">' + m.label + '</td><td>' + v1 + suffix + '</td><td>' + v2 + suffix + '</td><td>' + changeBadge(m.change) + '</td></tr>';
+        });
+        // Match record row
+        var mr1 = data.season1.match_record;
+        var mr2 = data.season2.match_record;
+        html += '<tr><td style="font-weight:600;">Match Record</td><td>' + mr1.wins + 'W-' + mr1.draws + 'D-' + mr1.losses + 'L</td><td>' + mr2.wins + 'W-' + mr2.draws + 'D-' + mr2.losses + 'L</td><td>--</td></tr>';
+        html += '</tbody></table>';
+
+        el.innerHTML = html;
+    } catch (e) {
+        el.innerHTML = '<p class="text-muted">Error: ' + esc(e.message || String(e)) + '</p>';
+    }
+}
+
+// ===================================================================
+// MOBILE SIDEBAR OVERLAY CLOSE
+// ===================================================================
+document.addEventListener('click', function(e) {
+    var sidebar = document.getElementById('sidebar');
+    var menuBtn = document.getElementById('menu-toggle');
+    if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== menuBtn && !menuBtn.contains(e.target)) {
+        sidebar.classList.remove('open');
+    }
+});
+
+// ===================================================================
+// FOCUS TRAP FOR MODALS (Accessibility)
+// ===================================================================
+document.getElementById('modal-overlay').addEventListener('keydown', function(e) {
+    if (e.key !== 'Tab') return;
+    var modal = document.getElementById('modal');
+    var focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length === 0) return;
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+});
 
 // ===================================================================
 // INIT
