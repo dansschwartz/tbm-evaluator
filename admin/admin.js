@@ -229,6 +229,7 @@ function navigateTo(section) {
 navItems.forEach(function(item) {
     item.addEventListener('click', function(e) {
         e.preventDefault();
+        console.log('Nav click:', this.getAttribute('data-section'));
         navigateTo(this.getAttribute('data-section'));
         // close mobile menu
         document.getElementById('sidebar').classList.remove('open');
@@ -236,11 +237,11 @@ navItems.forEach(function(item) {
 });
 
 // Mobile menu toggle
-document.getElementById('menu-toggle').addEventListener('click', function() {
+try { document.getElementById('menu-toggle').addEventListener('click', function() {
     var sidebar = document.getElementById('sidebar');
     sidebar.classList.toggle('open');
     this.setAttribute('aria-expanded', sidebar.classList.contains('open') ? 'true' : 'false');
-});
+}); } catch(e) { console.warn('Menu toggle not found:', e); }
 
 // Change API key button
 document.getElementById('btn-change-key').addEventListener('click', function() {
@@ -4948,9 +4949,19 @@ document.getElementById('modal-overlay').addEventListener('keydown', function(e)
 // INIT
 // ===================================================================
 (async function init() {
-    await loadOrgSelector();
-    navigateTo('overview');
-    refreshBadges();
+    try {
+        console.log('TBM Admin: Initializing...');
+        await loadOrgSelector();
+        console.log('TBM Admin: Org selector loaded');
+        navigateTo('overview');
+        console.log('TBM Admin: Navigated to overview');
+        refreshBadges();
+        console.log('TBM Admin: Init complete');
+    } catch(e) {
+        console.error('TBM Admin init error:', e);
+        // Try basic init without badges
+        try { navigateTo('overview'); } catch(e2) { console.error('Nav error:', e2); }
+    }
 })();
 
 
