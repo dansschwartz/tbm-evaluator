@@ -1,4 +1,9 @@
 
+// PERMANENT: stat card click navigation
+window.navToSection = function(section) {
+    if (typeof navigateTo === 'function') navigateTo(section);
+};
+
 // Override toast position to always be above everything
 (function() {
     var style = document.createElement('style');
@@ -2560,7 +2565,7 @@ function scrollToField(fieldId) {
     if (row) {
         row;
         row.style.background = '#e8f2f2';
-        setTimeout(function() { row.style.background = ''; }, 2000);
+        setTimeout(function() { row.style.background = ''; }, 1000);
     }
 }
 
@@ -6285,8 +6290,20 @@ setInterval(function() {
     document.querySelectorAll('.stat-card').forEach(function(c) {
         c.title = 'Click to view details';
         c.style.cursor = 'pointer';
+        if (!c.dataset.navBound) {
+            c.dataset.navBound = '1';
+            c.addEventListener('click', function() {
+                var lbl = this.querySelector('.stat-label');
+                if (!lbl) return;
+                var t = lbl.textContent.trim();
+                var map = {'Players':'players','Teams':'ops-teams','Fields':'ops-fields','Coaches':'ops-coaches','Events This Week':'ops-schedule','Active Seasons':'ops-seasons','Messages Sent':'ops-comms','Total Teams':'ops-teams','With Coach':'ops-coaches','Need Coach':'ops-coaches','Players Rostered':'players','Matches':'intel-competition','Goals':'intel-competition','Compliance':'intel-compliance','Attendance':'ops-attendance','Documents':'ops-documents','Messages':'ops-comms','Threads':'t2-messages','Videos':'t2-videos','Total Bookings':'t2-bookings','Slots':'t2-bookings','Active Rules':'t2-automations','Total Programs':'t2-programs','Active':'t2-programs','AI Generated':'t2-programs','Drafts':'t2-programs','Bookings':'t2-bookings','Total Fields':'ops-fields','Total':'players','Turf':'ops-fields','Grass':'ops-fields','With Lights':'ops-fields','Avg Utilization':'ops-fields','Events':'events','Evaluators':'ops-coaches','Reports':'reports'};
+                var sec = map[t];
+                if (sec && typeof navigateTo === 'function') navigateTo(sec);
+            });
+        }
+        c.style.cursor = 'pointer';
     });
-}, 2000);
+}, 1000);
 
 // Auto-add copy/download buttons to ALL AI output panels
 (function() {
@@ -6329,5 +6346,5 @@ setInterval(function() {
                 addAIButtons(el);
             }
         });
-    }, 2000);
+    }, 1000);
 })();
