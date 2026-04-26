@@ -4,10 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tiny But Mighty — Club Onboarding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-
   :root {
     --primary: #09A1A1;
     --secondary: #5484A4;
@@ -18,7 +19,9 @@
     --border: #ACC0D3;
     --text: #2d3748;
     --text-muted: #888;
-    --radius: 16px;
+    --radius-card: 12px;
+    --radius-btn: 8px;
+    --radius-input: 6px;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -36,21 +39,26 @@
   .header {
     background: #fff;
     border-bottom: 1px solid var(--border);
-    padding: 20px 40px;
+    padding: 18px 40px;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
   }
   .logo {
-    width: 44px; height: 44px;
+    width: 42px; height: 42px;
     background: linear-gradient(135deg, var(--primary), var(--secondary));
-    border-radius: 12px;
+    border-radius: var(--radius-card);
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(9,161,161,0.25);
   }
   .logo svg { stroke: white; }
-  .header h1 { font-size: 22px; font-weight: 800; color: var(--secondary); }
-  .header-sub { font-size: 13px; color: var(--text-muted); margin-left: auto; }
+  .header h1 { font-size: 20px; font-weight: 800; color: var(--secondary); }
+  .header-sub {
+    font-size: 13px; color: var(--text-muted); margin-left: auto;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .header-sub i { width: 14px; height: 14px; }
 
   /* ── Main ── */
   .main {
@@ -62,159 +70,334 @@
   }
   .wizard {
     width: 100%;
-    max-width: 680px;
+    max-width: 700px;
   }
 
-  /* ── Step Indicator ── */
-  .steps-bar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    margin-bottom: 36px;
+  /* ── Progress Bar ── */
+  .progress-container {
+    margin-bottom: 32px;
   }
-  .step-dot {
-    width: 38px; height: 38px;
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .progress-step-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--secondary);
+  }
+  .progress-percent {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .progress-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(172,192,211,0.35);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 3px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 20%;
+  }
+  .progress-dots {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding: 0 2px;
+  }
+  .progress-dot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .progress-dot-circle {
+    width: 10px; height: 10px;
     border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 700;
     border: 2px solid var(--border);
     background: #fff;
+    transition: all 0.3s ease;
+  }
+  .progress-dot.active .progress-dot-circle,
+  .progress-dot.done .progress-dot-circle {
+    border-color: var(--primary);
+    background: var(--primary);
+  }
+  .progress-dot.active .progress-dot-circle {
+    box-shadow: 0 0 0 3px rgba(9,161,161,0.2);
+  }
+  .progress-dot-label {
+    font-size: 10px;
+    font-weight: 600;
     color: var(--border);
-    transition: all 0.3s;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 1;
+    transition: color 0.3s;
+    white-space: nowrap;
   }
-  .step-dot.active {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #fff;
-    box-shadow: 0 0 0 4px rgba(9, 161, 161, 0.15);
+  .progress-dot.active .progress-dot-label,
+  .progress-dot.done .progress-dot-label {
+    color: var(--primary);
   }
-  .step-dot.done {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #fff;
-  }
-  .step-line {
-    width: 48px; height: 2px;
-    background: var(--border);
-    transition: background 0.3s;
-    flex-shrink: 0;
-  }
-  .step-line.done { background: var(--primary); }
 
   /* ── Card ── */
   .card {
     background: var(--card);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    padding: 40px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+    border-radius: var(--radius-card);
+    border: 1px solid rgba(172,192,211,0.4);
+    padding: 44px;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03);
   }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .card-header-icon {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-btn);
+    background: linear-gradient(135deg, rgba(9,161,161,0.1), rgba(84,132,164,0.1));
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .card-header-icon i { width: 20px; height: 20px; stroke: var(--primary); }
   .card h2 {
     font-size: 22px; font-weight: 800;
     color: var(--secondary);
-    margin-bottom: 6px;
   }
   .card .subtitle {
     font-size: 14px; color: var(--text-muted);
-    margin-bottom: 28px;
+    margin-bottom: 32px;
+    margin-left: 52px;
   }
 
   /* ── Form ── */
-  .form-group { margin-bottom: 20px; }
+  .form-group { margin-bottom: 22px; }
   .form-group label {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 13px; font-weight: 600;
     color: var(--secondary);
-    margin-bottom: 6px;
+    margin-bottom: 7px;
   }
+  .form-group label i { width: 14px; height: 14px; stroke: var(--border); }
   .form-group input[type="text"],
   .form-group input[type="email"],
   .form-group input[type="number"],
   .form-group select {
     width: 100%;
-    padding: 10px 14px;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
+    padding: 11px 14px;
+    border: 1.5px solid rgba(172,192,211,0.5);
+    border-radius: var(--radius-input);
     font-family: inherit;
     font-size: 14px;
     color: var(--text);
     background: #fff;
-    transition: border-color 0.2s;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
     outline: none;
+  }
+  .form-group input:hover,
+  .form-group select:hover {
+    border-color: var(--border);
   }
   .form-group input:focus,
   .form-group select:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(9,161,161,0.1);
+    background: rgba(9,161,161,0.01);
+  }
+  .form-group input::placeholder {
+    color: #b8c4d0;
   }
   .form-group input.invalid {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(250,110,130,0.12);
+    box-shadow: 0 0 0 3px rgba(250,110,130,0.1);
   }
   .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 18px;
+  }
+  .form-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
   }
 
-  /* color picker */
-  .color-field {
-    display: flex; align-items: center; gap: 12px;
+  /* ── Sport Selector ── */
+  .sport-cards {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
   }
-  .color-field input[type="color"] {
-    width: 48px; height: 40px;
-    border: 2px solid var(--border);
-    border-radius: 10px;
+  .sport-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 8px;
+    border: 1.5px solid rgba(172,192,211,0.5);
+    border-radius: var(--radius-card);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    user-select: none;
+    background: #fff;
+  }
+  .sport-card:hover {
+    border-color: var(--primary);
+    background: rgba(9,161,161,0.02);
+  }
+  .sport-card.selected {
+    border-color: var(--primary);
+    background: rgba(9,161,161,0.06);
+    box-shadow: 0 0 0 3px rgba(9,161,161,0.1);
+  }
+  .sport-card-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(172,192,211,0.15);
+    transition: all 0.25s ease;
+  }
+  .sport-card.selected .sport-card-icon {
+    background: var(--primary);
+  }
+  .sport-card-icon i {
+    width: 20px; height: 20px;
+    stroke: var(--secondary);
+    transition: stroke 0.25s ease;
+  }
+  .sport-card.selected .sport-card-icon i {
+    stroke: #fff;
+  }
+  .sport-card-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: color 0.25s ease;
+  }
+  .sport-card.selected .sport-card-label {
+    color: var(--primary);
+  }
+
+  /* ── Color Picker ── */
+  .color-section { margin-bottom: 24px; }
+  .color-section > label {
+    display: block;
+    font-size: 13px; font-weight: 600;
+    color: var(--secondary);
+    margin-bottom: 10px;
+  }
+  .color-swatches {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .color-swatch {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2.5px solid transparent;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+  .color-swatch:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .color-swatch.active {
+    border-color: var(--text);
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text);
+  }
+  .color-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .color-picker-row input[type="color"] {
+    width: 44px; height: 36px;
+    border: 1.5px solid rgba(172,192,211,0.5);
+    border-radius: var(--radius-input);
     cursor: pointer;
     padding: 2px;
     background: #fff;
   }
-  .color-field .hex {
-    font-size: 14px; font-weight: 600; color: var(--text);
+  .color-picker-row .hex {
+    font-size: 13px; font-weight: 600; color: var(--text);
     font-family: 'Inter', monospace;
+    background: rgba(172,192,211,0.12);
+    padding: 6px 10px;
+    border-radius: var(--radius-input);
   }
 
-  /* preview card */
-  .preview-card {
-    border-radius: 14px;
-    padding: 24px;
-    margin-top: 8px;
-    color: #fff;
-    transition: all 0.3s;
+  /* ── Preview Card ── */
+  .preview-wrapper {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(172,192,211,0.3);
   }
-  .preview-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-  .preview-card p { font-size: 13px; opacity: 0.85; }
+  .preview-label {
+    font-size: 13px; font-weight: 600; color: var(--secondary);
+    margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .preview-label i { width: 14px; height: 14px; }
+  .preview-card {
+    border-radius: var(--radius-card);
+    padding: 28px;
+    color: #fff;
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .preview-card::after {
+    content: '';
+    position: absolute;
+    top: -50%; right: -30%;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+  }
+  .preview-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 4px; position: relative; }
+  .preview-card p { font-size: 13px; opacity: 0.85; position: relative; }
   .preview-badge {
     display: inline-block;
-    padding: 4px 14px;
+    padding: 6px 18px;
     border-radius: 20px;
     font-size: 12px; font-weight: 700;
-    margin-top: 12px;
+    margin-top: 14px;
+    position: relative;
+    transition: all 0.4s ease;
   }
 
-  /* checkboxes */
+  /* ── Checkboxes ── */
   .check-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 10px;
   }
   .check-item {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 14px;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px;
+    border: 1.5px solid rgba(172,192,211,0.5);
+    border-radius: var(--radius-btn);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.25s ease;
     user-select: none;
+    background: #fff;
   }
-  .check-item:hover { border-color: var(--primary); }
+  .check-item:hover { border-color: var(--primary); background: rgba(9,161,161,0.01); }
   .check-item.checked {
     border-color: var(--primary);
-    background: rgba(9,161,161,0.06);
+    background: rgba(9,161,161,0.05);
   }
   .check-item input { display: none; }
   .check-box {
@@ -223,7 +406,7 @@
     border-radius: 5px;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
   }
   .check-item.checked .check-box {
     background: var(--primary);
@@ -238,17 +421,19 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 32px;
+    margin-top: 36px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(172,192,211,0.2);
   }
   .btn {
-    padding: 11px 28px;
-    border-radius: 10px;
+    padding: 11px 26px;
+    border-radius: var(--radius-btn);
     font-family: inherit;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     border: none;
-    transition: all 0.2s;
+    transition: all 0.25s ease;
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -262,22 +447,24 @@
   .btn-secondary {
     background: transparent;
     color: var(--secondary);
-    border: 1.5px solid var(--border);
+    border: 1.5px solid rgba(172,192,211,0.5);
   }
-  .btn-secondary:hover { border-color: var(--secondary); }
+  .btn-secondary:hover { border-color: var(--secondary); background: rgba(84,132,164,0.04); }
   .btn-accent {
-    background: var(--accent);
+    background: linear-gradient(135deg, var(--accent), #e95d72);
     color: #fff;
+    font-size: 15px;
+    padding: 13px 32px;
   }
-  .btn-accent:hover { background: #e95d72; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(250,110,130,0.3); }
+  .btn-accent:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(250,110,130,0.35); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 
   /* ── Review Table ── */
   .review-table { width: 100%; border-collapse: collapse; }
-  .review-table tr { border-bottom: 1px solid #edf0f4; }
+  .review-table tr { border-bottom: 1px solid rgba(172,192,211,0.2); }
   .review-table tr:last-child { border-bottom: none; }
-  .review-table td { padding: 10px 0; font-size: 14px; vertical-align: top; }
-  .review-table td:first-child { font-weight: 600; color: var(--secondary); width: 160px; }
+  .review-table td { padding: 12px 0; font-size: 14px; vertical-align: top; }
+  .review-table td:first-child { font-weight: 600; color: var(--secondary); width: 150px; }
   .review-table td:last-child { color: var(--text); }
   .review-swatch {
     display: inline-block; width: 16px; height: 16px;
@@ -285,26 +472,146 @@
     margin-right: 6px; border: 1px solid rgba(0,0,0,0.1);
   }
 
-  /* ── Success Page ── */
-  .success-icon {
-    width: 72px; height: 72px;
+  /* ── Review Summary Card ── */
+  .review-summary {
+    background: linear-gradient(135deg, rgba(9,161,161,0.06), rgba(84,132,164,0.06));
+    border: 1px solid rgba(9,161,161,0.15);
+    border-radius: var(--radius-card);
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .review-summary-icon {
+    width: 48px; height: 48px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 20px;
+    flex-shrink: 0;
   }
-  .success-icon i { width: 36px; height: 36px; stroke: #fff; }
-  .success-title { text-align: center; font-size: 26px; font-weight: 800; color: var(--secondary); margin-bottom: 6px; }
-  .success-sub { text-align: center; font-size: 14px; color: var(--text-muted); margin-bottom: 32px; }
+  .review-summary-icon i { width: 22px; height: 22px; stroke: #fff; }
+  .review-summary-text {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .review-summary-text span {
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* ── Step Transitions ── */
+  .step-panel {
+    display: none;
+    position: relative;
+  }
+  .step-panel.active {
+    display: block;
+    animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .step-panel.slide-out-left {
+    animation: slideOutLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  .step-panel.slide-out-right {
+    animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slideInFromLeft {
+    from { opacity: 0; transform: translateX(-40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slideOutLeft {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(-40px); }
+  }
+  @keyframes slideOutRight {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(40px); }
+  }
+
+  /* ── Success Page ── */
+  .success-page { position: relative; overflow: hidden; }
+
+  /* Confetti */
+  .confetti-container {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .confetti-piece {
+    position: absolute;
+    width: 8px; height: 8px;
+    top: -20px;
+    opacity: 0;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0% { opacity: 1; top: -20px; transform: rotate(0deg) scale(1); }
+    75% { opacity: 1; }
+    100% { opacity: 0; top: 100%; transform: rotate(720deg) scale(0.5); }
+  }
+
+  /* Animated checkmark */
+  .success-check-wrap {
+    width: 88px; height: 88px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 24px;
+    position: relative;
+    z-index: 1;
+    animation: successPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.2s both;
+    box-shadow: 0 8px 32px rgba(9,161,161,0.3);
+  }
+  .success-check-wrap svg {
+    width: 44px; height: 44px;
+    stroke: #fff;
+    stroke-width: 2.5;
+    fill: none;
+    stroke-dasharray: 60;
+    stroke-dashoffset: 60;
+    animation: drawCheck 0.6s ease 0.6s forwards;
+  }
+  @keyframes successPop {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes drawCheck {
+    to { stroke-dashoffset: 0; }
+  }
+
+  .success-title {
+    text-align: center; font-size: 28px; font-weight: 800; color: var(--secondary);
+    margin-bottom: 6px; position: relative; z-index: 1;
+    animation: fadeUp 0.4s ease 0.4s both;
+  }
+  .success-sub {
+    text-align: center; font-size: 14px; color: var(--text-muted);
+    margin-bottom: 32px; position: relative; z-index: 1;
+    animation: fadeUp 0.4s ease 0.5s both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
   .cred-row {
     display: flex; gap: 12px; margin-bottom: 12px;
+    position: relative; z-index: 1;
   }
   .cred-box {
     flex: 1;
     background: #f8f9fb;
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    border: 1px solid rgba(172,192,211,0.4);
+    border-radius: var(--radius-btn);
     padding: 14px 16px;
   }
   .cred-box .cred-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
@@ -315,39 +622,47 @@
   }
   .copy-btn {
     background: none; border: none; cursor: pointer; color: var(--primary); flex-shrink: 0; padding: 2px;
+    transition: transform 0.2s;
   }
-  .copy-btn:hover { color: #088a8a; }
+  .copy-btn:hover { color: #088a8a; transform: scale(1.1); }
 
   .links-grid {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
     margin: 24px 0;
+    position: relative; z-index: 1;
   }
   .link-card {
     display: flex; flex-direction: column; align-items: center; gap: 8px;
     padding: 20px 12px;
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
+    border: 1.5px solid rgba(172,192,211,0.4);
+    border-radius: var(--radius-card);
     text-decoration: none;
     color: var(--secondary);
     font-size: 13px; font-weight: 600;
-    transition: all 0.2s;
+    transition: all 0.25s ease;
+    background: #fff;
   }
-  .link-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(9,161,161,0.12); }
+  .link-card:hover { border-color: var(--primary); transform: translateY(-3px); box-shadow: 0 6px 20px rgba(9,161,161,0.12); }
   .link-card .link-icon {
     width: 44px; height: 44px;
-    border-radius: 12px;
-    background: rgba(9,161,161,0.08);
+    border-radius: var(--radius-card);
+    background: linear-gradient(135deg, rgba(9,161,161,0.08), rgba(84,132,164,0.08));
     display: flex; align-items: center; justify-content: center;
   }
   .link-card .link-icon i { width: 22px; height: 22px; stroke: var(--primary); }
 
-  .checklist { margin: 24px 0; }
-  .checklist h3 { font-size: 15px; font-weight: 700; color: var(--secondary); margin-bottom: 12px; }
+  .checklist { margin: 24px 0; position: relative; z-index: 1; }
+  .checklist h3 {
+    font-size: 15px; font-weight: 700; color: var(--secondary); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .checklist h3 i { width: 16px; height: 16px; stroke: var(--primary); }
   .checklist-item {
     display: flex; align-items: center; gap: 10px;
     padding: 8px 0;
     font-size: 14px; color: var(--text);
     cursor: pointer; user-select: none;
+    transition: opacity 0.2s;
   }
   .checklist-item input { display: none; }
   .cl-box {
@@ -361,11 +676,11 @@
   .checklist-item.cl-done .cl-box { background: var(--primary); border-color: var(--primary); }
   .cl-box svg { width: 14px; height: 14px; stroke: #fff; opacity: 0; transition: opacity 0.15s; }
   .checklist-item.cl-done .cl-box svg { opacity: 1; }
-  .checklist-item.cl-done span { text-decoration: line-through; color: var(--text-muted); }
+  .checklist-item.cl-done span:last-child { text-decoration: line-through; color: var(--text-muted); }
 
   .snippet-box {
-    background: #1e293b; border-radius: 10px; padding: 18px 20px; margin-top: 16px;
-    position: relative;
+    background: #1e293b; border-radius: var(--radius-btn); padding: 18px 20px; margin-top: 16px;
+    position: relative; z-index: 1;
   }
   .snippet-box code {
     font-family: 'SF Mono', 'Fira Code', monospace;
@@ -375,26 +690,25 @@
   .snippet-copy {
     position: absolute; top: 10px; right: 10px;
     background: rgba(255,255,255,0.1); border: none; cursor: pointer; color: #94a3b8;
-    border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600;
+    border-radius: var(--radius-input); padding: 4px 10px; font-size: 11px; font-weight: 600;
     transition: all 0.2s;
+    font-family: inherit;
   }
   .snippet-copy:hover { background: rgba(255,255,255,0.2); color: #fff; }
 
-  /* ── Transitions ── */
-  .step-panel { display: none; animation: fadeIn 0.3s ease; }
-  .step-panel.active { display: block; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-
   /* ── Error ── */
   .error-msg {
-    background: rgba(250,110,130,0.08);
-    border: 1px solid rgba(250,110,130,0.3);
-    border-radius: 10px;
+    background: rgba(250,110,130,0.06);
+    border: 1px solid rgba(250,110,130,0.25);
+    border-radius: var(--radius-btn);
     padding: 12px 16px;
     font-size: 13px;
     color: var(--accent);
     margin-bottom: 20px;
     display: none;
+    display: none;
+    align-items: center;
+    gap: 8px;
   }
 
   /* ── Spinner ── */
@@ -410,18 +724,29 @@
 
   /* ── Responsive ── */
   @media (max-width: 640px) {
-    .header { padding: 16px 20px; }
+    .header { padding: 14px 20px; }
     .main { padding: 24px 16px 40px; }
     .card { padding: 28px 22px; }
+    .card .subtitle { margin-left: 0; }
     .form-row { grid-template-columns: 1fr; }
     .links-grid { grid-template-columns: 1fr; }
     .cred-row { flex-direction: column; }
-    .step-line { width: 28px; }
-    .step-dot { width: 32px; height: 32px; font-size: 12px; }
+    .sport-cards { grid-template-columns: repeat(3, 1fr); }
     .check-grid { grid-template-columns: 1fr 1fr; }
+    .progress-dot-label { font-size: 9px; }
+    .review-summary { flex-direction: column; text-align: center; }
+  }
+  @media (max-width: 420px) {
+    .sport-cards { grid-template-columns: repeat(2, 1fr); }
+    .progress-dots { gap: 2px; }
+    .progress-dot-label { display: none; }
   }
 
-  .footer { text-align: center; padding: 20px; font-size: 11px; color: #aaa; }
+  .footer {
+    text-align: center; padding: 20px; font-size: 11px; color: #aaa;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .footer i { width: 12px; height: 12px; }
 </style>
 </head>
 <body>
@@ -429,111 +754,194 @@
 <!-- Header -->
 <div class="header">
   <div class="logo">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
       <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
     </svg>
   </div>
   <div>
     <h1>Tiny But Mighty</h1>
   </div>
-  <span class="header-sub">Club Onboarding</span>
+  <span class="header-sub"><i data-lucide="sparkles"></i> Club Onboarding</span>
 </div>
 
 <!-- Main -->
 <div class="main">
   <div class="wizard">
 
-    <!-- Step Indicator -->
-    <div class="steps-bar" id="stepsBar"></div>
+    <!-- Progress Bar -->
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-header">
+        <span class="progress-step-label" id="progressLabel">Step 1 of 5</span>
+        <span class="progress-percent" id="progressPercent">20%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-dots">
+        <div class="progress-dot active" data-dot="1">
+          <div class="progress-dot-circle"></div>
+          <span class="progress-dot-label">Basics</span>
+        </div>
+        <div class="progress-dot" data-dot="2">
+          <div class="progress-dot-circle"></div>
+          <span class="progress-dot-label">Branding</span>
+        </div>
+        <div class="progress-dot" data-dot="3">
+          <div class="progress-dot-circle"></div>
+          <span class="progress-dot-label">Programs</span>
+        </div>
+        <div class="progress-dot" data-dot="4">
+          <div class="progress-dot-circle"></div>
+          <span class="progress-dot-label">Details</span>
+        </div>
+        <div class="progress-dot" data-dot="5">
+          <div class="progress-dot-circle"></div>
+          <span class="progress-dot-label">Review</span>
+        </div>
+      </div>
+    </div>
 
-    <!-- ━━━ Step 1: Club Basics ━━━ -->
+    <!-- Step 1: Club Basics -->
     <div class="step-panel active" data-step="1">
       <div class="card">
-        <h2>Club Basics</h2>
-        <p class="subtitle">Tell us about your organization.</p>
+        <div class="card-header">
+          <div class="card-header-icon"><i data-lucide="building-2"></i></div>
+          <h2>Club Basics</h2>
+        </div>
+        <p class="subtitle">Tell us about your organization to get started.</p>
         <div class="error-msg" id="err1"></div>
 
         <div class="form-group">
-          <label>Club Name *</label>
-          <input type="text" id="clubName" placeholder="e.g. Eastside United FC" required>
+          <label><i data-lucide="type"></i> Club Name *</label>
+          <input type="text" id="clubName" placeholder="e.g. Eastside United FC">
         </div>
 
         <div class="form-group">
-          <label>Club Slug</label>
+          <label><i data-lucide="link"></i> Club Slug</label>
           <input type="text" id="clubSlug" placeholder="auto-generated from club name">
+          <div class="form-hint">This will be used in your club's URL</div>
         </div>
 
         <div class="form-group">
-          <label>Sport</label>
-          <select id="sport">
+          <label><i data-lucide="trophy"></i> Sport</label>
+          <select id="sport" style="display:none;">
             <option value="soccer" selected>Soccer</option>
             <option value="basketball">Basketball</option>
             <option value="baseball">Baseball</option>
             <option value="lacrosse">Lacrosse</option>
             <option value="hockey">Hockey</option>
           </select>
+          <div class="sport-cards" id="sportCards">
+            <div class="sport-card selected" data-sport="soccer">
+              <div class="sport-card-icon"><i data-lucide="circle-dot"></i></div>
+              <span class="sport-card-label">Soccer</span>
+            </div>
+            <div class="sport-card" data-sport="basketball">
+              <div class="sport-card-icon"><i data-lucide="circle"></i></div>
+              <span class="sport-card-label">Basketball</span>
+            </div>
+            <div class="sport-card" data-sport="baseball">
+              <div class="sport-card-icon"><i data-lucide="diamond"></i></div>
+              <span class="sport-card-label">Baseball</span>
+            </div>
+            <div class="sport-card" data-sport="lacrosse">
+              <div class="sport-card-icon"><i data-lucide="swords"></i></div>
+              <span class="sport-card-label">Lacrosse</span>
+            </div>
+            <div class="sport-card" data-sport="hockey">
+              <div class="sport-card-icon"><i data-lucide="snowflake"></i></div>
+              <span class="sport-card-label">Hockey</span>
+            </div>
+          </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label>Contact Name *</label>
-            <input type="text" id="contactName" placeholder="Jane Smith" required>
+            <label><i data-lucide="user"></i> Contact Name *</label>
+            <input type="text" id="contactName" placeholder="Jane Smith">
           </div>
           <div class="form-group">
-            <label>Contact Email *</label>
-            <input type="email" id="contactEmail" placeholder="admin@club.com" required>
+            <label><i data-lucide="mail"></i> Contact Email *</label>
+            <input type="email" id="contactEmail" placeholder="admin@club.com">
           </div>
         </div>
 
         <div class="btn-row">
           <span></span>
-          <button class="btn btn-primary" onclick="nextStep()">Next <i data-lucide="arrow-right"></i></button>
+          <button class="btn btn-primary" onclick="nextStep()">Continue <i data-lucide="arrow-right"></i></button>
         </div>
       </div>
     </div>
 
-    <!-- ━━━ Step 2: Branding ━━━ -->
+    <!-- Step 2: Branding -->
     <div class="step-panel" data-step="2">
       <div class="card">
-        <h2>Branding</h2>
-        <p class="subtitle">Choose your club colors. Preview updates live.</p>
+        <div class="card-header">
+          <div class="card-header-icon"><i data-lucide="palette"></i></div>
+          <h2>Branding</h2>
+        </div>
+        <p class="subtitle">Choose your club colors. The preview updates live.</p>
         <div class="error-msg" id="err2"></div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>Primary Color</label>
-            <div class="color-field">
-              <input type="color" id="primaryColor" value="#003366">
-              <span class="hex" id="primaryHex">#003366</span>
-            </div>
+        <div class="color-section">
+          <label><i data-lucide="paintbrush" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;stroke:var(--border);"></i> Primary Color</label>
+          <div class="color-swatches" id="primarySwatches">
+            <div class="color-swatch active" data-color="#003366" style="background:#003366;" title="Navy"></div>
+            <div class="color-swatch" data-color="#1a5c2e" style="background:#1a5c2e;" title="Forest Green"></div>
+            <div class="color-swatch" data-color="#8b1a1a" style="background:#8b1a1a;" title="Maroon"></div>
+            <div class="color-swatch" data-color="#1a1a8b" style="background:#1a1a8b;" title="Royal Blue"></div>
+            <div class="color-swatch" data-color="#4a0e6b" style="background:#4a0e6b;" title="Purple"></div>
+            <div class="color-swatch" data-color="#1a1a1a" style="background:#1a1a1a;" title="Black"></div>
+            <div class="color-swatch" data-color="#c41e3a" style="background:#c41e3a;" title="Cardinal Red"></div>
+            <div class="color-swatch" data-color="#0e4d4d" style="background:#0e4d4d;" title="Dark Teal"></div>
           </div>
-          <div class="form-group">
-            <label>Secondary Color</label>
-            <div class="color-field">
-              <input type="color" id="secondaryColor" value="#CC9933">
-              <span class="hex" id="secondaryHex">#CC9933</span>
-            </div>
+          <div class="color-picker-row">
+            <input type="color" id="primaryColor" value="#003366">
+            <span class="hex" id="primaryHex">#003366</span>
           </div>
         </div>
 
-        <label style="font-size:13px;font-weight:600;color:var(--secondary);margin-bottom:8px;display:block;">Live Preview</label>
-        <div class="preview-card" id="previewCard" style="background:#003366;">
-          <h3 id="previewName">Your Club</h3>
-          <p>2026 Season Registration Open</p>
-          <span class="preview-badge" id="previewBadge" style="background:#CC9933;color:#003366;">Register Now</span>
+        <div class="color-section">
+          <label><i data-lucide="paintbrush" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;stroke:var(--border);"></i> Secondary Color</label>
+          <div class="color-swatches" id="secondarySwatches">
+            <div class="color-swatch active" data-color="#CC9933" style="background:#CC9933;" title="Gold"></div>
+            <div class="color-swatch" data-color="#FFFFFF" style="background:#FFFFFF;border:1.5px solid #ddd;" title="White"></div>
+            <div class="color-swatch" data-color="#C0C0C0" style="background:#C0C0C0;" title="Silver"></div>
+            <div class="color-swatch" data-color="#FF6B35" style="background:#FF6B35;" title="Orange"></div>
+            <div class="color-swatch" data-color="#4ECDC4" style="background:#4ECDC4;" title="Teal"></div>
+            <div class="color-swatch" data-color="#FFE66D" style="background:#FFE66D;" title="Yellow"></div>
+            <div class="color-swatch" data-color="#E8E8E8" style="background:#E8E8E8;" title="Light Gray"></div>
+            <div class="color-swatch" data-color="#FF1744" style="background:#FF1744;" title="Red"></div>
+          </div>
+          <div class="color-picker-row">
+            <input type="color" id="secondaryColor" value="#CC9933">
+            <span class="hex" id="secondaryHex">#CC9933</span>
+          </div>
+        </div>
+
+        <div class="preview-wrapper">
+          <div class="preview-label"><i data-lucide="eye"></i> Live Preview</div>
+          <div class="preview-card" id="previewCard" style="background:#003366;">
+            <h3 id="previewName">Your Club</h3>
+            <p>2026 Season Registration Open</p>
+            <span class="preview-badge" id="previewBadge" style="background:#CC9933;color:#003366;">Register Now</span>
+          </div>
         </div>
 
         <div class="btn-row">
           <button class="btn btn-secondary" onclick="prevStep()"><i data-lucide="arrow-left"></i> Back</button>
-          <button class="btn btn-primary" onclick="nextStep()">Next <i data-lucide="arrow-right"></i></button>
+          <button class="btn btn-primary" onclick="nextStep()">Continue <i data-lucide="arrow-right"></i></button>
         </div>
       </div>
     </div>
 
-    <!-- ━━━ Step 3: Programs ━━━ -->
+    <!-- Step 3: Programs -->
     <div class="step-panel" data-step="3">
       <div class="card">
-        <h2>Programs</h2>
+        <div class="card-header">
+          <div class="card-header-icon"><i data-lucide="layout-grid"></i></div>
+          <h2>Programs</h2>
+        </div>
         <p class="subtitle">Select the programs your club offers.</p>
         <div class="error-msg" id="err3"></div>
 
@@ -567,20 +975,23 @@
 
         <div class="btn-row">
           <button class="btn btn-secondary" onclick="prevStep()"><i data-lucide="arrow-left"></i> Back</button>
-          <button class="btn btn-primary" onclick="nextStep()">Next <i data-lucide="arrow-right"></i></button>
+          <button class="btn btn-primary" onclick="nextStep()">Continue <i data-lucide="arrow-right"></i></button>
         </div>
       </div>
     </div>
 
-    <!-- ━━━ Step 4: Setup Details ━━━ -->
+    <!-- Step 4: Setup Details -->
     <div class="step-panel" data-step="4">
       <div class="card">
-        <h2>Setup Details</h2>
+        <div class="card-header">
+          <div class="card-header-icon"><i data-lucide="settings"></i></div>
+          <h2>Setup Details</h2>
+        </div>
         <p class="subtitle">Age groups and facility information.</p>
         <div class="error-msg" id="err4"></div>
 
         <div class="form-group">
-          <label>Age Groups</label>
+          <label><i data-lucide="users"></i> Age Groups</label>
           <div class="check-grid" id="ageGrid">
             <label class="check-item" data-value="U6">
               <input type="checkbox"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="check-label">U6</span>
@@ -611,28 +1022,33 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label>Number of Fields</label>
+            <label><i data-lucide="map-pin"></i> Number of Fields</label>
             <input type="number" id="numFields" value="2" min="0">
           </div>
           <div class="form-group">
-            <label>Estimated Players</label>
+            <label><i data-lucide="users"></i> Estimated Players</label>
             <input type="number" id="estPlayers" value="200" min="0">
           </div>
         </div>
 
         <div class="btn-row">
           <button class="btn btn-secondary" onclick="prevStep()"><i data-lucide="arrow-left"></i> Back</button>
-          <button class="btn btn-primary" onclick="nextStep()">Next <i data-lucide="arrow-right"></i></button>
+          <button class="btn btn-primary" onclick="nextStep()">Continue <i data-lucide="arrow-right"></i></button>
         </div>
       </div>
     </div>
 
-    <!-- ━━━ Step 5: Review ━━━ -->
+    <!-- Step 5: Review -->
     <div class="step-panel" data-step="5">
       <div class="card">
-        <h2>Review &amp; Create</h2>
-        <p class="subtitle">Confirm your details, then let's go.</p>
+        <div class="card-header">
+          <div class="card-header-icon"><i data-lucide="check-circle"></i></div>
+          <h2>Review &amp; Create</h2>
+        </div>
+        <p class="subtitle">Confirm your details, then let's launch your club.</p>
         <div class="error-msg" id="err5"></div>
+
+        <div class="review-summary" id="reviewSummary"></div>
 
         <table class="review-table" id="reviewTable"></table>
 
@@ -645,21 +1061,26 @@
       </div>
     </div>
 
-    <!-- ━━━ Success ━━━ -->
+    <!-- Success -->
     <div class="step-panel" data-step="success">
-      <div class="card" style="text-align:left;">
-        <div class="success-icon"><i data-lucide="check"></i></div>
+      <div class="card success-page" style="text-align:left;">
+        <div class="confetti-container" id="confettiContainer"></div>
+
+        <div class="success-check-wrap">
+          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+
         <p class="success-title" id="successClubName">Club Created!</p>
         <p class="success-sub">Your club is ready to go. Save the credentials below.</p>
 
         <div class="cred-row">
           <div class="cred-box">
             <div class="cred-label">Organization ID</div>
-            <div class="cred-value"><span id="orgId">—</span><button class="copy-btn" onclick="copyText('orgId')"><i data-lucide="copy" style="width:16px;height:16px;"></i></button></div>
+            <div class="cred-value"><span id="orgId">&mdash;</span><button class="copy-btn" onclick="copyText('orgId')"><i data-lucide="copy" style="width:16px;height:16px;"></i></button></div>
           </div>
           <div class="cred-box">
             <div class="cred-label">API Key</div>
-            <div class="cred-value"><span id="apiKey">—</span><button class="copy-btn" onclick="copyText('apiKey')"><i data-lucide="copy" style="width:16px;height:16px;"></i></button></div>
+            <div class="cred-value"><span id="apiKey">&mdash;</span><button class="copy-btn" onclick="copyText('apiKey')"><i data-lucide="copy" style="width:16px;height:16px;"></i></button></div>
           </div>
         </div>
 
@@ -679,7 +1100,7 @@
         </div>
 
         <div class="checklist">
-          <h3>Getting Started</h3>
+          <h3><i data-lucide="list-checks"></i> Getting Started</h3>
           <label class="checklist-item" onclick="this.classList.toggle('cl-done')">
             <input type="checkbox"><span class="cl-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
             <span>Upload your club logo in Admin Dashboard</span>
@@ -702,7 +1123,7 @@
           </label>
         </div>
 
-        <label style="font-size:13px;font-weight:600;color:var(--secondary);display:block;margin-bottom:8px;">Chatbot Embed Code</label>
+        <label style="font-size:13px;font-weight:600;color:var(--secondary);display:flex;align-items:center;gap:6px;margin-bottom:8px;position:relative;z-index:1;"><i data-lucide="code" style="width:14px;height:14px;"></i> Chatbot Embed Code</label>
         <div class="snippet-box">
           <button class="snippet-copy" onclick="copySnippet()">Copy</button>
           <code id="embedCode">&lt;script src="/chatbot.js" data-org="ORG_ID"&gt;&lt;/script&gt;</code>
@@ -713,60 +1134,66 @@
   </div>
 </div>
 
-<div class="footer">Tiny But Mighty &mdash; Youth Sports Platform</div>
+<div class="footer"><i data-lucide="zap"></i> Tiny But Mighty &mdash; Youth Sports Platform</div>
 
 <script>
   // ── State ──
   let currentStep = 1;
   const totalSteps = 5;
+  let slideDirection = 'forward'; // 'forward' or 'back'
+
+  const stepLabels = ['Club Basics', 'Branding', 'Programs', 'Setup Details', 'Review & Create'];
 
   // ── Init ──
   document.addEventListener('DOMContentLoaded', () => {
-    buildStepBar();
+    updateProgressBar();
     bindCheckItems();
     bindColorPickers();
+    bindColorSwatches();
+    bindSportCards();
     bindSlugGen();
     lucide.createIcons();
   });
 
-  // ── Step Bar ──
-  function buildStepBar() {
-    const bar = document.getElementById('stepsBar');
-    bar.innerHTML = '';
-    for (let i = 1; i <= totalSteps; i++) {
-      const dot = document.createElement('div');
-      dot.className = 'step-dot' + (i === 1 ? ' active' : '');
-      dot.textContent = i;
-      dot.id = 'dot' + i;
-      bar.appendChild(dot);
-      if (i < totalSteps) {
-        const line = document.createElement('div');
-        line.className = 'step-line';
-        line.id = 'line' + i;
-        bar.appendChild(line);
-      }
-    }
-  }
+  // ── Progress Bar ──
+  function updateProgressBar() {
+    const pct = (currentStep / totalSteps) * 100;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressPercent').textContent = Math.round(pct) + '%';
+    document.getElementById('progressLabel').textContent = 'Step ' + currentStep + ' of ' + totalSteps + ' — ' + stepLabels[currentStep - 1];
 
-  function updateStepBar() {
-    for (let i = 1; i <= totalSteps; i++) {
-      const dot = document.getElementById('dot' + i);
-      dot.className = 'step-dot';
-      if (i < currentStep) dot.classList.add('done');
-      if (i === currentStep) dot.classList.add('active');
-      if (i < totalSteps) {
-        const line = document.getElementById('line' + i);
-        line.className = 'step-line' + (i < currentStep ? ' done' : '');
-      }
-    }
+    document.querySelectorAll('.progress-dot').forEach(dot => {
+      const n = parseInt(dot.dataset.dot);
+      dot.classList.remove('active', 'done');
+      if (n < currentStep) dot.classList.add('done');
+      if (n === currentStep) dot.classList.add('active');
+    });
   }
 
   // ── Navigation ──
   function showStep(n) {
-    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    const panels = document.querySelectorAll('.step-panel');
+    const currentPanel = document.querySelector('.step-panel.active');
+
+    if (currentPanel) {
+      currentPanel.classList.remove('active');
+    }
+
     const target = n === 'success' ? 'success' : n;
-    document.querySelector(`.step-panel[data-step="${target}"]`).classList.add('active');
-    if (n !== 'success') { currentStep = n; updateStepBar(); }
+    const nextPanel = document.querySelector(`.step-panel[data-step="${target}"]`);
+
+    // Apply direction-aware animation
+    if (slideDirection === 'back') {
+      nextPanel.style.animation = 'slideInFromLeft 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    } else {
+      nextPanel.style.animation = 'slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    }
+    nextPanel.classList.add('active');
+
+    if (n !== 'success') {
+      currentStep = n;
+      updateProgressBar();
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => lucide.createIcons(), 50);
   }
@@ -775,11 +1202,15 @@
     if (!validateStep(currentStep)) return;
     if (currentStep === 5) return;
     if (currentStep === 4) buildReview();
+    slideDirection = 'forward';
     showStep(currentStep + 1);
   }
 
   function prevStep() {
-    if (currentStep > 1) showStep(currentStep - 1);
+    if (currentStep > 1) {
+      slideDirection = 'back';
+      showStep(currentStep - 1);
+    }
   }
 
   // ── Validation ──
@@ -809,7 +1240,7 @@
   function showErr(step, msg, focusId) {
     const el = document.getElementById('err' + step);
     el.textContent = msg;
-    el.style.display = 'block';
+    el.style.display = 'flex';
     if (focusId) {
       const inp = document.getElementById(focusId);
       inp.classList.add('invalid');
@@ -840,12 +1271,67 @@
       .map(el => el.dataset.value);
   }
 
+  // ── Sport Cards ──
+  function bindSportCards() {
+    document.querySelectorAll('.sport-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.sport-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        // Sync with hidden select
+        document.getElementById('sport').value = card.dataset.sport;
+        lucide.createIcons();
+      });
+    });
+  }
+
   // ── Color Pickers ──
   function bindColorPickers() {
     const pc = document.getElementById('primaryColor');
     const sc = document.getElementById('secondaryColor');
-    pc.addEventListener('input', updatePreview);
-    sc.addEventListener('input', updatePreview);
+    pc.addEventListener('input', () => {
+      syncSwatches('primarySwatches', pc.value);
+      updatePreview();
+    });
+    sc.addEventListener('input', () => {
+      syncSwatches('secondarySwatches', sc.value);
+      updatePreview();
+    });
+  }
+
+  function bindColorSwatches() {
+    document.querySelectorAll('#primarySwatches .color-swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        document.querySelectorAll('#primarySwatches .color-swatch').forEach(s => s.classList.remove('active'));
+        sw.classList.add('active');
+        document.getElementById('primaryColor').value = sw.dataset.color;
+        updatePreview();
+      });
+    });
+    document.querySelectorAll('#secondarySwatches .color-swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        document.querySelectorAll('#secondarySwatches .color-swatch').forEach(s => s.classList.remove('active'));
+        sw.classList.add('active');
+        document.getElementById('secondaryColor').value = sw.dataset.color;
+        updatePreview();
+      });
+    });
+  }
+
+  function syncSwatches(containerId, colorValue) {
+    const swatches = document.querySelectorAll(`#${containerId} .color-swatch`);
+    let found = false;
+    swatches.forEach(sw => {
+      if (sw.dataset.color.toLowerCase() === colorValue.toLowerCase()) {
+        sw.classList.add('active');
+        found = true;
+      } else {
+        sw.classList.remove('active');
+      }
+    });
+    // If no swatch matches, remove all active states
+    if (!found) {
+      swatches.forEach(sw => sw.classList.remove('active'));
+    }
   }
 
   function updatePreview() {
@@ -878,10 +1364,25 @@
   function buildReview() {
     const programs = getChecked('programsGrid');
     const ages = getChecked('ageGrid');
+    const sportEl = document.getElementById('sport');
+    const sportName = sportEl.options[sportEl.selectedIndex].text;
+
+    // Build summary card
+    const summaryEl = document.getElementById('reviewSummary');
+    summaryEl.innerHTML = `
+      <div class="review-summary-icon"><i data-lucide="sparkles"></i></div>
+      <div class="review-summary-text">
+        Your club will include <span>${programs.length} program${programs.length !== 1 ? 's' : ''}</span>,
+        a <span>${sportName.toLowerCase()} evaluation template</span>,
+        <span>${v('numFields') || '0'} field${v('numFields') !== '1' ? 's' : ''}</span>,
+        and <span>${ages.length} age group${ages.length !== 1 ? 's' : ''}</span>.
+      </div>
+    `;
+
     const rows = [
       ['Club Name', v('clubName')],
       ['Slug', v('clubSlug')],
-      ['Sport', document.getElementById('sport').options[document.getElementById('sport').selectedIndex].text],
+      ['Sport', sportName],
       ['Contact', `${v('contactName')} &lt;${v('contactEmail')}&gt;`],
       ['Colors', `<span class="review-swatch" style="background:${v('primaryColor')}"></span>${v('primaryColor').toUpperCase()}  &nbsp; <span class="review-swatch" style="background:${v('secondaryColor')}"></span>${v('secondaryColor').toUpperCase()}`],
       ['Programs', programs.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')],
@@ -890,6 +1391,34 @@
       ['Est. Players', v('estPlayers')],
     ];
     document.getElementById('reviewTable').innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+  }
+
+  // ── Confetti ──
+  function launchConfetti() {
+    const container = document.getElementById('confettiContainer');
+    const colors = ['#09A1A1', '#5484A4', '#FA6E82', '#F6C992', '#ACC0D3', '#fff'];
+    const shapes = ['50%', '3px', '0'];
+
+    for (let i = 0; i < 60; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const size = 6 + Math.random() * 8;
+      const borderRadius = shapes[Math.floor(Math.random() * shapes.length)];
+      piece.style.cssText = `
+        left: ${Math.random() * 100}%;
+        width: ${size}px;
+        height: ${size}px;
+        background: ${color};
+        border-radius: ${borderRadius};
+        animation-duration: ${1.5 + Math.random() * 2}s;
+        animation-delay: ${Math.random() * 0.8}s;
+      `;
+      container.appendChild(piece);
+    }
+
+    // Clean up after animation
+    setTimeout(() => { container.innerHTML = ''; }, 5000);
   }
 
   // ── Submit ──
@@ -930,16 +1459,18 @@
       // Populate success page
       document.getElementById('successClubName').textContent = payload.club_name + ' Created!';
       const org = data.organization || {};
-      document.getElementById('orgId').textContent = org.id || '—';
-      document.getElementById('apiKey').textContent = org.api_key || '—';
+      document.getElementById('orgId').textContent = org.id || '\u2014';
+      document.getElementById('apiKey').textContent = org.api_key || '\u2014';
 
       const oid = org.id || 'ORG_ID';
       document.getElementById('embedCode').innerHTML =
         `&lt;script src="/chatbot.js" data-org="${oid}"&gt;&lt;/script&gt;`;
 
-      // Hide step bar & show success
-      document.getElementById('stepsBar').style.display = 'none';
+      // Hide progress bar & show success
+      document.getElementById('progressContainer').style.display = 'none';
+      slideDirection = 'forward';
       showStep('success');
+      setTimeout(launchConfetti, 300);
 
     } catch (e) {
       btn.disabled = false;

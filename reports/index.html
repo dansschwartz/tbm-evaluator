@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-<style>.icon-inline{width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:4px;stroke:currentColor;}</style>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>.icon-inline{width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:4px;stroke:currentColor;}</style>
 </head>
 <body>
 
@@ -32,6 +32,7 @@
 
     <!-- Organization Header -->
     <header id="report-header" class="report-header">
+      <div class="header-accent"></div>
       <div class="header-inner">
         <div class="org-branding">
           <img id="org-logo" class="org-logo" src="" alt="" style="display: none;">
@@ -79,7 +80,7 @@
         </div>
         <div class="event-card">
           <div class="event-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           </div>
           <div class="event-details">
             <p id="event-name" class="event-name"></p>
@@ -93,12 +94,19 @@
       <section class="score-overview-section">
         <div class="overall-score-card">
           <p class="section-eyebrow">Overall Score</p>
-          <div class="score-circle" id="score-circle">
-            <span id="overall-score" class="score-value"></span>
-            <span class="score-max">/ 5.0</span>
+          <div class="score-ring-wrapper">
+            <svg class="score-ring" viewBox="0 0 140 140">
+              <circle class="score-ring-bg" cx="70" cy="70" r="60" />
+              <circle class="score-ring-fill" cx="70" cy="70" r="60" />
+            </svg>
+            <div class="score-circle" id="score-circle">
+              <span id="overall-score" class="score-value"></span>
+              <span class="score-max">/ 5.0</span>
+            </div>
           </div>
         </div>
         <div class="rank-badge-card" id="rank-badge-card">
+          <p class="section-eyebrow">Event Ranking</p>
           <div class="rank-badge" id="rank-badge">
             <span class="rank-hash">#</span>
             <span id="rank-number" class="rank-number"></span>
@@ -109,10 +117,13 @@
 
       <!-- Skill Scores Section -->
       <section class="skills-section">
-        <h3 class="section-title">Skill Breakdown</h3>
+        <h3 class="section-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+          Skill Breakdown
+        </h3>
         <div class="skills-layout">
           <div class="skill-bars-container" id="skill-bars-container">
-            <!-- Skill bars rende#FA6E82 by JS -->
+            <!-- Skill bars rendered by JS -->
           </div>
           <div class="radar-chart-container">
             <canvas id="radar-chart" width="320" height="320"></canvas>
@@ -122,8 +133,12 @@
 
       <!-- AI Insights Section -->
       <section class="insights-section">
-        <h3 class="section-title">Evaluation Summary</h3>
+        <h3 class="section-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>
+          Evaluation Summary
+        </h3>
         <div class="summary-block" id="ai-summary-block">
+          <div class="summary-accent-bar"></div>
           <p id="ai-summary" class="ai-summary-text"></p>
         </div>
 
@@ -131,22 +146,26 @@
           <!-- Strengths -->
           <div class="insight-card strengths-card">
             <h4 class="insight-card-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#09A1A1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span class="insight-title-icon strengths-title-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </span>
               Key Strengths
             </h4>
             <ul id="strengths-list" class="insight-list strengths-list">
-              <!-- Rende#FA6E82 by JS -->
+              <!-- Rendered by JS -->
             </ul>
           </div>
 
           <!-- Areas for Improvement -->
           <div class="insight-card improvements-card">
             <h4 class="insight-card-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 16 12 12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span class="insight-title-icon improvements-title-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 16 12 12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              </span>
               Areas for Improvement
             </h4>
             <ul id="improvements-list" class="insight-list improvements-list">
-              <!-- Rende#FA6E82 by JS -->
+              <!-- Rendered by JS -->
             </ul>
           </div>
         </div>
@@ -161,17 +180,25 @@
         </div>
       </section>
 
-      <!-- Previous Evaluations (Feature 2) -->
+      <!-- Voice Recordings (JS will populate) -->
+      <section id="voice-recordings-section" style="display:none;"></section>
+
+      <!-- Development Plan (JS will populate) -->
+      <section id="development-plan-section" style="display:none;"></section>
+
+      <!-- Previous Evaluations -->
       <section class="previous-reports-section" id="previous-reports-section" style="display:none;"></section>
 
-      <!-- Progress Narrative (Feature 22) -->
+      <!-- Progress Narrative -->
       <section class="progress-narrative-section" id="progress-narrative-section" style="display:none;"></section>
 
     </main>
 
     <!-- Footer -->
     <footer class="report-footer">
-      <p class="footer-text">Powe#FA6E82 by <strong>TBM Evaluator</strong></p>
+      <div class="footer-inner">
+        <p class="footer-text">Powered by <strong>TBM Evaluator</strong></p>
+      </div>
     </footer>
 
   </div>
@@ -180,6 +207,6 @@
   <div id="share-toast" class="share-toast">Link copied to clipboard</div>
 
   <script src="/report/static/report.js"></script>
-<script>if(typeof lucide!=="undefined")lucide.createIcons();</script>
+  <script>if(typeof lucide!=="undefined")lucide.createIcons();</script>
 </body>
 </html>

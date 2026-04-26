@@ -183,9 +183,72 @@
             <div class="content-area" id="content-area">
                 <!-- Overview Section -->
                 <section class="section" id="section-overview">
-                    <div class="stats-grid" id="overview-stats"></div>
+                    <!-- Health Score Gauge + Key Metrics Row -->
+                    <div style="display:grid;grid-template-columns:200px 1fr;gap:24px;margin-bottom:24px;align-items:start;">
+                        <div class="card" id="overview-health-gauge" style="text-align:center;padding:24px 16px;">
+                            <div class="card-body" style="padding:0;">
+                                <svg width="140" height="140" viewBox="0 0 140 140" id="health-gauge-svg" style="margin:0 auto;display:block;">
+                                    <circle cx="70" cy="70" r="60" fill="none" stroke="#e9ecef" stroke-width="12"/>
+                                    <circle cx="70" cy="70" r="60" fill="none" stroke="var(--steel)" stroke-width="12"
+                                        stroke-dasharray="0 377" stroke-linecap="round"
+                                        transform="rotate(-90 70 70)" id="health-gauge-arc"/>
+                                    <text x="70" y="66" text-anchor="middle" font-size="32" font-weight="700" fill="var(--steel)" id="health-gauge-value">--</text>
+                                    <text x="70" y="86" text-anchor="middle" font-size="11" fill="#6c757d">Health Score</text>
+                                </svg>
+                                <p id="health-gauge-label" style="margin-top:8px;font-size:13px;color:#6c757d;">Organization health</p>
+                            </div>
+                        </div>
+                        <div class="stats-grid" id="overview-stats" style="margin-bottom:0;"></div>
+                    </div>
+
+                    <!-- Two-column: Activity Feed + Upcoming Schedule -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+                        <div class="card" id="overview-activity-feed">
+                            <div class="card-header"><h3><i data-lucide="activity" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;"></i> Recent Activity</h3></div>
+                            <div class="card-body" id="overview-activity-body">
+                                <p class="text-muted">Select an organization to view activity.</p>
+                            </div>
+                        </div>
+                        <div class="card" id="overview-upcoming">
+                            <div class="card-header"><h3><i data-lucide="calendar-clock" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;"></i> Upcoming Schedule</h3></div>
+                            <div class="card-body" id="overview-upcoming-body">
+                                <p class="text-muted">Select an organization to view schedule.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerts Panel -->
+                    <div class="card" id="overview-alerts" style="margin-bottom:24px;">
+                        <div class="card-header" style="background:#fff8f0;border-left:4px solid var(--gold);"><h3><i data-lucide="alert-triangle" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;color:var(--gold-dark);"></i> Alerts &amp; Action Items</h3></div>
+                        <div class="card-body" id="overview-alerts-body">
+                            <p class="text-muted">No alerts at this time.</p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions + Registration Trend -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+                        <div class="card" id="overview-quick-actions">
+                            <div class="card-header"><h3><i data-lucide="zap" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;"></i> Quick Actions</h3></div>
+                            <div class="card-body" id="overview-quick-actions-body" style="display:flex;flex-wrap:wrap;gap:10px;">
+                                <button class="btn btn-primary" onclick="navigateTo('players')"><i data-lucide="users" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Manage Players</button>
+                                <button class="btn btn-primary" onclick="navigateTo('events')"><i data-lucide="calendar-days" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Manage Events</button>
+                                <button class="btn btn-primary" onclick="navigateTo('evaluations')"><i data-lucide="clipboard-list" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Evaluations</button>
+                                <button class="btn btn-primary" onclick="navigateTo('coaches')"><i data-lucide="graduation-cap" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Coaches</button>
+                                <button class="btn btn-primary" onclick="navigateTo('schedules')"><i data-lucide="calendar-clock" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Schedules</button>
+                                <button class="btn btn-primary" onclick="navigateTo('health')"><i data-lucide="heart-pulse" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Health Score</button>
+                            </div>
+                        </div>
+                        <div class="card" id="overview-trend-chart">
+                            <div class="card-header"><h3><i data-lucide="trending-up" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;"></i> Registration Trend</h3></div>
+                            <div class="card-body" id="overview-trend-body" style="display:flex;align-items:flex-end;gap:6px;height:140px;padding-bottom:12px;">
+                                <p class="text-muted" style="width:100%;text-align:center;">Select an organization to view trends.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Events (original, kept) -->
                     <div class="card" id="overview-recent-events">
-                        <div class="card-header"><h3>Recent Events</h3></div>
+                        <div class="card-header"><h3><i data-lucide="list" style="width:16px;height:16px;display:inline;vertical-align:middle;margin-right:4px;"></i> Recent Events</h3></div>
                         <div class="card-body" id="overview-events-body">
                             <p class="text-muted">Select an organization to view data.</p>
                         </div>

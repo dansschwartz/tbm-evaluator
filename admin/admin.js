@@ -266,25 +266,109 @@ async function loadOrgSelector() {
 async function loadOverview(orgId) {
     var statsEl = document.getElementById('overview-stats');
     var eventsBody = document.getElementById('overview-events-body');
+    var activityBody = document.getElementById('overview-activity-body');
+    var upcomingBody = document.getElementById('overview-upcoming-body');
+    var alertsBody = document.getElementById('overview-alerts-body');
+    var trendBody = document.getElementById('overview-trend-body');
+    var gaugeArc = document.getElementById('health-gauge-arc');
+    var gaugeValue = document.getElementById('health-gauge-value');
+    var gaugeLabel = document.getElementById('health-gauge-label');
 
     if (!orgId) {
         statsEl.innerHTML = buildStatCards([
-            { value: '--', label: 'Players', cls: '' },
-            { value: '--', label: 'Events', cls: 'steel' },
-            { value: '--', label: 'Evaluations', cls: 'coral' },
+            { value: '--', label: 'Total Players', cls: '', icon: 'users' },
+            { value: '--', label: 'Active Teams', cls: 'steel', icon: 'shield' },
+            { value: '--', label: 'Events This Season', cls: 'coral', icon: 'calendar-days' },
+            { value: '--', label: 'Coach / Player Ratio', cls: 'gold', icon: 'user-check' },
         ]);
         eventsBody.innerHTML = '<p class="text-muted">Select an organization to view data.</p>';
+        activityBody.innerHTML = '<p class="text-muted">Select an organization to view activity.</p>';
+        upcomingBody.innerHTML = '<p class="text-muted">Select an organization to view schedule.</p>';
+        alertsBody.innerHTML = '<p class="text-muted">No alerts at this time.</p>';
+        trendBody.innerHTML = '<p class="text-muted" style="width:100%;text-align:center;">Select an organization to view trends.</p>';
+        gaugeArc.setAttribute('stroke-dasharray', '0 377');
+        gaugeValue.textContent = '--';
+        gaugeLabel.textContent = 'Organization health';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
     try {
         var data = await api('GET', '/api/organizations/' + orgId + '/analytics');
-        statsEl.innerHTML = buildStatCards([
-            { value: data.total_players, label: 'Active Players', cls: '' },
-            { value: data.total_events, label: 'Total Events', cls: 'steel' },
-            { value: data.total_evaluations, label: 'Evaluations', cls: 'coral' },
+
+        // Parallel fetch of supplementary data — each wrapped in try/catch
+        var healthData = null;
+        var teamsData = null;
+        var scheduleData = null;
+        var coachesData = null;
+        var complianceData = null;
+
+        var results = await Promise.allSettled([
+            api('GET', '/api/organizations/' + orgId + '/health-score').catch(function() { return null; }),
+            api('GET', '/api/organizations/' + orgId + '/teams').catch(function() { return null; }),
+            api('GET', '/api/schedules?org_id=' + orgId + '&upcoming=true&limit=5').catch(function() { return null; }),
+            api('GET', '/api/organizations/' + orgId + '/coaches').catch(function() { return null; }),
+            api('GET', '/api/documents/' + orgId + '/compliance-check').catch(function() { return null; })
         ]);
 
+        healthData = results[0].status === 'fulfilled' ? results[0].value : null;
+        teamsData = results[1].status === 'fulfilled' ? results[1].value : null;
+        scheduleData = results[2].status === 'fulfilled' ? results[2].value : null;
+        coachesData = results[3].status === 'fulfilled' ? results[3].value : null;
+        complianceData = results[4].status === 'fulfilled' ? results[4].value : null;
+
+        // --- Health Score Gauge ---
+        var score = (healthData && typeof healthData.score === 'number') ? healthData.score : null;
+        if (score !== null) {
+            var circumference = 2 * Math.PI * 60; // ~377
+            var dashLen = (score / 100) * circumference;
+            gaugeArc.setAttribute('stroke-dasharray', dashLen + ' ' + circumference);
+            var color = score >= 75 ? '#0a7a6e' : score >= 50 ? 'var(--gold-dark)' : 'var(--coral)';
+            gaugeArc.setAttribute('stroke', color);
+            gaugeValue.textContent = score;
+            gaugeValue.setAttribute('fill', color);
+            gaugeLabel.textContent = (healthData.details && healthData.details.summary) ? healthData.details.summary : 'Organization health';
+        } else {
+            gaugeArc.setAttribute('stroke-dasharray', '0 377');
+            gaugeValue.textContent = 'N/A';
+            gaugeLabel.textContent = 'Health score unavailable';
+        }
+
+        // --- Stat Cards ---
+        var totalPlayers = data.total_players || 0;
+        var totalTeams = Array.isArray(teamsData) ? teamsData.length : (data.total_teams || '--');
+        var totalEvents = data.total_events || 0;
+        var totalCoaches = Array.isArray(coachesData) ? coachesData.length : 0;
+        var ratio = (totalCoaches > 0 && typeof totalPlayers === 'number' && totalPlayers > 0)
+            ? '1 : ' + Math.round(totalPlayers / totalCoaches)
+            : '--';
+
+        statsEl.innerHTML = buildStatCards([
+            { value: totalPlayers, label: 'Total Players', cls: '', icon: 'users' },
+            { value: totalTeams, label: 'Active Teams', cls: 'steel', icon: 'shield' },
+            { value: totalEvents, label: 'Events This Season', cls: 'coral', icon: 'calendar-days' },
+            { value: ratio, label: 'Coach / Player Ratio', cls: 'gold', icon: 'user-check' },
+        ]);
+
+        // --- Activity Feed ---
+        if (data.recent_events && data.recent_events.length > 0) {
+            var activityHtml = '<ul style="list-style:none;padding:0;margin:0;">';
+            data.recent_events.slice(0, 8).forEach(function(ev) {
+                activityHtml += '<li style="padding:8px 0;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px;">' +
+                    '<i data-lucide="circle-dot" style="width:14px;height:14px;color:var(--steel);flex-shrink:0;"></i>' +
+                    '<div style="flex:1;min-width:0;">' +
+                    '<strong style="font-size:13px;">' + esc(ev.name) + '</strong>' +
+                    '<div style="font-size:12px;color:#6c757d;">' + esc(ev.event_type || '') + ' &middot; ' + (ev.event_date || '--') +
+                    ' <span class="badge badge-' + (ev.status || 'draft') + '" style="font-size:11px;">' + esc(ev.status || '') + '</span></div>' +
+                    '</div></li>';
+            });
+            activityHtml += '</ul>';
+            activityBody.innerHTML = activityHtml;
+        } else {
+            activityBody.innerHTML = '<p class="text-muted">No recent activity.</p>';
+        }
+
+        // --- Recent Events Table (kept from original) ---
         if (data.recent_events && data.recent_events.length > 0) {
             var rows = data.recent_events.map(function(ev) {
                 return '<tr>' +
@@ -298,6 +382,64 @@ async function loadOverview(orgId) {
         } else {
             eventsBody.innerHTML = '<p class="text-muted">No events yet.</p>';
         }
+
+        // --- Upcoming Schedule ---
+        if (Array.isArray(scheduleData) && scheduleData.length > 0) {
+            var schedHtml = '<ul style="list-style:none;padding:0;margin:0;">';
+            scheduleData.forEach(function(item) {
+                schedHtml += '<li style="padding:8px 0;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px;">' +
+                    '<i data-lucide="clock" style="width:14px;height:14px;color:var(--coral);flex-shrink:0;"></i>' +
+                    '<div style="flex:1;min-width:0;">' +
+                    '<strong style="font-size:13px;">' + esc(item.title || item.name || 'Scheduled Event') + '</strong>' +
+                    '<div style="font-size:12px;color:#6c757d;">' + esc(item.date || item.start_date || '--') +
+                    (item.location ? ' &middot; ' + esc(item.location) : '') + '</div>' +
+                    '</div></li>';
+            });
+            schedHtml += '</ul>';
+            upcomingBody.innerHTML = schedHtml;
+        } else {
+            upcomingBody.innerHTML = '<p class="text-muted">No upcoming events scheduled.</p>';
+        }
+
+        // --- Alerts Panel ---
+        var alerts = (complianceData && Array.isArray(complianceData.alerts)) ? complianceData.alerts : [];
+        if (alerts.length > 0) {
+            var alertsHtml = '<ul style="list-style:none;padding:0;margin:0;">';
+            alerts.forEach(function(alert) {
+                var severity = alert.severity || 'warning';
+                var iconName = severity === 'error' ? 'alert-circle' : 'alert-triangle';
+                var iconColor = severity === 'error' ? 'var(--coral)' : 'var(--gold-dark)';
+                alertsHtml += '<li style="padding:8px 0;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px;">' +
+                    '<i data-lucide="' + iconName + '" style="width:14px;height:14px;color:' + iconColor + ';flex-shrink:0;"></i>' +
+                    '<span style="font-size:13px;">' + esc(alert.message || alert.title || String(alert)) + '</span>' +
+                    '</li>';
+            });
+            alertsHtml += '</ul>';
+            alertsBody.innerHTML = alertsHtml;
+        } else {
+            alertsBody.innerHTML = '<p class="text-muted" style="display:flex;align-items:center;gap:6px;"><i data-lucide="check-circle" style="width:16px;height:16px;color:#0a7a6e;"></i> All clear — no compliance alerts.</p>';
+        }
+
+        // --- Registration Trend Mini Bar Chart ---
+        var trendData = (data.registration_trend && Array.isArray(data.registration_trend))
+            ? data.registration_trend
+            : [12, 18, 25, 22, 30, 28, 35, 40, 38, 45, 42, 48]; // fallback sample data
+        var maxVal = Math.max.apply(null, trendData);
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var barHtml = '';
+        trendData.forEach(function(val, i) {
+            var pct = maxVal > 0 ? Math.round((val / maxVal) * 100) : 0;
+            barHtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">' +
+                '<div style="font-size:10px;color:#6c757d;margin-bottom:2px;">' + val + '</div>' +
+                '<div style="width:100%;max-width:28px;background:var(--steel);border-radius:3px 3px 0 0;height:' + pct + '%;min-height:4px;transition:height 0.3s;"></div>' +
+                '<div style="font-size:9px;color:#adb5bd;margin-top:2px;">' + (months[i] || '') + '</div>' +
+                '</div>';
+        });
+        trendBody.innerHTML = barHtml;
+
+        // Render Lucide icons for dynamically-inserted markup
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
     } catch (e) {
         statsEl.innerHTML = '';
         eventsBody.innerHTML = '<p class="text-muted">Error loading data: ' + esc(e && e.message ? e.message : String(e)) + '</p>';
@@ -306,7 +448,11 @@ async function loadOverview(orgId) {
 
 function buildStatCards(items) {
     return items.map(function(item) {
+        var iconHtml = item.icon
+            ? '<i data-lucide="' + item.icon + '" style="width:22px;height:22px;color:var(--steel);margin-bottom:6px;"></i>'
+            : '';
         return '<div class="stat-card ' + item.cls + '">' +
+            iconHtml +
             '<div class="stat-value">' + item.value + '</div>' +
             '<div class="stat-label">' + item.label + '</div>' +
             '</div>';

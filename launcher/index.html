@@ -4,161 +4,638 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tiny But Mighty — Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Inter',system-ui,sans-serif; background:#f2f4f8; min-height:100vh; display:flex; flex-direction:column; }
-  
-  .header { background:#fff; border-bottom:1px solid #ACC0D3; padding:20px 40px; display:flex; align-items:center; gap:16px; }
-  .logo { width:44px; height:44px; background:linear-gradient(135deg,#09A1A1,#5484A4); border-radius:12px; display:flex; align-items:center; justify-content:center; }
-  .logo svg { stroke:white; }
-  .header h1 { font-size:22px; font-weight:800; color:#5484A4; }
-  .header p { font-size:13px; color:#888; margin-left:auto; }
-  
-  .main { flex:1; display:flex; align-items:center; justify-content:center; padding:40px; }
-  
-  .apps-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; max-width:900px; width:100%; }
-  
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --teal: #09A1A1;
+    --steel: #5484A4;
+    --coral: #FA6E82;
+    --gold: #F6C992;
+    --blue-gray: #ACC0D3;
+    --rose: #D396A6;
+    --bg: #f5f7fa;
+    --card-bg: #ffffff;
+    --text-primary: #1a2332;
+    --text-secondary: #64748b;
+    --card-radius: 12px;
+    --btn-radius: 8px;
+    --card-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Hero ───────────────────────────────── */
+  .hero {
+    position: relative;
+    background: linear-gradient(135deg, #09A1A1 0%, #0b8d8d 30%, #5484A4 70%, #3d6a8a 100%);
+    background-size: 300% 300%;
+    animation: gradientShift 12s ease infinite;
+    padding: 72px 40px 64px;
+    text-align: center;
+    color: #fff;
+    overflow: hidden;
+  }
+
+  @keyframes gradientShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 50%, rgba(255,255,255,0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 40%),
+      radial-gradient(circle at 50% 80%, rgba(246,201,146,0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .hero-logo {
+    width: 64px;
+    height: 64px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+
+  .hero h1 {
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+    margin-bottom: 12px;
+  }
+
+  .hero .subtitle {
+    font-size: 18px;
+    font-weight: 500;
+    opacity: 0.85;
+    line-height: 1.5;
+  }
+
+  /* ── Container ─────────────────────────── */
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--steel);
+    margin-bottom: 16px;
+  }
+
+  /* ── Org Stats ─────────────────────────── */
+  .stats-section {
+    margin-top: -32px;
+    position: relative;
+    z-index: 2;
+    padding-bottom: 8px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .stat-card {
+    background: var(--card-bg);
+    border-radius: var(--card-radius);
+    padding: 20px 24px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid rgba(172, 192, 211, 0.25);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .stat-icon.teal    { background: #e6f6f6; color: var(--teal); }
+  .stat-icon.coral    { background: #fde8ec; color: var(--coral); }
+  .stat-icon.gold     { background: #fef6ec; color: var(--gold); }
+  .stat-icon.steel    { background: #eaf0f6; color: var(--steel); }
+
+  .stat-value {
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--text-primary);
+  }
+
+  .stat-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  /* ── Activity Feed ─────────────────────── */
+  .activity-section {
+    margin-top: 40px;
+  }
+
+  .activity-feed {
+    background: var(--card-bg);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+    border: 1px solid rgba(172, 192, 211, 0.25);
+    overflow: hidden;
+  }
+
+  .activity-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 24px;
+    border-bottom: 1px solid #f0f2f5;
+    transition: background 0.15s;
+  }
+
+  .activity-item:last-child { border-bottom: none; }
+  .activity-item:hover { background: #f9fafb; }
+
+  .activity-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #e6f6f6;
+    color: var(--teal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .activity-text {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .activity-time {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .activity-empty {
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .activity-empty i { margin-bottom: 8px; opacity: 0.4; }
+
+  /* ── App Cards ─────────────────────────── */
+  .apps-section {
+    margin-top: 40px;
+  }
+
+  .apps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
   .app-card {
-    background:#fff;
-    border-radius:16px;
-    padding:32px;
-    text-align:center;
-    border:2px solid #ACC0D3;
-    cursor:pointer;
-    transition:all 0.2s;
-    text-decoration:none;
-    color:inherit;
-    position:relative;
-    overflow:hidden;
+    background: var(--card-bg);
+    border-radius: var(--card-radius);
+    padding: 28px 24px;
+    border: 1px solid rgba(172, 192, 211, 0.3);
+    box-shadow: var(--card-shadow);
+    cursor: pointer;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
   }
-  .app-card:hover { border-color:#09A1A1; transform:translateY(-4px); box-shadow:0 8px 30px rgba(9,161,161,0.15); }
-  .app-card.active { border-color:#09A1A1; }
-  .app-card.coming-soon { opacity:0.5; cursor:default; }
-  .app-card.coming-soon:hover { transform:none; box-shadow:none; border-color:#ACC0D3; }
-  
-  .app-icon {
-    width:64px; height:64px;
-    border-radius:16px;
-    display:flex; align-items:center; justify-content:center;
-    margin:0 auto 16px;
+
+  .app-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.1);
   }
-  .app-icon i { width:32px; height:32px; }
-  
-  .app-card h2 { font-size:18px; font-weight:700; margin-bottom:6px; color:#5484A4; }
-  .app-card p { font-size:13px; color:#888; line-height:1.5; }
-  
+
+  .app-card:hover.color-teal  { border-color: var(--teal); }
+  .app-card:hover.color-coral { border-color: var(--coral); }
+  .app-card:hover.color-gold  { border-color: var(--gold); }
+  .app-card:hover.color-steel { border-color: var(--steel); }
+  .app-card:hover.color-rose  { border-color: var(--rose); }
+
+  .app-card.coming-soon {
+    opacity: 0.62;
+    cursor: default;
+  }
+  .app-card.coming-soon:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    border-color: rgba(172, 192, 211, 0.3);
+  }
+
+  .app-icon-circle {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+  }
+
+  .app-icon-circle.teal  { background: #e6f6f6; color: var(--teal); }
+  .app-icon-circle.coral { background: #fde8ec; color: var(--coral); }
+  .app-icon-circle.gold  { background: #fef6ec; color: var(--gold); }
+  .app-icon-circle.steel { background: #eaf0f6; color: var(--steel); }
+  .app-icon-circle.rose  { background: #f5eaef; color: var(--rose); }
+
+  .app-card h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+  }
+
+  .app-card p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    flex: 1;
+  }
+
   .app-badge {
-    position:absolute; top:12px; right:12px;
-    background:#09A1A1; color:#fff;
-    font-size:10px; font-weight:700;
-    padding:3px 10px; border-radius:12px;
-    text-transform:uppercase; letter-spacing:0.5px;
-  }
-  .app-badge.soon { background:#ACC0D3; }
-  
-  .footer { text-align:center; padding:20px; font-size:11px; color:#aaa; }
-  
-  /* Color themes per app */
-  .app-finance .app-icon { background:#e0f5f5; color:#09A1A1; }
-  .app-operations .app-icon { background:#e0f5f5; color:#09A1A1; }
-  .app-marketing .app-icon { background:#fae8ec; color:#FA6E82; }
-  .app-fundraising .app-icon { background:#fdf5ec; color:#F6C992; }
-  .app-hr .app-icon { background:#e8edf6; color:#5484A4; }
-  .app-impact .app-icon { background:#f5e8ed; color:#D396A6; }
-  .app-onboard .app-icon { background:#e8f6e8; color:#27ae60; }
-
-  .start-club-banner {
-    max-width:900px; width:100%; margin-bottom:24px;
-    background:linear-gradient(135deg,#09A1A1,#5484A4);
-    border-radius:16px; padding:24px 32px;
-    display:flex; align-items:center; justify-content:space-between;
-    color:#fff; text-decoration:none;
-    transition:all 0.2s;
-  }
-  .start-club-banner:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(9,161,161,0.3); }
-  .start-club-banner h3 { font-size:18px; font-weight:700; margin-bottom:4px; }
-  .start-club-banner p { font-size:13px; opacity:0.9; }
-  .start-club-banner .btn-start {
-    background:#fff; color:#09A1A1;
-    font-weight:700; font-size:14px;
-    padding:10px 24px; border-radius:10px;
-    white-space:nowrap;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
   }
 
-  @media (max-width:768px) { .apps-grid { grid-template-columns:1fr; } .start-club-banner { flex-direction:column; gap:12px; text-align:center; } }
+  .app-badge.live {
+    background: var(--teal);
+    color: #fff;
+  }
+
+  .app-badge.soon {
+    background: #edf0f4;
+    color: var(--text-secondary);
+  }
+
+  /* ── CTA Banner ────────────────────────── */
+  .cta-banner {
+    margin-top: 40px;
+    display: block;
+    text-decoration: none;
+    color: #fff;
+    background: linear-gradient(135deg, var(--teal) 0%, var(--steel) 100%);
+    border-radius: var(--card-radius);
+    padding: 32px 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow: 0 4px 20px rgba(9,161,161,0.2);
+  }
+
+  .cta-banner:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 36px rgba(9,161,161,0.3);
+  }
+
+  .cta-banner h3 {
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .cta-banner p {
+    font-size: 14px;
+    opacity: 0.9;
+    line-height: 1.5;
+  }
+
+  .cta-btn {
+    background: #fff;
+    color: var(--teal);
+    font-weight: 700;
+    font-size: 14px;
+    padding: 12px 28px;
+    border-radius: var(--btn-radius);
+    white-space: nowrap;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .cta-banner:hover .cta-btn {
+    background: #f0fafa;
+  }
+
+  /* ── Footer ────────────────────────────── */
+  .footer {
+    text-align: center;
+    padding: 40px 32px 32px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 48px;
+  }
+
+  /* ── Responsive ────────────────────────── */
+  @media (max-width: 900px) {
+    .apps-grid { grid-template-columns: repeat(2, 1fr); }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 640px) {
+    .hero { padding: 48px 24px 44px; }
+    .hero h1 { font-size: 28px; }
+    .hero .subtitle { font-size: 15px; }
+    .container { padding: 0 16px; }
+    .apps-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .cta-banner { flex-direction: column; text-align: center; padding: 28px 24px; }
+  }
+
+  /* ── Fade-in animation ─────────────────── */
+  .fade-up {
+    opacity: 0;
+    transform: translateY(16px);
+    animation: fadeUp 0.5s ease forwards;
+  }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-up:nth-child(1) { animation-delay: 0.05s; }
+  .fade-up:nth-child(2) { animation-delay: 0.1s; }
+  .fade-up:nth-child(3) { animation-delay: 0.15s; }
+  .fade-up:nth-child(4) { animation-delay: 0.2s; }
+  .fade-up:nth-child(5) { animation-delay: 0.25s; }
+  .fade-up:nth-child(6) { animation-delay: 0.3s; }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="logo"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-  <div>
-    <h1>Tiny But Mighty</h1>
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-content">
+    <div class="hero-logo">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+    </div>
+    <h1>Welcome to Tiny But Mighty</h1>
+    <p class="subtitle">AI-Native Platform for Youth Sports Organizations</p>
   </div>
-  <p>Select an application to get started</p>
 </div>
 
-<div class="main">
-  <a href="/onboard" class="start-club-banner">
+<!-- Org Stats (populated via JS if org_id exists) -->
+<div class="container">
+  <div class="stats-section" id="statsSection" style="display:none;">
+    <div class="stats-grid">
+      <div class="stat-card fade-up">
+        <div class="stat-icon teal"><i data-lucide="users" style="width:22px;height:22px;"></i></div>
+        <div>
+          <div class="stat-value" id="statPlayers">--</div>
+          <div class="stat-label">Total Players</div>
+        </div>
+      </div>
+      <div class="stat-card fade-up">
+        <div class="stat-icon coral"><i data-lucide="calendar" style="width:22px;height:22px;"></i></div>
+        <div>
+          <div class="stat-value" id="statEvents">--</div>
+          <div class="stat-label">Upcoming Events</div>
+        </div>
+      </div>
+      <div class="stat-card fade-up">
+        <div class="stat-icon gold"><i data-lucide="heart-pulse" style="width:22px;height:22px;"></i></div>
+        <div>
+          <div class="stat-value" id="statHealth">--</div>
+          <div class="stat-label">Health Score</div>
+        </div>
+      </div>
+      <div class="stat-card fade-up">
+        <div class="stat-icon steel"><i data-lucide="ratio" style="width:22px;height:22px;"></i></div>
+        <div>
+          <div class="stat-value" id="statRatio">--</div>
+          <div class="stat-label">Coach / Player</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="activity-section" id="activitySection" style="display:none;">
+    <div class="section-label">Recent Activity</div>
+    <div class="activity-feed" id="activityFeed">
+      <div class="activity-empty">
+        <div><i data-lucide="inbox" style="width:28px;height:28px;"></i></div>
+        No recent activity to display
+      </div>
+    </div>
+  </div>
+
+  <!-- App Cards -->
+  <div class="apps-section">
+    <div class="section-label">Applications</div>
+    <div class="apps-grid">
+
+      <a href="/admin" class="app-card color-teal fade-up">
+        <span class="app-badge live">Live</span>
+        <div class="app-icon-circle teal"><i data-lucide="settings" style="width:26px;height:26px;"></i></div>
+        <h3>Operations</h3>
+        <p>Players, families, programs & delivery. Evaluations, teams, fields, scheduling, AI intelligence.</p>
+      </a>
+
+      <a href="#" class="app-card color-teal coming-soon fade-up" onclick="return false;">
+        <span class="app-badge soon">Coming Soon</span>
+        <div class="app-icon-circle teal"><i data-lucide="dollar-sign" style="width:26px;height:26px;"></i></div>
+        <h3>Finance</h3>
+        <p>Budgets, revenue, grants & expenses. Daily cash position, monthly variance, annual reporting.</p>
+      </a>
+
+      <a href="#" class="app-card color-coral coming-soon fade-up" onclick="return false;">
+        <span class="app-badge soon">Coming Soon</span>
+        <div class="app-icon-circle coral"><i data-lucide="megaphone" style="width:26px;height:26px;"></i></div>
+        <h3>Marketing & Comms</h3>
+        <p>Membership drives, communications & brand. Email campaigns, social media, chatbot support.</p>
+      </a>
+
+      <a href="#" class="app-card color-gold coming-soon fade-up" onclick="return false;">
+        <span class="app-badge soon">Coming Soon</span>
+        <div class="app-icon-circle gold"><i data-lucide="heart-handshake" style="width:26px;height:26px;"></i></div>
+        <h3>Fundraising</h3>
+        <p>Campaigns, donors & appeals. Grant tracking, sponsorship management, donation processing.</p>
+      </a>
+
+      <a href="#" class="app-card color-steel coming-soon fade-up" onclick="return false;">
+        <span class="app-badge soon">Coming Soon</span>
+        <div class="app-icon-circle steel"><i data-lucide="users" style="width:26px;height:26px;"></i></div>
+        <h3>HR & Volunteers</h3>
+        <p>Staff, volunteers & rosters. Certifications, scheduling, background checks, recognition.</p>
+      </a>
+
+      <a href="#" class="app-card color-rose coming-soon fade-up" onclick="return false;">
+        <span class="app-badge soon">Coming Soon</span>
+        <div class="app-icon-circle rose"><i data-lucide="bar-chart-3" style="width:26px;height:26px;"></i></div>
+        <h3>Impact Reports</h3>
+        <p>Outcomes, metrics & board reporting. IYSL benchmarks, health scores, seasonal analysis.</p>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- Start a Club CTA -->
+  <a href="/onboard" class="cta-banner">
     <div>
       <h3>Start a New Club</h3>
-      <p>Set up your entire club in under 2 minutes — organization, programs, fields, and admin access.</p>
+      <p>Set up your entire organization in under 2 minutes — programs, fields, staff, and admin access.</p>
     </div>
-    <div class="btn-start">Get Started &rarr;</div>
+    <div class="cta-btn">Get Started &rarr;</div>
   </a>
-  <div class="apps-grid">
-    
-    <a href="#" class="app-card app-finance coming-soon">
-      <span class="app-badge soon">Coming Soon</span>
-      <div class="app-icon"><i data-lucide="dollar-sign"></i></div>
-      <h2>Finance</h2>
-      <p>Budgets, revenue, grants & expenses. Daily cash position, monthly variance, annual reporting.</p>
-    </a>
-    
-    <a href="/admin" class="app-card app-operations active">
-      <span class="app-badge">Live</span>
-      <div class="app-icon"><i data-lucide="settings"></i></div>
-      <h2>Operations</h2>
-      <p>Players, families, programs & delivery. Evaluations, teams, fields, scheduling, AI intelligence.</p>
-    </a>
-    
-    <a href="#" class="app-card app-marketing coming-soon">
-      <span class="app-badge soon">Coming Soon</span>
-      <div class="app-icon"><i data-lucide="megaphone"></i></div>
-      <h2>Marketing & Comms</h2>
-      <p>Membership drives, communications & brand. Email campaigns, social media, chatbot support.</p>
-    </a>
-    
-    <a href="#" class="app-card app-fundraising coming-soon">
-      <span class="app-badge soon">Coming Soon</span>
-      <div class="app-icon"><i data-lucide="heart-handshake"></i></div>
-      <h2>Fundraising</h2>
-      <p>Campaigns, donors & appeals. Grant tracking, sponsorship management, donation processing.</p>
-    </a>
-    
-    <a href="#" class="app-card app-hr coming-soon">
-      <span class="app-badge soon">Coming Soon</span>
-      <div class="app-icon"><i data-lucide="users"></i></div>
-      <h2>HR & Volunteers</h2>
-      <p>Staff, volunteers & rosters. Certifications, scheduling, background checks, recognition.</p>
-    </a>
-    
-    <a href="#" class="app-card app-impact coming-soon">
-      <span class="app-badge soon">Coming Soon</span>
-      <div class="app-icon"><i data-lucide="bar-chart-3"></i></div>
-      <h2>Impact Reports</h2>
-      <p>Outcomes, metrics & board reporting. IYSL benchmarks, health scores, seasonal analysis.</p>
-    </a>
-    
-  </div>
 </div>
 
+<!-- Footer -->
 <div class="footer">
-  Tiny But Mighty Platform v1.0 — AI-native tools for not-for-profit organizations
+  Tiny But Mighty Platform v4.0 &mdash; AI-native tools for not-for-profit organizations &middot; &copy; <span id="footerYear"></span>
 </div>
 
-<script>lucide.createIcons();</script>
+<script>
+  // Render Lucide icons
+  lucide.createIcons();
+
+  // Footer year
+  document.getElementById('footerYear').textContent = new Date().getFullYear();
+
+  // ── Data fetching ──────────────────────────
+  (async function () {
+    const orgId = localStorage.getItem('org_id');
+    const adminKey = localStorage.getItem('tbm_admin_key') || '';
+
+    if (!orgId) return;
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (adminKey) headers['X-Admin-Key'] = adminKey;
+
+    // Fetch org analytics
+    try {
+      const res = await fetch('/api/organizations/' + orgId + '/analytics', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById('statsSection').style.display = '';
+        if (data.total_players != null)   document.getElementById('statPlayers').textContent = data.total_players.toLocaleString();
+        if (data.upcoming_events != null) document.getElementById('statEvents').textContent = data.upcoming_events.toLocaleString();
+        if (data.health_score != null)    document.getElementById('statHealth').textContent = data.health_score + '%';
+        if (data.coach_player_ratio != null) document.getElementById('statRatio').textContent = data.coach_player_ratio;
+      }
+    } catch (e) { /* silently skip */ }
+
+    // Fetch recent activity
+    try {
+      const res = await fetch('/api/organizations/' + orgId + '/recent-activity', { headers });
+      if (res.ok) {
+        const items = await res.json();
+        if (Array.isArray(items) && items.length > 0) {
+          document.getElementById('activitySection').style.display = '';
+          const feed = document.getElementById('activityFeed');
+          feed.innerHTML = '';
+          const iconMap = {
+            player: 'user-plus',
+            event: 'calendar',
+            evaluation: 'clipboard-check',
+            team: 'users',
+            program: 'layout-grid',
+            default: 'activity'
+          };
+          items.slice(0, 5).forEach(function (item) {
+            const iconName = iconMap[item.type] || iconMap.default;
+            const timeAgo = item.timestamp ? formatTimeAgo(item.timestamp) : '';
+            const el = document.createElement('div');
+            el.className = 'activity-item';
+            el.innerHTML =
+              '<div class="activity-icon"><i data-lucide="' + iconName + '" style="width:18px;height:18px;"></i></div>' +
+              '<div class="activity-text">' + escapeHtml(item.description || item.message || '') + '</div>' +
+              '<div class="activity-time">' + escapeHtml(timeAgo) + '</div>';
+            feed.appendChild(el);
+          });
+          lucide.createIcons();
+        }
+      }
+    } catch (e) { /* silently skip */ }
+  })();
+
+  function escapeHtml(str) {
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function formatTimeAgo(ts) {
+    var d = new Date(ts);
+    var now = new Date();
+    var diff = Math.floor((now - d) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return d.toLocaleDateString();
+  }
+</script>
 </body>
 </html>
