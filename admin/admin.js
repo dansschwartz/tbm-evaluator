@@ -2537,7 +2537,7 @@ function renderFieldMap(fields) {
                 _fieldMapSelectedMarker.setStyle({ radius: 8, color: '#fff', weight: 2, fillColor: prevColor });
             }
             // Highlight this marker
-            marker.setStyle({ radius: 12, color: '#1a2332', weight: 3 });
+            marker.setStyle({ radius: 12, color: '#1a2332', weight: 2 });
             _fieldMapSelectedMarker = marker;
             // Update detail panel
             renderFieldDetailPanel(f);
@@ -2552,7 +2552,7 @@ function renderFieldMap(fields) {
     if (fieldsWithCoords.length > 0) {
         var first = fieldsWithCoords[0];
         var firstMarker = _fieldMapMarkers[0];
-        firstMarker.setStyle({ radius: 12, color: '#1a2332', weight: 3 });
+        firstMarker.setStyle({ radius: 12, color: '#1a2332', weight: 2 });
         _fieldMapSelectedMarker = firstMarker;
         renderFieldDetailPanel(first);
         _fieldLeafletMap.setView([first.latitude, first.longitude], 12);

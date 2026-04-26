@@ -1289,3 +1289,15 @@ select, .form-select {
 .leaflet-control-attribution {
     display: none !important;
 }
+
+/* Fix Leaflet marker selection — circular not square */
+.leaflet-interactive:focus {
+    outline: none !important;
+}
+.leaflet-interactive {
+    outline: none !important;
+}
+path.leaflet-interactive:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
