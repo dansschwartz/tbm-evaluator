@@ -56,6 +56,8 @@
                 <div class="brand-logo">TBM</div>
                 <div class="brand-text">Operations Admin</div>
             </div>
+            <!-- Shortcuts footer in sidebar -->
+            <div id="shortcuts-footer-top" style="display:none;"></div>
             <nav class="sidebar-nav">
                 <a href="#" class="nav-item active" data-section="overview">
                     <i data-lucide="layout-dashboard" class="nav-icon-lucide"></i>
@@ -162,6 +164,11 @@
                     <span class="nav-label">Compliance</span>
                 </a>
             </nav>
+            <div id="shortcuts-footer" style="padding:8px 20px;border-top:1px solid rgba(255,255,255,0.08);font-size:11px;">
+                <a href="#" onclick="event.preventDefault();showShortcutsModal();" style="color:rgba(255,255,255,0.5);text-decoration:none;display:flex;align-items:center;gap:4px;">
+                    <kbd style="display:inline-block;padding:1px 5px;font-size:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:3px;color:rgba(255,255,255,0.6);">?</kbd> Shortcuts
+                </a>
+            </div>
             <div class="sidebar-footer">
                 <button class="btn btn-sm btn-outline" id="btn-change-key">Change API Key</button>
             </div>
@@ -188,6 +195,12 @@
             <div class="content-area" id="content-area">
                 <!-- Overview Section -->
                 <section class="section" id="section-overview">
+                    <div class="section-toolbar" style="margin-bottom:16px;">
+                        <div></div>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-outline" onclick="printDashboard()"><i data-lucide="printer" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Print Dashboard</button>
+                        </div>
+                    </div>
                     <!-- Health Score Gauge + Key Metrics Row -->
                     <div style="display:grid;grid-template-columns:200px 1fr;gap:24px;margin-bottom:24px;align-items:start;">
                         <div class="card" id="overview-health-gauge" style="text-align:center;padding:24px 16px;">

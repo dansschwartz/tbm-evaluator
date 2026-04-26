@@ -99,18 +99,30 @@ async function api(method, path, body) {
     return resp.json();
 }
 
-// ---- TOAST ----
+// ---- TOAST (Enhanced with icons, stacking, slide animation) ----
+var _toastIcons = {
+    success: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="#09A1A1" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    error: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="#FA6E82" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    info: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="#5484A4" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+    warning: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="#e8b06e" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+};
 function toast(message, type) {
     type = type || 'success';
-    const container = document.getElementById('toast-container');
-    const el = document.createElement('div');
+    var container = document.getElementById('toast-container');
+    var el = document.createElement('div');
     el.className = 'toast ' + type;
-    el.textContent = message;
+    var iconHtml = _toastIcons[type] || _toastIcons.info;
+    el.innerHTML = iconHtml + '<span style="flex:1;">' + (message || '').replace(/</g,'&lt;') + '</span><button class="toast-close">&times;</button>';
     container.appendChild(el);
+    el.querySelector('.toast-close').onclick = function() {
+        el.classList.add('toast-exit');
+        setTimeout(function() { if (el.parentElement) el.remove(); }, 300);
+    };
     setTimeout(function() {
-        el.style.opacity = '0';
-        el.style.transition = 'opacity 0.3s';
-        setTimeout(function() { el.remove(); }, 300);
+        if (el.parentElement) {
+            el.classList.add('toast-exit');
+            setTimeout(function() { if (el.parentElement) el.remove(); }, 300);
+        }
     }, 4000);
 }
 
@@ -632,7 +644,7 @@ document.addEventListener('click', function(e) {
 // ===================================================================
 async function loadOrganizations() {
     var tbody = document.getElementById('orgs-table-body');
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted"><div class="skeleton-row" style="width:60%;margin:0 auto;"></div><div class="skeleton-row" style="width:80%;margin:4px auto 0;"></div><div class="skeleton-row" style="width:50%;margin:4px auto 0;"></div></td></tr>';
 
     try {
         var orgs = await api('GET', '/api/organizations');
@@ -690,6 +702,14 @@ function orgFormHtml(org) {
 }
 
 async function submitCreateOrg() {
+    // Client-side validation
+    markRequiredFields(['f-org-name', 'f-org-slug']);
+    if (!validateForm([
+        { id: 'f-org-name', required: true, label: 'Name', minLength: 2 },
+        { id: 'f-org-slug', required: true, label: 'Slug', pattern: /^[a-z0-9-]+$/, patternMsg: 'Slug must be lowercase letters, numbers, and hyphens only' },
+        { id: 'f-org-email', pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, patternMsg: 'Enter a valid email address' }
+    ])) return;
+
     var data = {
         name: document.getElementById('f-org-name').value.trim(),
         slug: document.getElementById('f-org-slug').value.trim(),
@@ -700,11 +720,6 @@ async function submitCreateOrg() {
         logo_url: document.getElementById('f-org-logo').value.trim() || null,
         settings: {}
     };
-
-    if (!data.name || !data.slug) {
-        toast('Name and slug are requi#FA6E82.', 'error');
-        return;
-    }
 
     try {
         showLoading();
@@ -792,7 +807,7 @@ async function loadTemplates(orgId) {
         return;
     }
 
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted"><div class="skeleton-row" style="width:60%;margin:0 auto;"></div><div class="skeleton-row" style="width:80%;margin:4px auto 0;"></div><div class="skeleton-row" style="width:50%;margin:4px auto 0;"></div></td></tr>';
 
     try {
         var templates = await api('GET', '/api/organizations/' + orgId + '/templates');
@@ -1025,7 +1040,7 @@ async function loadEvents(orgId) {
         return;
     }
 
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted"><div class="skeleton-row" style="width:60%;margin:0 auto;"></div><div class="skeleton-row" style="width:80%;margin:4px auto 0;"></div><div class="skeleton-row" style="width:50%;margin:4px auto 0;"></div></td></tr>';
 
     try {
         cachedEvents = await api('GET', '/api/organizations/' + orgId + '/events');
@@ -1295,7 +1310,7 @@ async function loadPlayers(orgId) {
         return;
     }
 
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted"><div class="skeleton-row" style="width:60%;margin:0 auto;"></div><div class="skeleton-row" style="width:80%;margin:4px auto 0;"></div><div class="skeleton-row" style="width:50%;margin:4px auto 0;"></div></td></tr>';
 
     try {
         var params = '';
@@ -1343,7 +1358,7 @@ function renderPlayers(players) {
     }
 
     tbody.innerHTML = filte#FA6E82.map(function(p) {
-        return '<tr>' +
+        return '<tr data-id="' + (p.id || '') + '">' +
             '<td>' + (p.jersey_number || '--') + '</td>' +
             '<td><strong>' + esc(p.first_name + ' ' + p.last_name) + '</strong></td>' +
             '<td>' + esc(p.age_group || '--') + '</td>' +
@@ -1427,7 +1442,12 @@ async function submitPlayer(editId) {
         metadata: {}
     };
 
-    if (!data.first_name || !data.last_name) { toast('First and last name are requi#FA6E82.', 'error'); return; }
+    markRequiredFields(['f-pl-fname', 'f-pl-lname']);
+    if (!validateForm([
+        { id: 'f-pl-fname', required: true, label: 'First name' },
+        { id: 'f-pl-lname', required: true, label: 'Last name' },
+        { id: 'f-pl-pemail', pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, patternMsg: 'Enter a valid email address' }
+    ])) return;
 
     if (editId) {
         var activeEl = document.getElementById('f-pl-active');
@@ -1583,7 +1603,7 @@ document.getElementById('reports-event-select').addEventListener('change', funct
 
 async function loadReports(eventId) {
     var tbody = document.getElementById('reports-table-body');
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted"><div class="skeleton-row" style="width:60%;margin:0 auto;"></div><div class="skeleton-row" style="width:80%;margin:4px auto 0;"></div><div class="skeleton-row" style="width:50%;margin:4px auto 0;"></div></td></tr>';
 
     try {
         var reports = await api('GET', '/api/events/' + eventId + '/reports');
@@ -2130,7 +2150,7 @@ async function loadOpsTeams(orgId) {
             if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             tbody.innerHTML = teams.map(function(t) {
-                return '<tr><td>' + esc(t.name) + '</td><td>' + esc(t.team_level || '-') + '</td>' +
+                return '<tr data-id="' + (t.id || '') + '"><td>' + esc(t.name) + '</td><td>' + esc(t.team_level || '-') + '</td>' +
                     '<td>' + esc(t.program_id ? 'Assigned' : '-') + '</td>' +
                     '<td>' + (t.head_coach_id ? '<span class="badge badge-yes">Assigned</span>' : '<span class="badge badge-no">None</span>') + '</td>' +
                     '<td><button class="btn btn-sm btn-outline" onclick="viewRoster(\'' + t.id + '\')">Roster</button></td>' +
@@ -3330,7 +3350,9 @@ async function askAiOps() {
     if (!q.trim()) return;
     var body = document.getElementById('ai-answer-body');
     body.style.display = 'block';
-    body.innerHTML = '<p style="color:#999;">Thinking...</p>';
+    showAIThinking(body);
+    var btn = document.getElementById('btn-ai-ask');
+    btnLoading(btn, true);
     try {
         var result = await api('POST', '/api/organizations/' + orgId + '/ai/ask', { question: q });
         var html = '<p><strong>Answer:</strong></p><p>' + esc(result.answer) + '</p>';
@@ -3341,6 +3363,7 @@ async function askAiOps() {
         }
         body.innerHTML = html;
     } catch (e) { body.innerHTML = '<p style="color:#FA6E82;">Error: ' + esc(e && e.message ? e.message : String(e)) + '</p>'; }
+    btnLoading(document.getElementById('btn-ai-ask'), false);
 }
 
 async function draftAiEmail() {
@@ -3682,13 +3705,17 @@ if(typeof lucide!=='undefined')lucide.createIcons();
 
 document.getElementById('btn-generate-health').addEventListener('click', async function() {
     var orgId = requireOrg(); if (!orgId) return;
-    showLoading();
+    var btn = this;
+    btnLoading(btn, true);
+    showAIThinking('health-ai-narrative');
+    showSkeleton('health-breakdown-body', 6);
+    showSkeleton('health-benchmarks-body', 6);
     try {
         var hs = await api('POST', '/api/organizations/' + orgId + '/health-score/generate');
         renderHealthScore(hs);
         toast('Health score generated!');
     } catch (e) { toast('Error: ' + e.message, 'error'); }
-    hideLoading();
+    btnLoading(btn, false);
 });
 
 document.getElementById('btn-generate-report').addEventListener('click', async function() {
@@ -4214,6 +4241,423 @@ document.getElementById('btn-expiring-compliance').addEventListener('click', asy
     hideLoading();
 });
 
+
+// ===================================================================
+// FEATURE: SKELETON LOADER
+// ===================================================================
+function showSkeleton(el, rows) {
+    rows = rows || 5;
+    var html = '';
+    for (var i = 0; i < rows; i++) {
+        var w = 40 + Math.random() * 55;
+        html += '<div class="skeleton-row" style="width:' + w + '%;height:' + (i === 0 ? '18' : '14') + 'px;"></div>';
+    }
+    if (typeof el === 'string') el = document.getElementById(el);
+    if (el) el.innerHTML = html;
+}
+
+function showAIThinking(el) {
+    if (typeof el === 'string') el = document.getElementById(el);
+    if (el) el.innerHTML = '<div class="ai-thinking-indicator"><i data-lucide="sparkles" style="width:18px;height:18px;color:var(--teal);"></i> AI is thinking...<div class="ai-dots"><span></span><span></span><span></span></div></div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function btnLoading(btn, loading) {
+    if (!btn) return;
+    if (loading) {
+        btn._origText = btn.innerHTML;
+        btn.classList.add('btn-loading');
+        btn.disabled = true;
+    } else {
+        btn.classList.remove('btn-loading');
+        btn.disabled = false;
+        if (btn._origText) btn.innerHTML = btn._origText;
+    }
+}
+
+// ===================================================================
+// FEATURE: TABLE SORTING
+// ===================================================================
+function sortTable(table, colIndex, forceDir) {
+    if (typeof table === 'string') table = document.getElementById(table);
+    if (!table) return;
+    var tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    var rows = Array.from(tbody.querySelectorAll('tr'));
+    if (rows.length === 0) return;
+
+    var th = table.querySelectorAll('thead th')[colIndex];
+    var currentDir = th && th.classList.contains('sort-asc') ? 'asc' : (th && th.classList.contains('sort-desc') ? 'desc' : null);
+    var dir = forceDir || (currentDir === 'asc' ? 'desc' : 'asc');
+
+    // Clear sort indicators on all headers
+    table.querySelectorAll('thead th').forEach(function(h) { h.classList.remove('sort-asc', 'sort-desc'); });
+    if (th) th.classList.add('sort-' + dir);
+
+    rows.sort(function(a, b) {
+        var aVal = (a.cells[colIndex] && a.cells[colIndex].textContent.trim()) || '';
+        var bVal = (b.cells[colIndex] && b.cells[colIndex].textContent.trim()) || '';
+        var aNum = parseFloat(aVal);
+        var bNum = parseFloat(bVal);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return dir === 'asc' ? aNum - bNum : bNum - aNum;
+        }
+        var aDate = Date.parse(aVal);
+        var bDate = Date.parse(bVal);
+        if (!isNaN(aDate) && !isNaN(bDate)) {
+            return dir === 'asc' ? aDate - bDate : bDate - aDate;
+        }
+        return dir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+
+    rows.forEach(function(r) { tbody.appendChild(r); });
+}
+
+function enableTableSorting(tableId, excludeCols) {
+    var table = document.getElementById(tableId);
+    if (!table) return;
+    excludeCols = excludeCols || [];
+    var headers = table.querySelectorAll('thead th');
+    headers.forEach(function(th, i) {
+        if (excludeCols.indexOf(i) !== -1) return;
+        if (th.textContent.trim() === 'Actions') return;
+        th.classList.add('sortable');
+        th.addEventListener('click', function() { sortTable(table, i); });
+    });
+}
+
+// ===================================================================
+// FEATURE: INLINE EDITING
+// ===================================================================
+function enableInlineEdit(tableBodyId, columns, patchFn) {
+    var tbody = document.getElementById(tableBodyId);
+    if (!tbody) return;
+    tbody.addEventListener('dblclick', function(e) {
+        var td = e.target.closest('td');
+        if (!td || td.querySelector('.inline-edit-input')) return;
+        var tr = td.closest('tr');
+        if (!tr) return;
+        var cellIndex = Array.from(tr.cells).indexOf(td);
+        var colDef = columns.find(function(c) { return c.index === cellIndex; });
+        if (!colDef) return;
+
+        var originalValue = td.textContent.trim();
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'inline-edit-input';
+        input.value = originalValue;
+        td.textContent = '';
+        td.appendChild(input);
+        input.focus();
+        input.select();
+
+        function save() {
+            var newVal = input.value.trim();
+            td.textContent = newVal || originalValue;
+            td.classList.remove('inline-editable');
+            if (newVal && newVal !== originalValue && patchFn) {
+                patchFn(tr, colDef.field, newVal);
+            }
+        }
+        function cancel() {
+            td.textContent = originalValue;
+        }
+        input.addEventListener('keydown', function(ev) {
+            if (ev.key === 'Enter') { ev.preventDefault(); save(); }
+            if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+        });
+        input.addEventListener('blur', save);
+    });
+
+    // Mark editable cells
+    var observer = new MutationObserver(function() {
+        Array.from(tbody.querySelectorAll('tr')).forEach(function(tr) {
+            columns.forEach(function(col) {
+                if (tr.cells[col.index] && !tr.cells[col.index].classList.contains('inline-editable')) {
+                    tr.cells[col.index].classList.add('inline-editable');
+                }
+            });
+        });
+    });
+    observer.observe(tbody, { childList: true, subtree: true });
+    // Initial mark
+    Array.from(tbody.querySelectorAll('tr')).forEach(function(tr) {
+        columns.forEach(function(col) {
+            if (tr.cells[col.index]) tr.cells[col.index].classList.add('inline-editable');
+        });
+    });
+}
+
+// ===================================================================
+// FEATURE: FORM VALIDATION
+// ===================================================================
+function validateForm(fields) {
+    var valid = true;
+    // Clear previous errors
+    document.querySelectorAll('.field-error').forEach(function(e) { e.remove(); });
+    document.querySelectorAll('.input-error').forEach(function(e) { e.classList.remove('input-error'); });
+
+    fields.forEach(function(f) {
+        var el = document.getElementById(f.id);
+        if (!el) return;
+        var val = el.value.trim();
+        var errorMsg = null;
+
+        if (f.required && !val) {
+            errorMsg = (f.label || 'This field') + ' is required';
+        } else if (f.minLength && val.length < f.minLength) {
+            errorMsg = (f.label || 'This field') + ' must be at least ' + f.minLength + ' characters';
+        } else if (f.pattern && val && !f.pattern.test(val)) {
+            errorMsg = f.patternMsg || 'Invalid format';
+        } else if (f.validate && val) {
+            errorMsg = f.validate(val);
+        }
+
+        if (errorMsg) {
+            valid = false;
+            el.classList.add('input-error');
+            var errEl = document.createElement('span');
+            errEl.className = 'field-error';
+            errEl.textContent = errorMsg;
+            el.parentElement.appendChild(errEl);
+        } else if (val) {
+            el.classList.add('input-success');
+        }
+    });
+    return valid;
+}
+
+// Mark required fields in modals
+function markRequiredFields(fieldIds) {
+    fieldIds.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var label = el.parentElement.querySelector('.form-label');
+        if (label && !label.classList.contains('required')) {
+            label.classList.add('required');
+        }
+    });
+}
+
+// ===================================================================
+// FEATURE: HELP TOOLTIPS
+// ===================================================================
+function helpTooltip(text) {
+    return '<span class="help-tooltip-trigger">?<span class="help-tooltip-content">' + text + '</span></span>';
+}
+
+var _helpTexts = {
+    'health-score': 'Health Score is calculated from 7 weighted factors: registration numbers, coach-to-player ratio, field utilization, volunteer engagement, document compliance, financial sustainability, and program diversity.',
+    'iysl-benchmarks': 'IYSL benchmarks compare your club against data from 2,500+ youth soccer clubs nationwide. Top 10% represents elite-performing organizations.',
+    'competition': 'Competition intelligence tracks match results, league standings, goal statistics, and team performance across all registered leagues.',
+    'compliance': 'Compliance tracks background checks, certifications, medical clearances, and insurance documents for all coaches, volunteers, and staff.',
+    'attendance': 'Attendance tracking monitors player participation rates across practices and games. Low attendance may indicate scheduling conflicts or engagement issues.',
+    'ai-assistant': 'The AI assistant analyzes your club data to provide actionable insights. It can draft emails, identify trends, suggest roster changes, and more.',
+    'development': 'Development pathways map player progression from recreational to competitive levels: Tots \u2192 Rec \u2192 Pre-Travel \u2192 Select \u2192 Travel \u2192 Academy.',
+    'draft': 'The draft tool helps balance teams by distributing players based on skill evaluations, positions, and age groups for fair competition.'
+};
+
+// ===================================================================
+// FEATURE: PRINT DASHBOARD
+// ===================================================================
+function printDashboard() {
+    // Ensure overview section is visible
+    var currentActive = document.querySelector('.nav-item.active');
+    var wasOverview = currentActive && currentActive.getAttribute('data-section') === 'overview';
+    if (!wasOverview) navigateTo('overview');
+    setTimeout(function() {
+        window.print();
+        if (!wasOverview && currentActive) {
+            navigateTo(currentActive.getAttribute('data-section'));
+        }
+    }, 300);
+}
+
+// ===================================================================
+// FEATURE: KEYBOARD SHORTCUTS
+// ===================================================================
+var _shortcutsVisible = false;
+
+function showShortcutsModal() {
+    var body = '<div class="shortcuts-grid">' +
+        shortcutRow('Focus search', 'Ctrl', 'K') +
+        shortcutRow('Focus search', '/') +
+        shortcutRow('Overview', 'Ctrl', '1') +
+        shortcutRow('Organizations', 'Ctrl', '2') +
+        shortcutRow('Templates', 'Ctrl', '3') +
+        shortcutRow('Events', 'Ctrl', '4') +
+        shortcutRow('Players', 'Ctrl', '5') +
+        shortcutRow('Reports', 'Ctrl', '6') +
+        shortcutRow('Draft', 'Ctrl', '7') +
+        shortcutRow('Analytics', 'Ctrl', '8') +
+        shortcutRow('Ops Dashboard', 'Ctrl', '9') +
+        shortcutRow('Close modal', 'Esc') +
+        shortcutRow('Print dashboard', 'Ctrl', 'P') +
+        shortcutRow('Show shortcuts', '?') +
+    '</div>';
+    openModal('Keyboard Shortcuts', body, '<button class="btn btn-primary" onclick="closeModal()">Got it</button>');
+    _shortcutsVisible = true;
+}
+
+function shortcutRow(label, key1, key2) {
+    var keys = '<kbd class="kbd">' + key1 + '</kbd>';
+    if (key2) keys += ' + <kbd class="kbd">' + key2 + '</kbd>';
+    return '<div class="shortcut-item"><span class="shortcut-label">' + label + '</span><span class="shortcut-keys">' + keys + '</span></div>';
+}
+
+var _shortcutSections = ['overview', 'organizations', 'templates', 'events', 'players', 'reports', 'draft', 'analytics', 'ops-overview'];
+
+document.addEventListener('keydown', function(e) {
+    // Don't trigger if typing in an input/textarea
+    var tag = (e.target.tagName || '').toLowerCase();
+    var isInput = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+
+    // Escape — close modal
+    if (e.key === 'Escape') {
+        var overlay = document.getElementById('modal-overlay');
+        if (overlay && !overlay.classList.contains('hidden')) {
+            closeModal();
+            _shortcutsVisible = false;
+            e.preventDefault();
+            return;
+        }
+    }
+
+    // Ctrl+K — focus search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        var searchInput = document.getElementById('global-search-input');
+        if (searchInput) searchInput.focus();
+        return;
+    }
+
+    // Ctrl+1 through Ctrl+9 — navigate tabs
+    if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '9') {
+        var idx = parseInt(e.key) - 1;
+        if (idx < _shortcutSections.length) {
+            e.preventDefault();
+            navigateTo(_shortcutSections[idx]);
+        }
+        return;
+    }
+
+    // Only non-input shortcuts below
+    if (isInput) return;
+
+    // / — focus search
+    if (e.key === '/') {
+        e.preventDefault();
+        var si = document.getElementById('global-search-input');
+        if (si) si.focus();
+        return;
+    }
+
+    // ? — show shortcuts
+    if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        showShortcutsModal();
+        return;
+    }
+});
+
+// ===================================================================
+// FEATURE: INJECT HELP TOOLTIPS & SORT/INLINE-EDIT ON SECTION LOAD
+// ===================================================================
+var _origNavigateTo = navigateTo;
+navigateTo = function(section) {
+    _origNavigateTo(section);
+    // Inject help tooltips
+    setTimeout(function() {
+        injectHelpTooltips(section);
+        injectSortingAndEditing(section);
+    }, 200);
+};
+
+function injectHelpTooltips(section) {
+    var mappings = {
+        'intel-health': [
+            { selector: '#section-intel-health .card-header h3', text: _helpTexts['health-score'], match: 'Health Score' },
+            { selector: '#section-intel-health .card-header h3', text: _helpTexts['iysl-benchmarks'], match: 'Benchmarks' }
+        ],
+        'intel-competition': [
+            { selector: '#section-intel-competition .section-toolbar h2', text: _helpTexts['competition'] }
+        ],
+        'intel-compliance': [
+            { selector: '#section-intel-compliance .section-toolbar h2', text: _helpTexts['compliance'] }
+        ],
+        'ops-attendance': [
+            { selector: '#section-ops-attendance .section-toolbar h2', text: _helpTexts['attendance'] }
+        ],
+        'ops-ai': [
+            { selector: '#section-ops-ai .section-toolbar h2', text: _helpTexts['ai-assistant'] }
+        ],
+        'intel-development': [
+            { selector: '#section-intel-development .section-toolbar h2', text: _helpTexts['development'] }
+        ],
+        'draft': [
+            { selector: '#section-draft .section-toolbar h2', text: _helpTexts['draft'] }
+        ]
+    };
+
+    var defs = mappings[section];
+    if (!defs) return;
+    defs.forEach(function(def) {
+        var els = document.querySelectorAll(def.selector);
+        els.forEach(function(el) {
+            if (el.querySelector('.help-tooltip-trigger')) return; // already added
+            if (def.match && el.textContent.indexOf(def.match) === -1) return;
+            el.insertAdjacentHTML('beforeend', ' ' + helpTooltip(def.text));
+        });
+    });
+}
+
+function injectSortingAndEditing(section) {
+    // Enable sorting on key tables
+    if (section === 'players') {
+        enableTableSorting('players-table', [0, 6]); // exclude # and Actions
+        enableInlineEdit('players-table-body',
+            [{ index: 1, field: 'name' }, { index: 2, field: 'age_group' }, { index: 3, field: 'position' }],
+            function(tr, field, newVal) {
+                var playerId = tr.getAttribute('data-id');
+                if (!playerId) { toast('Cannot update: missing player ID', 'error'); return; }
+                var orgId = getSelectedOrg();
+                if (!orgId) return;
+                var body = {};
+                if (field === 'name') {
+                    var parts = newVal.split(' ');
+                    body.first_name = parts[0] || '';
+                    body.last_name = parts.slice(1).join(' ') || '';
+                } else {
+                    body[field] = newVal;
+                }
+                api('PATCH', '/api/organizations/' + orgId + '/players/' + playerId, body)
+                    .then(function() { toast('Player updated'); })
+                    .catch(function(e) { toast('Update failed: ' + e.message, 'error'); });
+            }
+        );
+    }
+    if (section === 'ops-teams') {
+        enableTableSorting('ops-teams-table', [5]); // exclude Actions
+        enableInlineEdit('ops-teams-table-body',
+            [{ index: 0, field: 'name' }],
+            function(tr, field, newVal) {
+                var teamId = tr.getAttribute('data-id');
+                if (!teamId) { toast('Cannot update: missing team ID', 'error'); return; }
+                var orgId = getSelectedOrg();
+                if (!orgId) return;
+                api('PATCH', '/api/organizations/' + orgId + '/teams/' + teamId, { name: newVal })
+                    .then(function() { toast('Team updated'); })
+                    .catch(function(e) { toast('Update failed: ' + e.message, 'error'); });
+            }
+        );
+    }
+    if (section === 'ops-schedule') enableTableSorting('schedule-table', [6]);
+    if (section === 'intel-competition') enableTableSorting('standings-table');
+    if (section === 'ops-attendance') enableTableSorting('attendance-table');
+    if (section === 'events') enableTableSorting('events-table', [5]);
+    if (section === 'organizations') enableTableSorting('orgs-table', [6]);
+    if (section === 'templates') enableTableSorting('templates-table', [5]);
+}
 
 // ===================================================================
 // INIT
