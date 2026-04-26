@@ -90,7 +90,6 @@ app.mount("/parent/static", StaticFiles(directory="parent"), name="parent_static
 app.mount("/self-assess/static", StaticFiles(directory="selfassess"), name="selfassess_static")
 app.mount("/onboard/static", StaticFiles(directory="onboard"), name="onboard_static")
 
-
 async def run_migrations(conn):
     """Add new columns to existing tables. Safe to run repeatedly."""
     migrations = [
@@ -142,7 +141,6 @@ async def run_migrations(conn):
         except Exception:
             pass  # Column already exists or table doesn't exist yet
 
-
 @app.on_event("startup")
 async def startup():
     logger.info("Running migrations...")
@@ -152,16 +150,9 @@ async def startup():
 
     logger.info("Creating database tables...")
     async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-        # Force-create v5 tables if they don't exist
-        v5_tables = [
-            "CREATE TABLE IF NOT EXISTS training_programs (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), org_id UUID, player_id UUID, template_name VARCHAR(255), sport VARCHAR(50) DEFAULT 'soccer', duration_weeks INTEGER DEFAULT 4, phase_name VARCHAR(100), status VARCHAR(50) DEFAULT 'draft', created_by VARCHAR(255), ai_generated BOOLEAN DEFAULT FALSE, notes TEXT, created_at TIMESTAMP DEFAULT NOW())","CREATE TABLE IF NOT EXISTS program_weeks (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), program_id UUID, week_number INTEGER, focus TEXT, notes TEXT)","CREATE TABLE IF NOT EXISTS program_sessions (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), week_id UUID, day_of_week VARCHAR(20), session_type VARCHAR(50), exercises JSONB DEFAULT '[]' ::jsonb)","CREATE TABLE IF NOT EXISTS chat_threads (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), org_id UUID, thread_type VARCHAR(50), title VARCHAR(255), participants JSONB DEFAULT '[]' ::jsonb, player_id UUID, team_id UUID, created_at TIMESTAMP DEFAULT NOW(), last_message_at TIMESTAMP DEFAULT NOW())","CREATE TABLE IF NOT EXISTS chat_messages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), thread_id UUID, sender_name VARCHAR(255), sender_role VARCHAR(50), content TEXT, attachments JSONB DEFAULT '[]' ::jsonb, read_by JSONB DEFAULT '[]' ::jsonb, created_at TIMESTAMP DEFAULT NOW())","CREATE TABLE IF NOT EXISTS player_videos (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), player_id UUID, org_id UUID, event_id UUID, title VARCHAR(255), description TEXT, video_data TEXT, thumbnail_data TEXT, duration_seconds FLOAT, tags JSONB DEFAULT '[]' ::jsonb, ai_analysis TEXT, uploaded_by VARCHAR(255), created_at TIMESTAMP DEFAULT NOW())","CREATE TABLE IF NOT EXISTS automation_rules (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), org_id UUID, name VARCHAR(255), trigger_event VARCHAR(100), conditions JSONB DEFAULT '{}' ::jsonb, actions JSONB DEFAULT '[]' ::jsonb, enabled BOOLEAN DEFAULT TRUE, run_count INTEGER DEFAULT 0, last_run_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())","CREATE TABLE IF NOT EXISTS bookable_slots (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), org_id UUID, title VARCHAR(255), slot_type VARCHAR(50), capacity INTEGER, booked_count INTEGER DEFAULT 0, start_time TIMESTAMP, end_time TIMESTAMP, location VARCHAR(255), price FLOAT, description TEXT, coach_name VARCHAR(255), active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT NOW())","CREATE TABLE IF NOT EXISTS bookings (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), slot_id UUID, player_id UUID, parent_name VARCHAR(255), parent_email VARCHAR(255), status VARCHAR(50) DEFAULT 'confirmed', booked_at TIMESTAMP DEFAULT NOW(), notes TEXT)",
-        ]
-        for sql in v5_tables:
-            try:
-                await conn.execute(text(sql))
-            except Exception as e:
-                logger.warning(f"Table creation warning: {e}")
+        
     logger.info("Database tables created.")
 
     # Seed default templates if none exist
@@ -187,7 +178,6 @@ async def startup():
             await session.commit()
             logger.info("Seeded default evaluation templates.")
 
-
 @app.on_event("shutdown")
 async def shutdown():
     from app.services.ai import close_client
@@ -195,12 +185,10 @@ async def shutdown():
     from app.services.webhooks import close_webhook_client
     await close_webhook_client()
 
-
 @app.get("/health")
 async def health():
     """Health check endpoint."""
     return {"status": "healthy", "service": "tbm-operations", "version": "5.0.0", "features": 105}
-
 
 # Serve frontend pages
 @app.get("/marketing")
@@ -222,24 +210,20 @@ async def onboard_page():
 async def admin_page():
     return FileResponse("admin/index.html")
 
-
 @app.get("/score")
 @app.get("/score/")
 async def scoring_page():
     return FileResponse("scoring/index.html")
 
-
 @app.get("/report/{report_id}")
 async def report_page(report_id: str):
     return FileResponse("reports/index.html")
-
 
 # Feature 11: Parent portal
 @app.get("/parent")
 @app.get("/parent/")
 async def parent_page():
     return FileResponse("parent/index.html")
-
 
 # Feature 12: Self-assessment
 @app.get("/self-assess")
