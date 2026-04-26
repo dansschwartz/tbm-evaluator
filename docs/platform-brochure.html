@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tiny But Mighty — Complete Platform Brochure</title>
+<style>
+  @page { size: letter; margin: 0; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',system-ui,sans-serif;color:#333;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  :root{--teal:#09A1A1;--steel:#5484A4;--coral:#FA6E82;--gold:#F6C992;--blue-gray:#ACC0D3;--rose:#D396A6;--dark:#3d6882;--light:#f2f5f8}
+  .page{width:8.5in;min-height:11in;padding:0.55in;page-break-after:always;position:relative;overflow:hidden}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:34pt;font-weight:900;line-height:1.1;color:var(--dark)}
+  h2{font-size:18pt;font-weight:800;color:var(--dark);margin-bottom:10px}
+  h3{font-size:11pt;font-weight:700;color:var(--dark);margin-bottom:6px}
+  h4{font-size:9.5pt;font-weight:700;color:var(--dark);margin-bottom:3px}
+  p{font-size:9pt;line-height:1.5;color:#555;margin-bottom:6px}
+  .footer{position:absolute;bottom:0.3in;left:0.55in;right:0.55in;text-align:center;font-size:6.5pt;color:#aaa}
+  .cover{background:linear-gradient(135deg,var(--dark),var(--steel));color:#fff;display:flex;flex-direction:column;justify-content:center}
+  .cover h1{color:#fff;font-size:36pt;margin-bottom:10px}
+  .cover h1 span{color:var(--gold)}
+  .cover .sub{font-size:12pt;color:var(--blue-gray);max-width:5.2in;margin-bottom:20px;line-height:1.5}
+  .badge{display:inline-block;background:rgba(246,201,146,0.2);border:1px solid var(--gold);border-radius:14px;padding:4px 14px;font-size:8pt;color:var(--gold);font-weight:600;letter-spacing:1px;text-transform:uppercase}
+  .stats-row{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap}
+  .stat-box{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:12px 16px;text-align:center;flex:1;min-width:80px}
+  .stat-num{font-size:20pt;font-weight:900;color:#fff}
+  .stat-lbl{font-size:6.5pt;color:var(--blue-gray);text-transform:uppercase;letter-spacing:1px}
+  
+  /* Grids */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0}
+  .card{padding:10px;border-radius:8px;border:1px solid #e8ecf0;background:var(--light)}
+  .card h4{font-size:9pt}
+  .card p{font-size:7.5pt;margin:0;color:#666}
+  .card-icon{font-size:16pt;margin-bottom:4px}
+  
+  /* AI cards */
+  .ai{padding:10px;border-radius:8px;background:linear-gradient(135deg,#f0f8f8,#fff);border:1px solid var(--teal);border-left:3px solid var(--teal)}
+  .ai h4{font-size:9pt;color:var(--teal);margin-bottom:3px}
+  .ai p{font-size:7.5pt;margin:0;color:#555}
+  
+  /* Tables */
+  table.comp{width:100%;border-collapse:collapse;font-size:7pt;margin:8px 0}
+  table.comp th{background:var(--dark);color:#fff;padding:5px 4px;text-align:left;font-size:6.5pt;text-transform:uppercase;letter-spacing:0.3px}
+  table.comp th.ours{background:var(--teal)}
+  table.comp td{padding:4px;border-bottom:1px solid #eee}
+  table.comp .feat{font-weight:600;color:#333}
+  table.comp .yes{color:var(--teal);font-weight:700}
+  table.comp .no{color:var(--coral)}
+  table.comp .part{color:var(--gold);font-weight:600}
+  table.comp .ours-col{background:#f0f8f8;font-weight:600}
+  table.comp .cat{background:var(--light);font-weight:700;font-size:7pt;padding:3px 4px}
+  
+  /* Pricing */
+  .price-row{display:flex;gap:10px;margin:10px 0}
+  .price-box{flex:1;border:2px solid #eee;border-radius:8px;padding:12px;text-align:center}
+  .price-box.feat{border-color:var(--teal);background:#f0f8f8;position:relative}
+  .price-box.feat::before{content:"BEST VALUE";position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--teal);color:#fff;font-size:6pt;font-weight:700;padding:2px 10px;border-radius:8px;letter-spacing:0.5px}
+  .price-amt{font-size:24pt;font-weight:900;color:var(--dark)}
+  .price-amt span{font-size:9pt;font-weight:400;color:#888}
+  .price-box.dim{opacity:0.5}
+  .price-box.dim .price-amt{text-decoration:line-through;color:#999}
+  .price-detail{font-size:7pt;color:#888;margin-top:3px}
+  
+  /* Feature list */
+  .feat-list{list-style:none;padding:0}
+  .feat-list li{padding:3px 0;font-size:8pt;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:5px}
+  .feat-list li::before{content:"✓";color:var(--teal);font-weight:700;font-size:10pt}
+  
+  /* Benchmarks */
+  .bench{display:flex;align-items:center;gap:6px;margin:4px 0}
+  .bench-lbl{width:80px;font-size:7pt;font-weight:600;text-align:right}
+  .bench-bar{flex:1;height:16px;background:#e8ecf0;border-radius:3px;position:relative;overflow:hidden}
+  .bench-fill{height:100%;border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:3px;font-size:6pt;font-weight:700;color:#fff}
+  .bench-ref{font-size:6pt;width:60px;color:#888}
+  
+  /* CTA */
+  .cta{background:linear-gradient(135deg,var(--teal),var(--dark));color:#fff;border-radius:10px;padding:20px;text-align:center;margin-top:12px}
+  .cta h2{color:#fff;font-size:14pt;margin-bottom:4px}
+  .cta p{color:rgba(255,255,255,0.8);font-size:8pt;margin-bottom:10px}
+  .cta-btn{display:inline-block;background:#fff;color:var(--teal);padding:8px 28px;border-radius:6px;font-weight:700;font-size:9pt;text-decoration:none}
+  
+  /* Specs */
+  .specs{width:100%;border-collapse:collapse;margin:8px 0}
+  .specs td{padding:4px 8px;border-bottom:1px solid #f0f0f0;font-size:8pt}
+  .specs td:first-child{font-weight:600;color:#333;width:120px}
+  
+  /* Products */
+  .product{padding:12px;border-radius:10px;border:2px solid var(--teal);margin:8px 0}
+  .product h3{color:var(--teal);font-size:12pt;margin-bottom:4px}
+  .product .tag{display:inline-block;background:var(--teal);color:#fff;font-size:6pt;font-weight:700;padding:2px 8px;border-radius:4px;margin-bottom:6px}
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: COVER -->
+<div class="page cover">
+  <div class="badge">THE COMPLETE PLATFORM FOR YOUTH SPORTS</div>
+  <div style="height:16px"></div>
+  <h1>Tiny But Mighty.<br><span>AI-native tools for NFPs.</span></h1>
+  <p class="sub">Two products. 145+ features. One mission: give not-for-profit youth sports organizations the same AI-powered tools that enterprise companies pay thousands for — at a fraction of the cost.</p>
+  <p class="sub" style="font-size:10pt;color:#fff;font-weight:600;">Built in 5 days. Deployed. Live. Ready to scale.</p>
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-num">145+</div><div class="stat-lbl">Features</div></div>
+    <div class="stat-box"><div class="stat-num">2</div><div class="stat-lbl">Products</div></div>
+    <div class="stat-box"><div class="stat-num">37K+</div><div class="stat-lbl">Lines of Code</div></div>
+    <div class="stat-box"><div class="stat-num">160+</div><div class="stat-lbl">API Endpoints</div></div>
+    <div class="stat-box"><div class="stat-num">20+</div><div class="stat-lbl">AI Features</div></div>
+    <div class="stat-box"><div class="stat-num">~$28</div><div class="stat-lbl">Total/Month</div></div>
+  </div>
+  <div class="footer" style="color:rgba(255,255,255,0.3)">Tiny But Mighty Platform — Confidential | April 2026</div>
+</div>
+
+<!-- PAGE 2: THE TWO PRODUCTS -->
+<div class="page">
+  <h2>The Platform: Two Products That Work Together</h2>
+  <p style="font-size:10pt;margin-bottom:14px;">TBM is a unified platform with two AI-native products that cover every aspect of running a youth sports organization — from the parent-facing website experience to behind-the-scenes operations.</p>
+  
+  <div class="product">
+    <div class="tag">PRODUCT 1 — LIVE</div>
+    <h3>TBM AI Chatbot</h3>
+    <p style="font-size:9.5pt;margin-bottom:8px;">An intelligent chatbot that lives on any club's website and answers visitor questions 24/7 using the club's own content. When it can't help, it seamlessly connects visitors with staff.</p>
+    <div class="grid-3">
+      <div class="card"><h4>AI Knowledge Base</h4><p>Learns entire website automatically. 275KB for DC Soccer Club.</p></div>
+      <div class="card"><h4>Smart Widget</h4><p>One-line embed. Pre-chat forms, quick replies, persistence.</p></div>
+      <div class="card"><h4>Human Handoff</h4><p>Contact form, email routing, business hours, escalation.</p></div>
+      <div class="card"><h4>Analytics</h4><p>CSAT, unanswered questions, conversation search, webhooks.</p></div>
+      <div class="card"><h4>Multi-Tenant</h4><p>Each club gets isolated data, branding, system prompt.</p></div>
+      <div class="card"><h4>45 Features</h4><p>Feedback, A/B testing, article browser, scheduled messages.</p></div>
+    </div>
+    <p style="font-size:8pt;color:var(--teal);font-weight:600;">Cost: ~$8/month | Compare: Intercom $130+/month</p>
+  </div>
+  
+  <div class="product">
+    <div class="tag">PRODUCT 2 — LIVE</div>
+    <h3>TBM Operations</h3>
+    <p style="font-size:9.5pt;margin-bottom:8px;">A comprehensive AI-native club operating system covering evaluations, team building, field management, scheduling, communications, coaching, compliance, and club intelligence — all benchmarked against 2,500+ real clubs.</p>
+    <div class="grid-3">
+      <div class="card"><h4>Player Evaluation</h4><p>Mobile scoring, AI reports, development plans, position profiling.</p></div>
+      <div class="card"><h4>Team Building</h4><p>AI-balanced teams, draft mode, position-based formation.</p></div>
+      <div class="card"><h4>Field & Schedule</h4><p>Field booking, game/practice generation, conflict detection.</p></div>
+      <div class="card"><h4>Club Intelligence</h4><p>Health Score (0-100), IYSL benchmarks, lifecycle predictor.</p></div>
+      <div class="card"><h4>Competition</h4><p>League standings, match results, player stats across 6 DMV leagues.</p></div>
+      <div class="card"><h4>100+ Features</h4><p>Communications, compliance, attendance, documents, AI advisor.</p></div>
+    </div>
+    <p style="font-size:8pt;color:var(--teal);font-weight:600;">Cost: ~$20/month | Compare: PlayMetrics $5,000+/year + SkillShark $2,500+/year</p>
+  </div>
+  <div class="footer">Tiny But Mighty — Complete Platform Brochure | Page 2</div>
+</div>
+
+<!-- PAGE 3: AI FEATURES -->
+<div class="page">
+  <h2>20+ AI Features — What No Competitor Offers</h2>
+  <p style="margin-bottom:10px;">Every module has AI built in. Not bolted on. Not a chatbot gimmick. Real AI that generates reports, balances teams, predicts trends, and advises leadership.</p>
+  
+  <div class="grid-2">
+    <div class="ai"><h4>AI Player Report Cards</h4><p>Personalized narratives using player name, scores, and position: "Marcus shows exceptional ball control for a midfielder. Focus on stamina to reach Travel level."</p></div>
+    <div class="ai"><h4>AI Development Plans</h4><p>Custom 6-week training plans with position-specific drills, weekly schedules, and gap analysis. 30+ drill library for GK/DEF/MID/FWD.</p></div>
+    <div class="ai"><h4>AI Team Formation</h4><p>Auto-balance teams from evaluation data. Position-aware, constraint-based. "Team Blue avg: 3.8. Team Red avg: 3.7. Balanced."</p></div>
+    <div class="ai"><h4>AI Club Health Score</h4><p>0-100 composite across 7 dimensions: retention, coach ratios, financial aid, gender equity, fill rates, development, satisfaction.</p></div>
+    <div class="ai"><h4>AI Email Drafting</h4><p>"Draft a weather cancellation for U12 parents" → professional email in seconds with the right tone, details, and next steps.</p></div>
+    <div class="ai"><h4>AI Operations Assistant</h4><p>Ask in plain English: "Which teams don't have coaches?" "What fields are open Saturday?" Instant answers from your data.</p></div>
+    <div class="ai"><h4>AI Board Reports</h4><p>Generate board-ready seasonal reports with executive summary, key metrics, year-over-year trends, and recommendations — one click.</p></div>
+    <div class="ai"><h4>AI Retention Predictor</h4><p>Parent engagement scoring identifies families at risk of leaving. "Martinez family: 3 missed practices, flag for outreach."</p></div>
+    <div class="ai"><h4>AI Position Profiling</h4><p>Analyzes each player against ideal position profiles. "Marcus is 82% Midfielder fit, 71% Forward fit."</p></div>
+    <div class="ai"><h4>AI Voice-to-Score</h4><p>Coaches speak naturally: "Marcus — dribbling 4, passing strong." AI parses into structured evaluation scores automatically.</p></div>
+    <div class="ai"><h4>AI Schedule Generation</h4><p>Input teams, fields, constraints. AI generates optimal game schedule — balanced home/away, no double-bookings, no conflicts.</p></div>
+    <div class="ai"><h4>AI Chatbot (Website)</h4><p>24/7 AI assistant on the club website. Answers registration, schedule, cost, policy questions. Handles 80% of parent inquiries.</p></div>
+  </div>
+  <div class="footer">Tiny But Mighty — Complete Platform Brochure | Page 3</div>
+</div>
+
+<!-- PAGE 4: BENCHMARKING -->
+<div class="page">
+  <h2>Club Intelligence — Benchmarked Against 2,500+ Clubs</h2>
+  <p style="margin-bottom:12px;">The only platform with built-in IYSL (Institute for Youth Sports Leaders) best practice framework. Compare your club against real data from 2,500+ youth sports organizations across 60 best practices, 7 departments, and 10 key roles.</p>
+  
+  <h3>Club Health Score</h3>
+  <p>A single 0-100 number that tells your board how the club is performing:</p>
+  <div style="display:flex;gap:20px;align-items:center;margin:10px 0;">
+    <div style="text-align:center;">
+      <div style="width:90px;height:90px;border-radius:50%;background:conic-gradient(var(--teal) 0% 72%,#e8ecf0 72%);position:relative;display:inline-block;">
+        <div style="position:absolute;top:8px;left:8px;width:74px;height:74px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+          <span style="font-size:22pt;font-weight:900;color:var(--dark);">72</span>
+          <span style="font-size:5pt;color:#888;">HEALTH</span>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;">
+      <div class="bench"><span class="bench-lbl">Programs</span><div class="bench-bar"><div class="bench-fill" style="width:68%;background:var(--teal);">68%</div></div><span class="bench-ref">All: 52% Top: 75%</span></div>
+      <div class="bench"><span class="bench-lbl">Memberships</span><div class="bench-bar"><div class="bench-fill" style="width:69%;background:var(--teal);">69%</div></div><span class="bench-ref">All: 62% Top: 77%</span></div>
+      <div class="bench"><span class="bench-lbl">Leadership</span><div class="bench-bar"><div class="bench-fill" style="width:65%;background:var(--gold);">65%</div></div><span class="bench-ref">All: 48% Top: 72%</span></div>
+      <div class="bench"><span class="bench-lbl">HR Mgmt</span><div class="bench-bar"><div class="bench-fill" style="width:63%;background:var(--gold);">63%</div></div><span class="bench-ref">All: 41% Top: 65%</span></div>
+      <div class="bench"><span class="bench-lbl">Finance</span><div class="bench-bar"><div class="bench-fill" style="width:61%;background:var(--gold);">61%</div></div><span class="bench-ref">All: 45% Top: 68%</span></div>
+      <div class="bench"><span class="bench-lbl">Operations</span><div class="bench-bar"><div class="bench-fill" style="width:61%;background:var(--gold);">61%</div></div><span class="bench-ref">All: 49% Top: 72%</span></div>
+      <div class="bench"><span class="bench-lbl">Education</span><div class="bench-bar"><div class="bench-fill" style="width:55%;background:var(--coral);">55%</div></div><span class="bench-ref">All: 52% Top: 75%</span></div>
+    </div>
+  </div>
+  
+  <h3>Club Lifecycle Predictor — 5 Phases, 10 Factors</h3>
+  <div style="display:flex;gap:3px;margin:8px 0;">
+    <div style="flex:1;text-align:center;padding:6px;background:#e8ecf0;border-radius:5px;font-size:7pt;"><strong>Phase 1</strong><br>Formation</div>
+    <div style="flex:1;text-align:center;padding:6px;background:#d0dce8;border-radius:5px;font-size:7pt;"><strong>Phase 2</strong><br>Growth</div>
+    <div style="flex:1;text-align:center;padding:6px;background:var(--teal);color:#fff;border-radius:5px;font-size:7pt;border:2px solid var(--dark);"><strong>Phase 3</strong><br>Development ←</div>
+    <div style="flex:1;text-align:center;padding:6px;background:#e8ecf0;border-radius:5px;font-size:7pt;"><strong>Phase 4</strong><br>Performance</div>
+    <div style="flex:1;text-align:center;padding:6px;background:#e8ecf0;border-radius:5px;font-size:7pt;"><strong>Phase 5</strong><br>Model Club</div>
+  </div>
+  <p style="font-size:7pt;color:#888;">10 factors: Leadership Structure, Community Connection, Right People, Staffing, Strategic Planning, Admin Structure, Facilities, Operational Planning, Program Oversight, Revenue Portfolio</p>
+  
+  <h3 style="margin-top:12px;">Competition Intelligence — 6 DMV Leagues</h3>
+  <div class="grid-3">
+    <div class="card"><h4>MLS NEXT Academy</h4><p>Elite boys U13-U19. Virginia region.</p></div>
+    <div class="card"><h4>GA ASPIRE</h4><p>Elite girls U13-U19. East region.</p></div>
+    <div class="card"><h4>NCSL</h4><p>72 clubs. Competitive. DMV.</p></div>
+    <div class="card"><h4>CPSL</h4><p>Chesapeake Premier. DMV.</p></div>
+    <div class="card"><h4>EDP</h4><p>Elite Development. Mid-Atlantic.</p></div>
+    <div class="card"><h4>MDSL</h4><p>Maryland Developmental.</p></div>
+  </div>
+  <p style="font-size:8pt;">Track standings, match results, goal scorers, and assists across all leagues in one dashboard.</p>
+  <div class="footer">Tiny But Mighty — Complete Platform Brochure | Page 4</div>
+</div>
+
+<!-- PAGE 5: FULL COMPARISON -->
+<div class="page">
+  <h2>Complete Competitive Comparison</h2>
+  <table class="comp">
+    <thead><tr><th style="width:22%">Feature</th><th class="ours" style="width:13%">TBM Platform</th><th style="width:13%">PlayMetrics</th><th style="width:13%">SportsEngine</th><th style="width:13%">TeamSnap</th><th style="width:13%">SkillShark</th><th style="width:13%">Intercom</th></tr></thead>
+    <tbody>
+      <tr><td colspan="7" class="cat">WEBSITE & PARENT SUPPORT</td></tr>
+      <tr><td class="feat">AI chatbot on website</td><td class="ours-col yes">✓ 45 features</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓ (Fin AI)</td></tr>
+      <tr><td class="feat">Knowledge base from website</td><td class="ours-col yes">✓ Auto-crawl</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td></tr>
+      <tr><td class="feat">Human handoff + contact form</td><td class="ours-col yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td></tr>
+      <tr><td class="feat">CSAT + feedback analytics</td><td class="ours-col yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td></tr>
+      
+      <tr><td colspan="7" class="cat">CLUB MANAGEMENT</td></tr>
+      <tr><td class="feat">Player/family management</td><td class="ours-col yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="part">Basic</td><td class="no">✗</td></tr>
+      <tr><td class="feat">Team formation + rosters</td><td class="ours-col yes">✓ + AI</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="part">Draft</td><td class="no">✗</td></tr>
+      <tr><td class="feat">Field/facility management</td><td class="ours-col yes">✓ + AI</td><td class="part">Basic</td><td class="part">Basic</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+      <tr><td class="feat">Scheduling (games + practices)</td><td class="ours-col yes">✓ + AI</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td></tr>
+      <tr><td class="feat">Communications (email/SMS)</td><td class="ours-col yes">✓ + AI draft</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">✗</td><td class="yes">✓</td></tr>
+      <tr><td class="feat">Registration + payments</td><td class="ours-col">Via integration</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td></tr>
+      
+      <tr><td colspan="7" class="cat">PLAYER EVALUATION</td></tr>
+      <tr><td class="feat">Mobile player scoring</td><td class="ours-col yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td><td class="no">✗</td></tr>
+      <tr><td class="feat">AI-generated report cards</td><td class="ours-col yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+      <tr><td class="feat">Custom development plans</td><td class="ours-col yes">✓ + drills</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+      <tr><td class="feat">Position-specific evaluation</td><td class="ours-col yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="part">Basic</td><td class="no">✗</td></tr>
+      <tr><td class="feat">AI team balancing</td><td class="ours-col yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="part">Manual</td><td class="no">✗</td></tr>
+      <tr><td class="feat">Voice recording per player</td><td class="ours-col yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+      <tr><td class="feat">Parent report portal</td><td class="ours-col yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="part">Email</td><td class="no">✗</td></tr>
+      
+      <tr><td colspan="7" class="cat">INTELLIGENCE & ANALYTICS</td></tr>
+      <tr><td class="feat">Club Health Score (0-100)</td><td class="ours-col yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+      <tr><td class="feat">IYSL benchmarking (2,500+ clubs)</td><td class="ours-col yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+      <tr><td class="feat">Club lifecycle predictor</td><td class="ours-col yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+      <tr><td class="feat">AI operations assistant</td><td class="ours-col yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+      <tr><td class="feat">Competition/league tracking</td><td class="ours-col yes">✓ 6 leagues</td><td class="part">Basic</td><td class="part">Basic</td><td class="part">Basic</td><td class="no">✗</td><td class="no">✗</td></tr>
+      <tr><td class="feat">Board-ready reports</td><td class="ours-col yes">✓ + AI</td><td class="part">Manual</td><td class="part">Manual</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+      <tr><td class="feat">Compliance dashboard</td><td class="ours-col yes">✓</td><td class="part">Basic</td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+      
+      <tr><td colspan="7" class="cat">PLATFORM</td></tr>
+      <tr><td class="feat">Multi-organization</td><td class="ours-col yes">✓ Built-in</td><td class="no">Separate</td><td class="no">Separate</td><td class="no">Separate</td><td class="no">Separate</td><td class="no">Separate</td></tr>
+      <tr><td class="feat">Full REST API</td><td class="ours-col yes">160+ endpoints</td><td class="no">✗</td><td class="part">Limited</td><td class="part">Limited</td><td class="part">$15/player</td><td class="yes">✓</td></tr>
+      <tr><td class="feat">Data ownership</td><td class="ours-col"><strong>Your DB</strong></td><td>Theirs</td><td>Theirs</td><td>Theirs</td><td>Theirs</td><td>Theirs</td></tr>
+    </tbody>
+  </table>
+  <div class="footer">Tiny But Mighty — Complete Platform Brochure | Page 5</div>
+</div>
+
+<!-- PAGE 6: PRICING + COST ANALYSIS -->
+<div class="page">
+  <h2>Pricing — The Math Speaks for Itself</h2>
+  <p style="font-size:10pt;font-weight:600;color:var(--dark);margin-bottom:4px;">One flat fee. Everything included. No per-player, per-seat, or per-feature pricing.</p>
+  
+  <div class="price-row">
+    <div class="price-box feat"><h4 style="font-size:8pt;color:#888;text-transform:uppercase;letter-spacing:1px;">TBM Platform</h4><div class="price-amt">$28<span>/mo</span></div><div class="price-detail">Chatbot ($8) + Operations ($20)<br>All 145+ features included<br>Unlimited players, evaluations, AI<br>Your own database</div></div>
+    <div class="price-box dim"><h4 style="font-size:8pt;color:#888;">PlayMetrics + SkillShark</h4><div class="price-amt">$7.5K+<span>/yr</span></div><div class="price-detail">PM: $5,000+/yr (custom)<br>SK: $2,500+/yr ($5-15/player)<br>No AI, separate systems</div></div>
+    <div class="price-box dim"><h4 style="font-size:8pt;color:#888;">SportsEngine + Intercom</h4><div class="price-amt">$3.8K+<span>/yr</span></div><div class="price-detail">SE: $2,199/yr (Pro)<br>IC: $1,560+/yr ($130/mo)<br>No evaluations, no benchmarks</div></div>
+  </div>
+  
+  <div style="background:var(--light);padding:12px;border-radius:8px;margin:12px 0;">
+    <h4 style="color:var(--teal);margin-bottom:6px;">Annual Cost Comparison — Club with 500 Players</h4>
+    <table style="width:100%;font-size:8pt;border-collapse:collapse;">
+      <tr style="font-weight:700;border-bottom:2px solid var(--teal);"><td>Platform</td><td>Annual Cost</td><td>AI?</td><td>Evaluations?</td><td>Chatbot?</td><td>Benchmarks?</td></tr>
+      <tr style="border-bottom:1px solid #e8ecf0;color:var(--teal);font-weight:700;"><td>TBM Platform</td><td>$336/year</td><td>20+ features</td><td>Unlimited</td><td>45 features</td><td>2,500+ clubs</td></tr>
+      <tr style="border-bottom:1px solid #e8ecf0;"><td>PlayMetrics + SkillShark</td><td>$7,500+/year</td><td>None</td><td>$5-15/player</td><td>None</td><td>None</td></tr>
+      <tr style="border-bottom:1px solid #e8ecf0;"><td>SportsEngine + Intercom</td><td>$3,800+/year</td><td>Fin only</td><td>None</td><td>$0.99/resolution</td><td>None</td></tr>
+      <tr style="border-bottom:1px solid #e8ecf0;"><td>TeamSnap</td><td>$1,400+/year</td><td>None</td><td>None</td><td>None</td><td>None</td></tr>
+    </table>
+    <p style="font-size:8pt;font-weight:700;color:var(--teal);margin-top:6px;">TBM saves $3,000-$7,000+ per year while offering 10x more features.</p>
+  </div>
+  
+  <h2 style="margin-top:14px;">Built for Not-for-Profits</h2>
+  <div class="grid-3">
+    <div class="card" style="text-align:center;"><div class="card-icon">💰</div><h4>Budget-Friendly</h4><p>$28/mo replaces $7,500+/yr in tools.</p></div>
+    <div class="card" style="text-align:center;"><div class="card-icon">🧠</div><h4>AI-Native</h4><p>20+ AI features no competitor has.</p></div>
+    <div class="card" style="text-align:center;"><div class="card-icon">📊</div><h4>Board-Ready</h4><p>Reports and benchmarks that impress.</p></div>
+    <div class="card" style="text-align:center;"><div class="card-icon">🏆</div><h4>Competition-Ready</h4><p>Track 6 DMV leagues in one place.</p></div>
+    <div class="card" style="text-align:center;"><div class="card-icon">🔒</div><h4>Your Data</h4><p>Your database, your control.</p></div>
+    <div class="card" style="text-align:center;"><div class="card-icon">🔗</div><h4>API-First</h4><p>160+ endpoints for custom integration.</p></div>
+  </div>
+  <div class="footer">Tiny But Mighty — Complete Platform Brochure | Page 6</div>
+</div>
+
+<!-- PAGE 7: TECH + GETTING STARTED -->
+<div class="page">
+  <h2>Technical Architecture</h2>
+  <table class="specs">
+    <tr><td>AI Model</td><td>OpenAI GPT-4o-mini (fast, accurate, cost-effective)</td></tr>
+    <tr><td>Backend</td><td>Python 3.12 / FastAPI (async, high-performance)</td></tr>
+    <tr><td>Database</td><td>PostgreSQL (Neon) — 43 models across both products</td></tr>
+    <tr><td>Vector Search</td><td>pgvector for RAG-based chatbot knowledge retrieval</td></tr>
+    <tr><td>API</td><td>160+ REST endpoints with full OpenAPI documentation</td></tr>
+    <tr><td>Frontend</td><td>Vanilla JS + Lucide Icons — no framework dependencies</td></tr>
+    <tr><td>Hosting</td><td>Railway (Docker) — 99.9% uptime SLA</td></tr>
+    <tr><td>Security</td><td>HTTPS, API key auth, per-tenant data isolation</td></tr>
+    <tr><td>Mobile</td><td>Responsive web app — no app store needed</td></tr>
+    <tr><td>Icons</td><td>Lucide (MIT license, 1,500+ icons)</td></tr>
+    <tr><td>Benchmarking</td><td>IYSL framework (2,500+ club dataset)</td></tr>
+    <tr><td>Multi-Tenant</td><td>Complete data isolation per organization</td></tr>
+  </table>
+  
+  <h2 style="margin-top:14px;">Getting Started — 5 Minutes</h2>
+  <div style="display:flex;gap:6px;margin:10px 0;">
+    <div style="flex:1;text-align:center;background:var(--light);border-radius:8px;padding:10px 4px;">
+      <div style="width:22px;height:22px;background:var(--teal);color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:10pt;margin-bottom:4px;">1</div>
+      <div style="font-size:7pt;color:#555;">Go to /onboard wizard</div>
+    </div>
+    <div style="flex:1;text-align:center;background:var(--light);border-radius:8px;padding:10px 4px;">
+      <div style="width:22px;height:22px;background:var(--teal);color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:10pt;margin-bottom:4px;">2</div>
+      <div style="font-size:7pt;color:#555;">Enter club details</div>
+    </div>
+    <div style="flex:1;text-align:center;background:var(--light);border-radius:8px;padding:10px 4px;">
+      <div style="width:22px;height:22px;background:var(--teal);color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:10pt;margin-bottom:4px;">3</div>
+      <div style="font-size:7pt;color:#555;">Import players (CSV)</div>
+    </div>
+    <div style="flex:1;text-align:center;background:var(--light);border-radius:8px;padding:10px 4px;">
+      <div style="width:22px;height:22px;background:var(--teal);color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:10pt;margin-bottom:4px;">4</div>
+      <div style="font-size:7pt;color:#555;">Coaches score on phones</div>
+    </div>
+    <div style="flex:1;text-align:center;background:var(--light);border-radius:8px;padding:10px 4px;">
+      <div style="width:22px;height:22px;background:var(--teal);color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:10pt;margin-bottom:4px;">5</div>
+      <div style="font-size:7pt;color:#555;">AI does the rest</div>
+    </div>
+  </div>
+  
+  <h2 style="margin-top:14px;">What's Included — Everything</h2>
+  <div class="grid-2">
+    <ul class="feat-list">
+      <li>AI chatbot for club website (45 features)</li>
+      <li>Player evaluation with AI report cards</li>
+      <li>Custom development plans with drill library</li>
+      <li>AI team formation + draft mode</li>
+      <li>Field management with AI allocation</li>
+      <li>Game + practice scheduling</li>
+      <li>AI email/SMS drafting</li>
+      <li>Coach certification tracking</li>
+    </ul>
+    <ul class="feat-list">
+      <li>Club Health Score (0-100)</li>
+      <li>IYSL benchmarks (2,500+ clubs)</li>
+      <li>Competition tracking (6 leagues)</li>
+      <li>Compliance dashboard</li>
+      <li>Attendance + at-risk detection</li>
+      <li>Parent portal with reports</li>
+      <li>Board-ready seasonal reports</li>
+      <li>160+ API endpoints for integration</li>
+    </ul>
+  </div>
+  
+  <div class="cta">
+    <h2>Ready to transform how you run your club?</h2>
+    <p>Set up your club in 5 minutes. See the full platform live.</p>
+    <a href="https://tbm-evaluator-production.up.railway.app/" class="cta-btn">See Live Demo →</a>
+  </div>
+  <div class="footer">Tiny But Mighty — AI-native tools for not-for-profit organizations. © 2026 TBM.</div>
+</div>
+
+</body>
+</html>
