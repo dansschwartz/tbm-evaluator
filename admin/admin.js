@@ -4725,9 +4725,9 @@ async function showPlayerDetail(playerId) {
 
     try {
         var results = await Promise.allSettled([
-            api('GET', '/api/organizations/' + orgId + '/players/' + playerId),
+            api('GET', '/api/players/' + playerId),
             api('GET', '/api/players/' + playerId + '/development-path').catch(function() { return null; }),
-            api('GET', '/api/documents/' + orgId + '/players/' + playerId).catch(function() { return []; }),
+            api('GET', '/api/players/' + playerId + '/documents').catch(function() { return []; }),
             api('GET', '/api/organizations/' + orgId + '/teams').catch(function() { return []; }),
         ]);
 
@@ -4767,7 +4767,7 @@ async function showPlayerDetail(playerId) {
         // Evaluation history from reports
         var evalHtml = '<p class="text-muted">No evaluation history.</p>';
         try {
-            var reports = await api('GET', '/api/organizations/' + orgId + '/reports?player_id=' + playerId).catch(function() { return []; });
+            var reports = await api('GET', '/api/players/' + playerId + '/progress').catch(function() { return []; });
             if (Array.isArray(reports) && reports.length > 0) {
                 evalHtml = '<table class="data-table" style="min-width:auto;"><thead><tr><th>Event</th><th>Score</th><th>Rank</th></tr></thead><tbody>';
                 reports.forEach(function(r) {
