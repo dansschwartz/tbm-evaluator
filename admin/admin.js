@@ -716,7 +716,8 @@ async function loadEvents(orgId) {
     try {
         cachedEvents = await api('GET', '/api/organizations/' + orgId + '/events');
         if (cachedEvents.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No events yet.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="calendar-plus" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No evaluation events yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-create-event\')&&document.getElementById(\'btn-create-event\').click()">Create First Event</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Events are used for tryouts, evaluations, and player assessments</p></div></td></tr>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
             return;
         }
 
@@ -1773,7 +1774,8 @@ async function loadOpsSeasons(orgId) {
 
         var tbody = document.getElementById('seasons-table-body');
         if (seasons.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No seasons yet. Create your first season to get started.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="calendar" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No seasons yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-add-season\')&&document.getElementById(\'btn-add-season\').click()">Create Your First Season</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Seasons organize your programs, teams, and schedules</p></div></td></tr>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
         tbody.innerHTML = seasons.map(function(s) {
             return '<tr><td>' + esc(s.name) + '</td><td>' + esc(s.start_date) + '</td><td>' + esc(s.end_date) + '</td>' +
@@ -1810,7 +1812,8 @@ async function loadOpsTeams(orgId) {
 
         var tbody = document.getElementById('ops-teams-table-body');
         if (teams.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No teams yet. Create teams manually or use AI Form Teams.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="users" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No teams yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-add-team\')&&document.getElementById(\'btn-add-team\').click()">Create Your First Team</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Or use AI Form Teams to auto-generate balanced teams</p></div></td></tr>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             tbody.innerHTML = teams.map(function(t) {
                 return '<tr><td>' + esc(t.name) + '</td><td>' + esc(t.team_level || '-') + '</td>' +
@@ -1844,7 +1847,8 @@ async function loadOpsFields(orgId) {
 
         var tbody = document.getElementById('fields-table-body');
         if (fields.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No fields yet. Add your first field or use AI to import from your permit list.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="map-pin" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No fields yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-add-field\')&&document.getElementById(\'btn-add-field\').click()">Add Your First Field</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Or use the AI Assistant to import from your permit list</p></div></td></tr>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             tbody.innerHTML = fields.map(function(f) {
                 return '<tr><td>' + esc(f.name) + '</td><td>' + esc(f.location_address || '-') + '</td>' +
@@ -1992,19 +1996,18 @@ async function loadOpsSchedule(orgId) {
 
         var tbody = document.getElementById('schedule-table-body');
         if (entries.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No schedule entries in the next 90 days. Use Generate Games or Generate Practices to create a schedule.</td></tr>';
-        }
-        tbody.innerHTML = entries.map(function(e) {
-            var dt = new Date(e.start_time);
-            var typeColor = e.entry_type === 'game' ? 'badge-active' : e.entry_type === 'practice' ? 'badge-scoring' : 'badge-draft';
-            return '<tr><td>' + dt.toLocaleDateString() + '</td><td>' + dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</td>' +
-                '<td><span class="badge ' + typeColor + '">' + esc(e.entry_type) + '</span></td><td>' + esc(e.title || '-') + '</td>' +
-                '<td>' + esc(e.field_name || '-') + '</td>' +
-                '<td><span class="badge badge-' + (e.status === 'scheduled' ? 'active' : e.status === 'cancelled' ? 'no' : 'draft') + '">' + esc(e.status) + '</span></td>' +
-                '<td><button class="btn btn-xs btn-danger" onclick="deleteOpsScheduleItem(\'' + e.id + '\')">Delete</button></td></tr>';
-        }).join('');
-        if (entries.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No schedule entries in the next 90 days.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="calendar-clock" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No schedule entries in the next 90 days</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-gen-practices\')&&document.getElementById(\'btn-gen-practices\').click()">Generate Practices</button> <button class="btn btn-outline btn-sm" onclick="document.getElementById(\'btn-gen-games\')&&document.getElementById(\'btn-gen-games\').click()" style="margin-left:8px;">Generate Games</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Auto-generate a full practice and game schedule for the season</p></div></td></tr>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else {
+            tbody.innerHTML = entries.map(function(e) {
+                var dt = new Date(e.start_time);
+                var typeColor = e.entry_type === 'game' ? 'badge-active' : e.entry_type === 'practice' ? 'badge-scoring' : 'badge-draft';
+                return '<tr><td>' + dt.toLocaleDateString() + '</td><td>' + dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</td>' +
+                    '<td><span class="badge ' + typeColor + '">' + esc(e.entry_type) + '</span></td><td>' + esc(e.title || '-') + '</td>' +
+                    '<td>' + esc(e.field_name || '-') + '</td>' +
+                    '<td><span class="badge badge-' + (e.status === 'scheduled' ? 'active' : e.status === 'cancelled' ? 'no' : 'draft') + '">' + esc(e.status) + '</span></td>' +
+                    '<td><button class="btn btn-xs btn-danger" onclick="deleteOpsScheduleItem(\'' + e.id + '\')">Delete</button></td></tr>';
+            }).join('');
         }
     } catch (e) {
         toast('Error: ' + e.message, 'error');
@@ -2055,7 +2058,8 @@ async function loadOpsCoaches(orgId) {
 
         var tbody = document.getElementById('coaches-table-body');
         if (coaches.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No coaches yet. Add evaluators from the Events section.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="clipboard-check" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No coaches yet</div><button class="btn btn-primary btn-sm" onclick="navigateTo(\'events\')">Add Evaluators First</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Coaches appear here once added as evaluators in the Events section</p></div></td></tr>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             tbody.innerHTML = coaches.map(function(c) {
                 var certs = (c.certifications || []).map(function(cert) {
@@ -2094,7 +2098,8 @@ async function loadOpsComms(orgId) {
 
         var tbody = document.getElementById('messages-table-body');
         if (msgs.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No messages yet. Compose a message or use AI Draft to get started.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="mail" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No messages yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-compose-msg\')&&document.getElementById(\'btn-compose-msg\').click()">Compose Your First Message</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Or use AI Draft to auto-generate a message</p></div></td></tr>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
         var smtpNote = '<tr><td colspan="7" style="background:#fff3cd;color:#856404;font-size:12px;padding:8px 12px;border-left:3px solid #ffc107;">Note: SMTP not configu#FA6E82 — emails are logged in dry-run mode. Configure SMTP_HOST env var to enable real sending.</td></tr>';
         tbody.innerHTML = smtpNote + msgs.map(function(m) {
@@ -3239,7 +3244,8 @@ async function loadIntelHealth(orgId) {
         renderHealthScore(hs);
     } catch (e) {
         document.getElementById('health-score-stats').innerHTML = '<div class="stat-card"><div class="stat-value">--</div><div class="stat-label">Health Score</div></div>';
-        document.getElementById('health-breakdown-body').innerHTML = '<p class="text-muted">No health score yet. Click "Generate Health Score" to start.</p>';
+        document.getElementById('health-breakdown-body').innerHTML = '<div style="text-align:center;padding:24px;"><i data-lucide="heart-pulse" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i><p style="color:#888;margin-bottom:12px;">No health score generated yet</p><button class="btn btn-primary btn-sm" onclick="generateHealthScore()">Generate Health Score</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Analyzes retention, coaching ratios, equity, and more</p></div>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
     // Load lifecycle
     try {
@@ -3418,7 +3424,8 @@ async function loadIntelAssessment(orgId) {
         var assessments = await api('GET', '/api/organizations/' + orgId + '/assessments');
         var tbody = document.getElementById('assessments-table-body');
         if (assessments.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No assessments yet. Submit one to begin.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="file-check" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No assessments yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-new-assessment\')&&document.getElementById(\'btn-new-assessment\').click()">Start Your First Assessment</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Benchmark your club against 2,500+ clubs with the IYSL Best Practice Assessment</p></div></td></tr>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             tbody.innerHTML = assessments.map(function(a) {
                 return '<tr><td>' + a.respondent_name + '</td><td><span class="badge">' + a.respondent_role + '</span></td><td>' + (a.completed_at ? new Date(a.completed_at).toLocaleDateString() : '') + '</td></tr>';
@@ -3556,7 +3563,8 @@ async function loadIntelDevelopment(orgId) {
         pathHtml += '</div><div style="text-align:center;color:#6b7280;font-size:13px;">Total tracked: ' + summary.total_tracked + ' players</div>';
         document.getElementById('dev-pathway-visual').innerHTML = pathHtml;
     } catch (e) {
-        document.getElementById('dev-pathway-visual').innerHTML = '<p class="text-muted">No development data yet. Run AI p#FA6E82ictions to build pathways.</p>';
+        document.getElementById('dev-pathway-visual').innerHTML = '<div style="text-align:center;padding:24px;"><i data-lucide="trending-up" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i><p style="color:#888;margin-bottom:12px;">No development data yet</p><button class="btn btn-primary btn-sm" onclick="runDevPredictions()">Run AI Predictions</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Predict player readiness for advancement across Rec, Select, Travel, and Academy levels</p></div>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
 
@@ -3619,7 +3627,8 @@ async function loadIntelCompetition(orgId) {
         var standings = await api('GET', '/api/organizations/' + orgId + '/competition/standings');
         var tbody = document.getElementById('standings-table-body');
         if (standings.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No match results yet. Add results to see standings.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="trophy" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No match results yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-add-result\')&&document.getElementById(\'btn-add-result\').click()">Add First Match Result</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Track wins, losses, draws, scorers, and league standings</p></div></td></tr>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             tbody.innerHTML = standings.map(function(s) {
                 var ptsStyle = 'font-weight:800;color:#5484A4;';
@@ -3825,7 +3834,8 @@ async function loadIntelCompliance(orgId) {
         var items = data.items || [];
         var tbody = document.getElementById('compliance-table-body');
         if (items.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No compliance items. Add items to track.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="shield-check" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No compliance items tracked</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-add-compliance\')&&document.getElementById(\'btn-add-compliance\').click()">Add Compliance Item</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Track SafeSport, background checks, coaching licenses, and waivers</p></div></td></tr>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
             tbody.innerHTML = items.map(function(i) {
                 var statusColor = i.status === 'compliant' ? '#09A1A1' : i.status === 'expiring' ? '#F6C992' : '#FA6E82';

@@ -67,8 +67,27 @@
   .app-fundraising .app-icon { background:#fdf5ec; color:#F6C992; }
   .app-hr .app-icon { background:#e8edf6; color:#5484A4; }
   .app-impact .app-icon { background:#f5e8ed; color:#D396A6; }
-  
-  @media (max-width:768px) { .apps-grid { grid-template-columns:1fr; } }
+  .app-onboard .app-icon { background:#e8f6e8; color:#27ae60; }
+
+  .start-club-banner {
+    max-width:900px; width:100%; margin-bottom:24px;
+    background:linear-gradient(135deg,#09A1A1,#5484A4);
+    border-radius:16px; padding:24px 32px;
+    display:flex; align-items:center; justify-content:space-between;
+    color:#fff; text-decoration:none;
+    transition:all 0.2s;
+  }
+  .start-club-banner:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(9,161,161,0.3); }
+  .start-club-banner h3 { font-size:18px; font-weight:700; margin-bottom:4px; }
+  .start-club-banner p { font-size:13px; opacity:0.9; }
+  .start-club-banner .btn-start {
+    background:#fff; color:#09A1A1;
+    font-weight:700; font-size:14px;
+    padding:10px 24px; border-radius:10px;
+    white-space:nowrap;
+  }
+
+  @media (max-width:768px) { .apps-grid { grid-template-columns:1fr; } .start-club-banner { flex-direction:column; gap:12px; text-align:center; } }
 </style>
 </head>
 <body>
@@ -82,6 +101,13 @@
 </div>
 
 <div class="main">
+  <a href="/onboard" class="start-club-banner">
+    <div>
+      <h3>Start a New Club</h3>
+      <p>Set up your entire club in under 2 minutes — organization, programs, fields, and admin access.</p>
+    </div>
+    <div class="btn-start">Get Started &rarr;</div>
+  </a>
   <div class="apps-grid">
     
     <a href="#" class="app-card app-finance coming-soon">

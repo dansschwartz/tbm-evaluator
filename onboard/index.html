@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiny But Mighty — Club Onboarding</title>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+  :root {
+    --primary: #09A1A1;
+    --secondary: #5484A4;
+    --accent: #FA6E82;
+    --warning: #F6C992;
+    --bg: #f2f4f8;
+    --card: #ffffff;
+    --border: #ACC0D3;
+    --text: #2d3748;
+    --text-muted: #888;
+    --radius: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    color: var(--text);
+  }
+
+  /* ── Header ── */
+  .header {
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .logo {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo svg { stroke: white; }
+  .header h1 { font-size: 22px; font-weight: 800; color: var(--secondary); }
+  .header-sub { font-size: 13px; color: var(--text-muted); margin-left: auto; }
+
+  /* ── Main ── */
+  .main {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px 60px;
+  }
+  .wizard {
+    width: 100%;
+    max-width: 680px;
+  }
+
+  /* ── Step Indicator ── */
+  .steps-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 36px;
+  }
+  .step-dot {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+    border: 2px solid var(--border);
+    background: #fff;
+    color: var(--border);
+    transition: all 0.3s;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .step-dot.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(9, 161, 161, 0.15);
+  }
+  .step-dot.done {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+  }
+  .step-line {
+    width: 48px; height: 2px;
+    background: var(--border);
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+  .step-line.done { background: var(--primary); }
+
+  /* ── Card ── */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 40px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+  }
+  .card h2 {
+    font-size: 22px; font-weight: 800;
+    color: var(--secondary);
+    margin-bottom: 6px;
+  }
+  .card .subtitle {
+    font-size: 14px; color: var(--text-muted);
+    margin-bottom: 28px;
+  }
+
+  /* ── Form ── */
+  .form-group { margin-bottom: 20px; }
+  .form-group label {
+    display: block;
+    font-size: 13px; font-weight: 600;
+    color: var(--secondary);
+    margin-bottom: 6px;
+  }
+  .form-group input[type="text"],
+  .form-group input[type="email"],
+  .form-group input[type="number"],
+  .form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background: #fff;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .form-group input:focus,
+  .form-group select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(9,161,161,0.1);
+  }
+  .form-group input.invalid {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(250,110,130,0.12);
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* color picker */
+  .color-field {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .color-field input[type="color"] {
+    width: 48px; height: 40px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    padding: 2px;
+    background: #fff;
+  }
+  .color-field .hex {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    font-family: 'Inter', monospace;
+  }
+
+  /* preview card */
+  .preview-card {
+    border-radius: 14px;
+    padding: 24px;
+    margin-top: 8px;
+    color: #fff;
+    transition: all 0.3s;
+  }
+  .preview-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .preview-card p { font-size: 13px; opacity: 0.85; }
+  .preview-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 12px; font-weight: 700;
+    margin-top: 12px;
+  }
+
+  /* checkboxes */
+  .check-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .check-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .check-item:hover { border-color: var(--primary); }
+  .check-item.checked {
+    border-color: var(--primary);
+    background: rgba(9,161,161,0.06);
+  }
+  .check-item input { display: none; }
+  .check-box {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .check-item.checked .check-box {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+  .check-box svg { width: 14px; height: 14px; stroke: #fff; opacity: 0; transition: opacity 0.15s; }
+  .check-item.checked .check-box svg { opacity: 1; }
+  .check-label { font-size: 14px; font-weight: 500; }
+
+  /* ── Buttons ── */
+  .btn-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 32px;
+  }
+  .btn {
+    padding: 11px 28px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn i { width: 16px; height: 16px; }
+  .btn-primary {
+    background: var(--primary);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #088a8a; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(9,161,161,0.3); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--secondary);
+    border: 1.5px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--secondary); }
+  .btn-accent {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-accent:hover { background: #e95d72; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(250,110,130,0.3); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+  /* ── Review Table ── */
+  .review-table { width: 100%; border-collapse: collapse; }
+  .review-table tr { border-bottom: 1px solid #edf0f4; }
+  .review-table tr:last-child { border-bottom: none; }
+  .review-table td { padding: 10px 0; font-size: 14px; vertical-align: top; }
+  .review-table td:first-child { font-weight: 600; color: var(--secondary); width: 160px; }
+  .review-table td:last-child { color: var(--text); }
+  .review-swatch {
+    display: inline-block; width: 16px; height: 16px;
+    border-radius: 4px; vertical-align: middle;
+    margin-right: 6px; border: 1px solid rgba(0,0,0,0.1);
+  }
+
+  /* ── Success Page ── */
+  .success-icon {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+  }
+  .success-icon i { width: 36px; height: 36px; stroke: #fff; }
+  .success-title { text-align: center; font-size: 26px; font-weight: 800; color: var(--secondary); margin-bottom: 6px; }
+  .success-sub { text-align: center; font-size: 14px; color: var(--text-muted); margin-bottom: 32px; }
+
+  .cred-row {
+    display: flex; gap: 12px; margin-bottom: 12px;
+  }
+  .cred-box {
+    flex: 1;
+    background: #f8f9fb;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .cred-box .cred-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .cred-box .cred-value {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    word-break: break-all;
+  }
+  .copy-btn {
+    background: none; border: none; cursor: pointer; color: var(--primary); flex-shrink: 0; padding: 2px;
+  }
+  .copy-btn:hover { color: #088a8a; }
+
+  .links-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin: 24px 0;
+  }
+  .link-card {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 20px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--secondary);
+    font-size: 13px; font-weight: 600;
+    transition: all 0.2s;
+  }
+  .link-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(9,161,161,0.12); }
+  .link-card .link-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: rgba(9,161,161,0.08);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .link-card .link-icon i { width: 22px; height: 22px; stroke: var(--primary); }
+
+  .checklist { margin: 24px 0; }
+  .checklist h3 { font-size: 15px; font-weight: 700; color: var(--secondary); margin-bottom: 12px; }
+  .checklist-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0;
+    font-size: 14px; color: var(--text);
+    cursor: pointer; user-select: none;
+  }
+  .checklist-item input { display: none; }
+  .cl-box {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .checklist-item.cl-done .cl-box { background: var(--primary); border-color: var(--primary); }
+  .cl-box svg { width: 14px; height: 14px; stroke: #fff; opacity: 0; transition: opacity 0.15s; }
+  .checklist-item.cl-done .cl-box svg { opacity: 1; }
+  .checklist-item.cl-done span { text-decoration: line-through; color: var(--text-muted); }
+
+  .snippet-box {
+    background: #1e293b; border-radius: 10px; padding: 18px 20px; margin-top: 16px;
+    position: relative;
+  }
+  .snippet-box code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px; color: #e2e8f0;
+    word-break: break-all;
+  }
+  .snippet-copy {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(255,255,255,0.1); border: none; cursor: pointer; color: #94a3b8;
+    border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600;
+    transition: all 0.2s;
+  }
+  .snippet-copy:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+  /* ── Transitions ── */
+  .step-panel { display: none; animation: fadeIn 0.3s ease; }
+  .step-panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Error ── */
+  .error-msg {
+    background: rgba(250,110,130,0.08);
+    border: 1px solid rgba(250,110,130,0.3);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: none;
+  }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2.5px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .header { padding: 16px 20px; }
+    .main { padding: 24px 16px 40px; }
+    .card { padding: 28px 22px; }
+    .form-row { grid-template-columns: 1fr; }
+    .links-grid { grid-template-columns: 1fr; }
+    .cred-row { flex-direction: column; }
+    .step-line { width: 28px; }
+    .step-dot { width: 32px; height: 32px; font-size: 12px; }
+    .check-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  .footer { text-align: center; padding: 20px; font-size: 11px; color: #aaa; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+    </svg>
+  </div>
+  <div>
+    <h1>Tiny But Mighty</h1>
+  </div>
+  <span class="header-sub">Club Onboarding</span>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="wizard">
+
+    <!-- Step Indicator -->
+    <div class="steps-bar" id="stepsBar"></div>
+
+    <!-- ━━━ Step 1: Club Basics ━━━ -->
+    <div class="step-panel active" data-step="1">
+      <div class="card">
+        <h2>Club Basics</h2>
+        <p class="subtitle">Tell us about your organization.</p>
+        <div class="error-msg" id="err1"></div>
+
+        <div class="form-group">
+          <label>Club Name *</label>
+          <input type="text" id="clubName" placeholder="e.g. Eastside United FC" required>
+        </div>
+
+        <div class="form-group">
+          <label>Club Slug</label>
+          <input type="text" id="clubSlug" placeholder="auto-generated from club name">
+        </div>
+
+        <div class="form-group">
+          <label>Sport</label>
+          <select id="sport">
+            <option value="soccer" selected>Soccer</option>
+            <option value="basketball">Basketball</option>
+            <option value="baseball">Baseball</option>
+            <option value="lacrosse">Lacrosse</option>
+            <option value="hockey">Hockey</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Contact Name *</label>
+            <input type="text" id="contactName" placeholder="Jane Smith" required>
+          </div>
+          <div class="form-group">
+            <label>Contact Email *</label>
+            <input type="email" id="contactEmail" placeholder="admin@club.com" required>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <span></span>
+          <button class="btn btn-primary" onclick="nextStep()">Next <i data-lucide="arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ━━━ Step 2: Branding ━━━ -->
+    <div class="step-panel" data-step="2">
+      <div class="card">
+        <h2>Branding</h2>
+        <p class="subtitle">Choose your club colors. Preview updates live.</p>
+        <div class="error-msg" id="err2"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Primary Color</label>
+            <div class="color-field">
+              <input type="color" id="primaryColor" value="#003366">
+              <span class="hex" id="primaryHex">#003366</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Secondary Color</label>
+            <div class="color-field">
+              <input type="color" id="secondaryColor" value="#CC9933">
+              <span class="hex" id="secondaryHex">#CC9933</span>
+            </div>
+          </div>
+        </div>
+
+        <label style="font-size:13px;font-weight:600;color:var(--secondary);margin-bottom:8px;display:block;">Live Preview</label>
+        <div class="preview-card" id="previewCard" style="background:#003366;">
+          <h3 id="previewName">Your Club</h3>
+          <p>2026 Season Registration Open</p>
+          <span class="preview-badge" id="previewBadge" style="background:#CC9933;color:#003366;">Register Now</span>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="prevStep()"><i data-lucide="arrow-left"></i> Back</button>
+          <button class="btn btn-primary" onclick="nextStep()">Next <i data-lucide="arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ━━━ Step 3: Programs ━━━ -->
+    <div class="step-panel" data-step="3">
+      <div class="card">
+        <h2>Programs</h2>
+        <p class="subtitle">Select the programs your club offers.</p>
+        <div class="error-msg" id="err3"></div>
+
+        <div class="check-grid" id="programsGrid">
+          <label class="check-item checked" data-value="recreational">
+            <input type="checkbox" checked>
+            <span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span class="check-label">Recreational</span>
+          </label>
+          <label class="check-item checked" data-value="travel">
+            <input type="checkbox" checked>
+            <span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span class="check-label">Travel</span>
+          </label>
+          <label class="check-item" data-value="academy">
+            <input type="checkbox">
+            <span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span class="check-label">Academy</span>
+          </label>
+          <label class="check-item" data-value="camps">
+            <input type="checkbox">
+            <span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span class="check-label">Camps</span>
+          </label>
+          <label class="check-item" data-value="clinics">
+            <input type="checkbox">
+            <span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span class="check-label">Clinics</span>
+          </label>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="prevStep()"><i data-lucide="arrow-left"></i> Back</button>
+          <button class="btn btn-primary" onclick="nextStep()">Next <i data-lucide="arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ━━━ Step 4: Setup Details ━━━ -->
+    <div class="step-panel" data-step="4">
+      <div class="card">
+        <h2>Setup Details</h2>
+        <p class="subtitle">Age groups and facility information.</p>
+        <div class="error-msg" id="err4"></div>
+
+        <div class="form-group">
+          <label>Age Groups</label>
+          <div class="check-grid" id="ageGrid">
+            <label class="check-item" data-value="U6">
+              <input type="checkbox"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="check-label">U6</span>
+            </label>
+            <label class="check-item" data-value="U8">
+              <input type="checkbox"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="check-label">U8</span>
+            </label>
+            <label class="check-item" data-value="U10">
+              <input type="checkbox"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="check-label">U10</span>
+            </label>
+            <label class="check-item" data-value="U12">
+              <input type="checkbox"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="check-label">U12</span>
+            </label>
+            <label class="check-item" data-value="U14">
+              <input type="checkbox"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="check-label">U14</span>
+            </label>
+            <label class="check-item" data-value="U16">
+              <input type="checkbox"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="check-label">U16</span>
+            </label>
+            <label class="check-item" data-value="U18">
+              <input type="checkbox"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="check-label">U18</span>
+            </label>
+            <label class="check-item" data-value="U19">
+              <input type="checkbox"><span class="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span><span class="check-label">U19</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Number of Fields</label>
+            <input type="number" id="numFields" value="2" min="0">
+          </div>
+          <div class="form-group">
+            <label>Estimated Players</label>
+            <input type="number" id="estPlayers" value="200" min="0">
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="prevStep()"><i data-lucide="arrow-left"></i> Back</button>
+          <button class="btn btn-primary" onclick="nextStep()">Next <i data-lucide="arrow-right"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ━━━ Step 5: Review ━━━ -->
+    <div class="step-panel" data-step="5">
+      <div class="card">
+        <h2>Review &amp; Create</h2>
+        <p class="subtitle">Confirm your details, then let's go.</p>
+        <div class="error-msg" id="err5"></div>
+
+        <table class="review-table" id="reviewTable"></table>
+
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="prevStep()"><i data-lucide="arrow-left"></i> Back</button>
+          <button class="btn btn-accent" id="createBtn" onclick="submitSetup()">
+            <i data-lucide="rocket"></i> Create My Club
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ━━━ Success ━━━ -->
+    <div class="step-panel" data-step="success">
+      <div class="card" style="text-align:left;">
+        <div class="success-icon"><i data-lucide="check"></i></div>
+        <p class="success-title" id="successClubName">Club Created!</p>
+        <p class="success-sub">Your club is ready to go. Save the credentials below.</p>
+
+        <div class="cred-row">
+          <div class="cred-box">
+            <div class="cred-label">Organization ID</div>
+            <div class="cred-value"><span id="orgId">—</span><button class="copy-btn" onclick="copyText('orgId')"><i data-lucide="copy" style="width:16px;height:16px;"></i></button></div>
+          </div>
+          <div class="cred-box">
+            <div class="cred-label">API Key</div>
+            <div class="cred-value"><span id="apiKey">—</span><button class="copy-btn" onclick="copyText('apiKey')"><i data-lucide="copy" style="width:16px;height:16px;"></i></button></div>
+          </div>
+        </div>
+
+        <div class="links-grid">
+          <a class="link-card" href="/admin">
+            <div class="link-icon"><i data-lucide="layout-dashboard"></i></div>
+            Admin Dashboard
+          </a>
+          <a class="link-card" href="/score">
+            <div class="link-icon"><i data-lucide="trophy"></i></div>
+            Scoring App
+          </a>
+          <a class="link-card" href="/parent">
+            <div class="link-icon"><i data-lucide="users"></i></div>
+            Parent Portal
+          </a>
+        </div>
+
+        <div class="checklist">
+          <h3>Getting Started</h3>
+          <label class="checklist-item" onclick="this.classList.toggle('cl-done')">
+            <input type="checkbox"><span class="cl-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span>Upload your club logo in Admin Dashboard</span>
+          </label>
+          <label class="checklist-item" onclick="this.classList.toggle('cl-done')">
+            <input type="checkbox"><span class="cl-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span>Create your first season</span>
+          </label>
+          <label class="checklist-item" onclick="this.classList.toggle('cl-done')">
+            <input type="checkbox"><span class="cl-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span>Invite your coaches and staff</span>
+          </label>
+          <label class="checklist-item" onclick="this.classList.toggle('cl-done')">
+            <input type="checkbox"><span class="cl-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span>Import player rosters</span>
+          </label>
+          <label class="checklist-item" onclick="this.classList.toggle('cl-done')">
+            <input type="checkbox"><span class="cl-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span>Add the chatbot to your website</span>
+          </label>
+        </div>
+
+        <label style="font-size:13px;font-weight:600;color:var(--secondary);display:block;margin-bottom:8px;">Chatbot Embed Code</label>
+        <div class="snippet-box">
+          <button class="snippet-copy" onclick="copySnippet()">Copy</button>
+          <code id="embedCode">&lt;script src="/chatbot.js" data-org="ORG_ID"&gt;&lt;/script&gt;</code>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">Tiny But Mighty &mdash; Youth Sports Platform</div>
+
+<script>
+  // ── State ──
+  let currentStep = 1;
+  const totalSteps = 5;
+
+  // ── Init ──
+  document.addEventListener('DOMContentLoaded', () => {
+    buildStepBar();
+    bindCheckItems();
+    bindColorPickers();
+    bindSlugGen();
+    lucide.createIcons();
+  });
+
+  // ── Step Bar ──
+  function buildStepBar() {
+    const bar = document.getElementById('stepsBar');
+    bar.innerHTML = '';
+    for (let i = 1; i <= totalSteps; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'step-dot' + (i === 1 ? ' active' : '');
+      dot.textContent = i;
+      dot.id = 'dot' + i;
+      bar.appendChild(dot);
+      if (i < totalSteps) {
+        const line = document.createElement('div');
+        line.className = 'step-line';
+        line.id = 'line' + i;
+        bar.appendChild(line);
+      }
+    }
+  }
+
+  function updateStepBar() {
+    for (let i = 1; i <= totalSteps; i++) {
+      const dot = document.getElementById('dot' + i);
+      dot.className = 'step-dot';
+      if (i < currentStep) dot.classList.add('done');
+      if (i === currentStep) dot.classList.add('active');
+      if (i < totalSteps) {
+        const line = document.getElementById('line' + i);
+        line.className = 'step-line' + (i < currentStep ? ' done' : '');
+      }
+    }
+  }
+
+  // ── Navigation ──
+  function showStep(n) {
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    const target = n === 'success' ? 'success' : n;
+    document.querySelector(`.step-panel[data-step="${target}"]`).classList.add('active');
+    if (n !== 'success') { currentStep = n; updateStepBar(); }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => lucide.createIcons(), 50);
+  }
+
+  function nextStep() {
+    if (!validateStep(currentStep)) return;
+    if (currentStep === 5) return;
+    if (currentStep === 4) buildReview();
+    showStep(currentStep + 1);
+  }
+
+  function prevStep() {
+    if (currentStep > 1) showStep(currentStep - 1);
+  }
+
+  // ── Validation ──
+  function validateStep(step) {
+    clearErrors();
+    if (step === 1) {
+      const name = v('clubName');
+      const email = v('contactEmail');
+      const cname = v('contactName');
+      if (!name) return showErr(1, 'Club name is required.', 'clubName');
+      if (!cname) return showErr(1, 'Contact name is required.', 'contactName');
+      if (!email || !email.includes('@')) return showErr(1, 'A valid email is required.', 'contactEmail');
+    }
+    if (step === 3) {
+      const checked = getChecked('programsGrid');
+      if (checked.length === 0) return showErr(3, 'Select at least one program.');
+    }
+    if (step === 4) {
+      const ages = getChecked('ageGrid');
+      if (ages.length === 0) return showErr(4, 'Select at least one age group.');
+    }
+    return true;
+  }
+
+  function v(id) { return document.getElementById(id).value.trim(); }
+
+  function showErr(step, msg, focusId) {
+    const el = document.getElementById('err' + step);
+    el.textContent = msg;
+    el.style.display = 'block';
+    if (focusId) {
+      const inp = document.getElementById(focusId);
+      inp.classList.add('invalid');
+      inp.focus();
+    }
+    return false;
+  }
+
+  function clearErrors() {
+    document.querySelectorAll('.error-msg').forEach(e => { e.style.display = 'none'; e.textContent = ''; });
+    document.querySelectorAll('.invalid').forEach(e => e.classList.remove('invalid'));
+  }
+
+  // ── Checkboxes ──
+  function bindCheckItems() {
+    document.querySelectorAll('.check-item').forEach(item => {
+      item.addEventListener('click', e => {
+        e.preventDefault();
+        const cb = item.querySelector('input');
+        cb.checked = !cb.checked;
+        item.classList.toggle('checked', cb.checked);
+      });
+    });
+  }
+
+  function getChecked(gridId) {
+    return Array.from(document.querySelectorAll(`#${gridId} .check-item.checked`))
+      .map(el => el.dataset.value);
+  }
+
+  // ── Color Pickers ──
+  function bindColorPickers() {
+    const pc = document.getElementById('primaryColor');
+    const sc = document.getElementById('secondaryColor');
+    pc.addEventListener('input', updatePreview);
+    sc.addEventListener('input', updatePreview);
+  }
+
+  function updatePreview() {
+    const p = document.getElementById('primaryColor').value;
+    const s = document.getElementById('secondaryColor').value;
+    document.getElementById('primaryHex').textContent = p.toUpperCase();
+    document.getElementById('secondaryHex').textContent = s.toUpperCase();
+    document.getElementById('previewCard').style.background = p;
+    document.getElementById('previewBadge').style.background = s;
+    document.getElementById('previewBadge').style.color = p;
+    const name = v('clubName');
+    document.getElementById('previewName').textContent = name || 'Your Club';
+  }
+
+  // ── Slug ──
+  function bindSlugGen() {
+    document.getElementById('clubName').addEventListener('input', () => {
+      const slug = document.getElementById('clubSlug');
+      if (!slug.dataset.edited) {
+        slug.value = v('clubName').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      }
+      updatePreview();
+    });
+    document.getElementById('clubSlug').addEventListener('input', () => {
+      document.getElementById('clubSlug').dataset.edited = '1';
+    });
+  }
+
+  // ── Review ──
+  function buildReview() {
+    const programs = getChecked('programsGrid');
+    const ages = getChecked('ageGrid');
+    const rows = [
+      ['Club Name', v('clubName')],
+      ['Slug', v('clubSlug')],
+      ['Sport', document.getElementById('sport').options[document.getElementById('sport').selectedIndex].text],
+      ['Contact', `${v('contactName')} &lt;${v('contactEmail')}&gt;`],
+      ['Colors', `<span class="review-swatch" style="background:${v('primaryColor')}"></span>${v('primaryColor').toUpperCase()}  &nbsp; <span class="review-swatch" style="background:${v('secondaryColor')}"></span>${v('secondaryColor').toUpperCase()}`],
+      ['Programs', programs.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')],
+      ['Age Groups', ages.join(', ')],
+      ['Fields', v('numFields')],
+      ['Est. Players', v('estPlayers')],
+    ];
+    document.getElementById('reviewTable').innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+  }
+
+  // ── Submit ──
+  async function submitSetup() {
+    const btn = document.getElementById('createBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Creating...';
+
+    const payload = {
+      club_name: v('clubName'),
+      club_slug: v('clubSlug'),
+      sport: document.getElementById('sport').value,
+      contact_email: v('contactEmail'),
+      contact_name: v('contactName'),
+      primary_color: document.getElementById('primaryColor').value,
+      secondary_color: document.getElementById('secondaryColor').value,
+      admin_name: v('contactName'),
+      programs: getChecked('programsGrid'),
+      age_groups: getChecked('ageGrid'),
+      num_fields: parseInt(v('numFields')) || 2,
+      estimated_players: parseInt(v('estPlayers')) || 200,
+    };
+
+    try {
+      const res = await fetch('/api/onboarding/quick-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Server error' }));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      // Populate success page
+      document.getElementById('successClubName').textContent = payload.club_name + ' Created!';
+      const org = data.organization || {};
+      document.getElementById('orgId').textContent = org.id || '—';
+      document.getElementById('apiKey').textContent = org.api_key || '—';
+
+      const oid = org.id || 'ORG_ID';
+      document.getElementById('embedCode').innerHTML =
+        `&lt;script src="/chatbot.js" data-org="${oid}"&gt;&lt;/script&gt;`;
+
+      // Hide step bar & show success
+      document.getElementById('stepsBar').style.display = 'none';
+      showStep('success');
+
+    } catch (e) {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="rocket"></i> Create My Club';
+      lucide.createIcons();
+      showErr(5, e.message || 'Something went wrong. Please try again.');
+    }
+  }
+
+  // ── Copy helpers ──
+  function copyText(id) {
+    const text = document.getElementById(id).textContent;
+    navigator.clipboard.writeText(text).then(() => flashCopy(id));
+  }
+
+  function copySnippet() {
+    const el = document.getElementById('embedCode');
+    const text = el.textContent.replace(/</g, '<').replace(/>/g, '>').replace(/&/g, '&');
+    navigator.clipboard.writeText(text);
+    const btn = document.querySelector('.snippet-copy');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+  }
+
+  function flashCopy(id) {
+    const btn = document.getElementById(id).parentElement.querySelector('.copy-btn');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="check" style="width:16px;height:16px;color:var(--primary);"></i>';
+    lucide.createIcons();
+    setTimeout(() => { btn.innerHTML = orig; lucide.createIcons(); }, 1500);
+  }
+</script>
+</body>
+</html>

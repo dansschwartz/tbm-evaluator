@@ -15,8 +15,6 @@ from datetime import datetime, date, timedelta
 
 import httpx
 
-ORG_ID = "7f872a72-b657-4a15-9cef-7eef29daf974"
-
 FIELDS = [
     {
         "name": "Mann Elementary School",
@@ -216,16 +214,20 @@ def main():
     client = httpx.Client(base_url=args.api_url, headers=h, timeout=120)
 
     random.seed(42)
-    ORG_ID = "7f872a72-b657-4a15-9cef-7eef29daf974"
 
-    # Verify org exists
-    print("Verifying organization...")
-    org_id = ORG_ID
-    resp = client.get(f"/api/organizations/{org_id}")
+    # Dynamically look up the org ID
+    print("Looking up organization...")
+    resp = client.get("/api/organizations")
     if resp.status_code != 200:
-        print(f"  ERROR: Org {org_id} not found ({resp.status_code}). Run seed_demo.py first.")
-    org = resp.json()
-    print(f"  OK: {org['name']}")
+        print(f"  ERROR: Could not fetch organizations ({resp.status_code}). Run seed_demo.py first.")
+        return
+    orgs = resp.json()
+    if not orgs:
+        print("  ERROR: No organizations found. Run seed_demo.py first.")
+        return
+    org = orgs[0]
+    org_id = org["id"]
+    print(f"  OK: {org['name']} ({org_id})")
 
     # Get existing players
     print("\nFetching existing players...")
@@ -974,22 +976,391 @@ def main():
 
     print(f"  Total: {match_count} match results seeded")
 
+    # ========== FALL 2025 HISTORICAL SEASON ==========
+    print("\n--- SEEDING FALL 2025 HISTORICAL SEASON ---")
+
+    # Create Fall 2025 season
+    resp = client.post(f"/api/organizations/{org_id}/seasons", json={
+        "name": "Fall 2025",
+        "start_date": "2025-09-01",
+        "end_date": "2025-11-15",
+        "registration_open_date": "2025-07-15",
+        "registration_close_date": "2025-08-25",
+        "status": "completed",
+    })
+    if resp.status_code in (200, 201):
+        fall_season = resp.json()
+        fall_season_id = fall_season["id"]
+        print(f"  + Fall 2025 season created ({fall_season['start_date']} to {fall_season['end_date']}) — status: completed")
+    else:
+        print(f"  ERROR creating Fall 2025 season: {resp.status_code} {resp.text[:200]}")
+        fall_season_id = None
+
+    if fall_season_id:
+        # Create Fall 2025 programs (same 5 but with slightly different numbers)
+        fall_programs = [
+            {"name": "Rec League (Fall)", "program_type": "recreational", "age_groups": ["K","1st","2nd","3rd","4th","5th","6th","7th","8th"],
+             "gender": "coed", "registration_fee": 135.0, "financial_aid_eligible": True, "max_players_per_team": 14, "max_teams": 18,
+             "description": "Fall recreational soccer. Everyone plays!"},
+            {"name": "Travel Program (Fall)", "program_type": "travel", "age_groups": ["U8","U9","U10","U11","U12","U13","U14"],
+             "gender": "coed", "registration_fee": 2400.0, "financial_aid_eligible": False, "max_players_per_team": 18, "max_teams": 14,
+             "description": "Fall competitive travel soccer."},
+            {"name": "Academy (Fall)", "program_type": "academy", "age_groups": ["U11","U12","U13","U14"],
+             "gender": "coed", "registration_fee": 3200.0, "financial_aid_eligible": False, "max_players_per_team": 18, "max_teams": 6,
+             "description": "Fall elite development program."},
+            {"name": "Pre-Travel Academy (Fall)", "program_type": "recreational", "age_groups": ["K","1st","2nd"],
+             "gender": "coed", "registration_fee": 375.0, "financial_aid_eligible": True, "max_players_per_team": 12, "max_teams": 5,
+             "description": "Fall pre-travel bridge program."},
+            {"name": "Fall Clinic", "program_type": "camp", "age_groups": ["K","1st","2nd","3rd","4th","5th","6th"],
+             "gender": "coed", "registration_fee": 275.0, "financial_aid_eligible": True, "max_players_per_team": 20, "max_teams": 6,
+             "description": "Fall skills clinics — 6-week program."},
+        ]
+        fall_program_ids = []
+        for prog in fall_programs:
+            data = {**prog, "season_id": fall_season_id}
+            resp = client.post(f"/api/organizations/{org_id}/programs", json=data)
+            if resp.status_code in (200, 201):
+                p = resp.json()
+                fall_program_ids.append(p["id"])
+                print(f"  + {p['name']} (${p['registration_fee']})")
+            else:
+                print(f"  ERROR: {resp.status_code} {resp.text[:100]}")
+        print(f"  {len(fall_program_ids)} fall programs created")
+
+        # Create Fall 2025 teams
+        fall_teams_def = [
+            ("Fall U12 Blue", 1, "Blue", "Tuesday", "18:00-19:30"),
+            ("Fall U12 Red", 1, "Red", "Thursday", "18:00-19:30"),
+            ("Fall U12 White", 1, "White", "Tuesday", "16:30-18:00"),
+            ("Fall U12 Select", 1, "Select", "Thursday", "16:30-18:00"),
+            ("Fall U12 Academy", 2, "Academy", "Monday", "17:00-19:00"),
+        ]
+        fall_team_ids = []
+        for team_name, prog_idx, level, pday, ptime in fall_teams_def:
+            fid = random.choice(field_ids) if field_ids else None
+            data = {
+                "name": team_name, "program_id": fall_program_ids[prog_idx] if prog_idx < len(fall_program_ids) else None,
+                "season_id": fall_season_id, "team_level": level, "practice_day": pday,
+                "practice_time": ptime, "max_roster_size": 18, "practice_field_id": fid,
+            }
+            resp = client.post(f"/api/organizations/{org_id}/teams", json=data)
+            if resp.status_code in (200, 201):
+                t = resp.json()
+                fall_team_ids.append(t["id"])
+                print(f"  + {t['name']} (level: {level})")
+        print(f"  {len(fall_team_ids)} fall teams created")
+
+        # Assign 20 of the 25 players to Fall 2025 teams (5 players are new for Spring 2026)
+        # The new players for Spring 2026 are: Daniel Kim, Alexander Robinson, Jack Hall, William King, Grace Scott (indices by name)
+        new_spring_only = {"Daniel Kim", "Alexander Robinson", "Jack Hall", "William King", "Grace Scott"}
+        fall_player_ids = [p["id"] for p in players if f"{p['first_name']} {p['last_name']}" not in new_spring_only]
+        random.shuffle(fall_player_ids)
+
+        fall_roster_count = 0
+        fall_roster_map = {}  # team_idx -> [player_ids]
+        fall_assignments = [
+            (0, fall_player_ids[0:4]),    # Fall U12 Blue: 4
+            (1, fall_player_ids[4:8]),    # Fall U12 Red: 4
+            (2, fall_player_ids[8:12]),   # Fall U12 White: 4
+            (3, fall_player_ids[12:16]),  # Fall U12 Select: 4
+            (4, fall_player_ids[16:20]),  # Fall U12 Academy: 4
+        ]
+        for tidx, pids in fall_assignments:
+            fall_roster_map[tidx] = pids
+            if tidx >= len(fall_team_ids):
+                continue
+            for pid in pids:
+                resp = client.post(f"/api/teams/{fall_team_ids[tidx]}/roster", json={
+                    "player_id": pid, "jersey_number": random.randint(1, 99), "role": "player",
+                })
+                if resp.status_code in (200, 201):
+                    fall_roster_count += 1
+        print(f"  Rostered {fall_roster_count} players across {len(fall_assignments)} fall teams")
+
+        # Fall 2025 evaluation event: "Fall 2025 U12 Tryouts"
+        print("\n  --- Fall 2025 Evaluation Event ---")
+        # Get templates to find a suitable one
+        templates_resp = client.get(f"/api/organizations/{org_id}/templates")
+        templates = templates_resp.json() if templates_resp.status_code == 200 else []
+        template_id = templates[0]["id"] if templates else None
+
+        # Create the evaluation event
+        resp = client.post(f"/api/organizations/{org_id}/events", json={
+            "name": "Fall 2025 U12 Tryouts",
+            "event_type": "tryout",
+            "event_date": "2025-08-30",
+            "location": "Mann Elementary School",
+            "status": "completed",
+            "season": "Fall 2025",
+            "template_id": template_id,
+        })
+        if resp.status_code in (200, 201):
+            fall_event = resp.json()
+            fall_event_id = fall_event["id"]
+            print(f"  + Event: {fall_event['name']} ({fall_event.get('event_date', '')})")
+
+            # Add players to event
+            for pid in fall_player_ids[:20]:
+                client.post(f"/api/events/{fall_event_id}/players", json={"player_id": pid})
+
+            # Submit scores (~0.3 lower than spring scores to show improvement)
+            if template_id and evaluators:
+                skills_resp = client.get(f"/api/organizations/{org_id}/templates")
+                all_templates = skills_resp.json() if skills_resp.status_code == 200 else []
+                skill_names = []
+                for t in all_templates:
+                    if t["id"] == template_id:
+                        skill_names = [s["name"] for s in t.get("skills", [])]
+                        break
+
+                if skill_names:
+                    eval_id = evaluators[0]["id"]
+                    scores_batch = []
+                    for pid in fall_player_ids[:20]:
+                        for skill in skill_names:
+                            # Base score around 2.5-3.5 (lower than spring's ~3.0-4.0)
+                            base = round(random.uniform(2.0, 3.5), 1)
+                            base = min(5.0, max(1.0, base))
+                            scores_batch.append({
+                                "player_id": pid, "skill_name": skill, "score_value": base,
+                            })
+                    # Submit in batches
+                    batch_size = 50
+                    scored_count = 0
+                    for i in range(0, len(scores_batch), batch_size):
+                        batch = scores_batch[i:i+batch_size]
+                        resp = client.post("/scoring/scores", json={
+                            "event_id": fall_event_id,
+                            "evaluator_id": eval_id,
+                            "scores": batch,
+                        })
+                        if resp.status_code in (200, 201):
+                            scored_count += len(batch)
+                    print(f"  + Submitted {scored_count} scores for {len(fall_player_ids[:20])} players")
+                else:
+                    print("  SKIP: No skills found in template for scoring")
+        else:
+            print(f"  ERROR creating fall event: {resp.status_code} {resp.text[:200]}")
+
+        # Fall 2025 schedule (practices + games, all completed)
+        print("\n  --- Fall 2025 Schedule ---")
+        fall_practice_teams = [
+            (0, "Tuesday", field_ids[0] if field_ids else None),
+            (0, "Thursday", field_ids[3] if len(field_ids) > 3 else None),
+            (1, "Tuesday", field_ids[1] if len(field_ids) > 1 else None),
+            (1, "Thursday", field_ids[4] if len(field_ids) > 4 else None),
+            (2, "Tuesday", field_ids[3] if len(field_ids) > 3 else None),
+            (4, "Monday", field_ids[4] if len(field_ids) > 4 else None),
+        ]
+
+        fall_base_date = date(2025, 9, 1)
+        fall_practice_count = 0
+        fall_schedule_ids = []
+        for week in range(4):  # 4 weeks of fall practices
+            week_start = fall_base_date + timedelta(days=week * 7)
+            for tidx, day_name, fid in fall_practice_teams:
+                if tidx >= len(fall_team_ids):
+                    continue
+                offset = day_offsets.get(day_name, 1)
+                practice_date = week_start + timedelta(days=offset)
+                start_dt = datetime.combine(practice_date, datetime.strptime("18:00", "%H:%M").time())
+                end_dt = start_dt + timedelta(minutes=90)
+                resp = client.post(f"/api/organizations/{org_id}/schedules", json={
+                    "season_id": fall_season_id, "entry_type": "practice",
+                    "team_id": fall_team_ids[tidx], "field_id": fid,
+                    "start_time": start_dt.isoformat(), "end_time": end_dt.isoformat(),
+                    "title": f"{fall_teams_def[tidx][0]} Practice", "status": "completed",
+                })
+                if resp.status_code in (200, 201):
+                    entry = resp.json()
+                    fall_schedule_ids.append({"id": entry["id"], "team_idx": tidx, "status": "completed"})
+                    fall_practice_count += 1
+        print(f"  + {fall_practice_count} fall practices (all completed)")
+
+        # Fall 2025 attendance records
+        fall_att_count = 0
+        for entry_info in fall_schedule_ids:
+            tidx = entry_info["team_idx"]
+            entry_id = entry_info["id"]
+            pids = fall_roster_map.get(tidx, [])
+            if not pids:
+                continue
+            records = []
+            for pid in pids:
+                roll = random.random()
+                status = "present" if roll < 0.80 else "absent" if roll < 0.92 else "late"
+                records.append({"player_id": pid, "status": status})
+            if records:
+                resp = client.post(f"/api/schedules/{entry_id}/attendance", json={"records": records})
+                if resp.status_code in (200, 201):
+                    fall_att_count += len(records)
+        print(f"  + {fall_att_count} fall attendance records")
+
+        # Fall 2025 competition results (15 matches)
+        fall_team_name_to_idx = {"Fall U12 Blue": 0, "Fall U12 Red": 1, "Fall U12 White": 2, "Fall U12 Select": 3, "Fall U12 Academy": 4}
+        fall_match_results = [
+            # Fall U12 Blue (NCSL Div 1) — 3W 1L 1D
+            {"team_idx": 0, "opponent": "Bethesda SC", "league": "NCSL Division 1", "date": "2025-09-06", "result": "win", "sf": 2, "sa": 1},
+            {"team_idx": 0, "opponent": "Arlington SA", "league": "NCSL Division 1", "date": "2025-09-13", "result": "loss", "sf": 0, "sa": 2},
+            {"team_idx": 0, "opponent": "McLean Youth Soccer", "league": "NCSL Division 1", "date": "2025-09-20", "result": "win", "sf": 3, "sa": 2},
+            # Fall U12 Red (NCSL Div 2) — 2W 2L 0D
+            {"team_idx": 1, "opponent": "Burke Athletic Club", "league": "NCSL Division 2", "date": "2025-09-06", "result": "win", "sf": 1, "sa": 0},
+            {"team_idx": 1, "opponent": "Springfield SYC", "league": "NCSL Division 2", "date": "2025-09-13", "result": "loss", "sf": 0, "sa": 1},
+            {"team_idx": 1, "opponent": "Potomac Soccer", "league": "NCSL Division 2", "date": "2025-09-20", "result": "win", "sf": 2, "sa": 1},
+            {"team_idx": 1, "opponent": "Virginia Rush", "league": "NCSL Division 2", "date": "2025-10-04", "result": "loss", "sf": 1, "sa": 3},
+            # Fall U12 White (NCSL Div 3) — 1W 2L 0D
+            {"team_idx": 2, "opponent": "Vienna Youth Soccer", "league": "NCSL Division 3", "date": "2025-09-13", "result": "loss", "sf": 0, "sa": 1},
+            {"team_idx": 2, "opponent": "Burke Athletic Club", "league": "NCSL Division 3", "date": "2025-09-27", "result": "win", "sf": 2, "sa": 1},
+            {"team_idx": 2, "opponent": "Loudoun Soccer", "league": "NCSL Division 3", "date": "2025-10-11", "result": "loss", "sf": 1, "sa": 2},
+            # Fall U12 Select (MDSL) — 2W 1L 0D
+            {"team_idx": 3, "opponent": "Potomac Soccer", "league": "MDSL", "date": "2025-09-06", "result": "win", "sf": 1, "sa": 0},
+            {"team_idx": 3, "opponent": "Bethesda SC", "league": "MDSL", "date": "2025-09-20", "result": "loss", "sf": 0, "sa": 2},
+            {"team_idx": 3, "opponent": "Arlington SA", "league": "MDSL", "date": "2025-10-04", "result": "win", "sf": 2, "sa": 1},
+            # Fall U12 Academy (NCSL Premier) — 1W 1L 0D
+            {"team_idx": 4, "opponent": "McLean Youth Soccer", "league": "NCSL Premier", "date": "2025-09-06", "result": "win", "sf": 2, "sa": 0},
+            {"team_idx": 4, "opponent": "Loudoun Soccer", "league": "NCSL Premier", "date": "2025-09-20", "result": "loss", "sf": 1, "sa": 3},
+        ]
+        fall_match_count = 0
+        for m in fall_match_results:
+            tidx = m["team_idx"]
+            if tidx >= len(fall_team_ids):
+                continue
+            resp = client.post(f"/api/organizations/{org_id}/competition/results", json={
+                "team_id": fall_team_ids[tidx], "opponent_name": m["opponent"],
+                "league": m["league"], "match_date": m["date"],
+                "result": m["result"], "score_for": m["sf"], "score_against": m["sa"],
+                "goal_scorers": [], "assists": [],
+            })
+            if resp.status_code in (200, 201):
+                fall_match_count += 1
+                emoji = "W" if m["result"] == "win" else "L" if m["result"] == "loss" else "D"
+                print(f"  + [{emoji}] {fall_teams_def[tidx][0]} {m['sf']}-{m['sa']} vs {m['opponent']}")
+        print(f"  {fall_match_count} fall match results")
+
+    # ========== ADDITIONAL SPRING 2026 DATA ==========
+    print("\n--- ADDING MORE SPRING 2026 DATA ---")
+
+    # 5 more competition results for Spring 2026 (total ~35)
+    extra_spring_results = [
+        {"team": "U12 Blue", "opponent": "Herndon Youth Soccer", "league": "NCSL Division 1", "date": "2026-06-07", "result": "win", "sf": 3, "sa": 0,
+         "scorers": [{"player_name": "Marcus Johnson", "count": 2}, {"player_name": "Ethan Williams", "count": 1}], "assists": [{"player_name": "Ethan Williams", "count": 2}]},
+        {"team": "U12 Red", "opponent": "Fairfax Alliance", "league": "NCSL Division 2", "date": "2026-06-07", "result": "draw", "sf": 2, "sa": 2,
+         "scorers": [{"player_name": "Olivia Chen", "count": 1}, {"player_name": "Isabella Martinez", "count": 1}], "assists": []},
+        {"team": "U12 White", "opponent": "Herndon Youth Soccer", "league": "NCSL Division 3", "date": "2026-06-07", "result": "win", "sf": 2, "sa": 0,
+         "scorers": [{"player_name": "Liam Davis", "count": 1}, {"player_name": "James Wilson", "count": 1}], "assists": [{"player_name": "James Wilson", "count": 1}]},
+        {"team": "U12 Academy", "opponent": "Herndon Youth Soccer", "league": "NCSL Premier", "date": "2026-06-07", "result": "win", "sf": 5, "sa": 1,
+         "scorers": [{"player_name": "Sofia Rodriguez", "count": 3}, {"player_name": "Aiden Thompson", "count": 2}], "assists": [{"player_name": "Emma Brown", "count": 2}, {"player_name": "Sofia Rodriguez", "count": 1}]},
+        {"team": "U12 Select", "opponent": "Fairfax Alliance", "league": "MDSL", "date": "2026-06-07", "result": "win", "sf": 2, "sa": 1,
+         "scorers": [{"player_name": "Noah Patel", "count": 1}, {"player_name": "Ava Anderson", "count": 1}], "assists": [{"player_name": "Mason Lee", "count": 1}]},
+    ]
+
+    extra_match_count = 0
+    for m in extra_spring_results:
+        t_idx = team_name_to_idx.get(m["team"])
+        if t_idx is None or t_idx >= len(team_ids):
+            continue
+        resp = client.post(f"/api/organizations/{org_id}/competition/results", json={
+            "team_id": team_ids[t_idx], "opponent_name": m["opponent"],
+            "league": m["league"], "match_date": m["date"],
+            "result": m["result"], "score_for": m["sf"], "score_against": m["sa"],
+            "goal_scorers": m["scorers"], "assists": m["assists"],
+        })
+        if resp.status_code in (200, 201):
+            extra_match_count += 1
+            emoji = "W" if m["result"] == "win" else "L" if m["result"] == "loss" else "D"
+            print(f"  + [{emoji}] {m['team']} {m['sf']}-{m['sa']} vs {m['opponent']}")
+    print(f"  {extra_match_count} extra spring matches added")
+
+    # More attendance records for Spring 2026 (additional completed sessions)
+    print("  Adding more Spring 2026 attendance...")
+    extra_att_count = 0
+    # Mark some more schedule entries as completed and add attendance
+    extra_practice_dates = [date(2026, 4, 28), date(2026, 4, 29), date(2026, 4, 30)]
+    extra_teams_for_att = [(5, 10, 13), (6, 13, 16), (7, 16, 18), (9, 20, 23)]  # (team_idx, player_slice_start, end)
+    for pdate in extra_practice_dates:
+        for tidx, ps, pe in extra_teams_for_att:
+            if tidx >= len(team_ids):
+                continue
+            start_dt = datetime.combine(pdate, datetime.strptime("18:00", "%H:%M").time())
+            end_dt = start_dt + timedelta(minutes=90)
+            resp = client.post(f"/api/organizations/{org_id}/schedules", json={
+                "season_id": season_id, "entry_type": "practice",
+                "team_id": team_ids[tidx],
+                "field_id": random.choice(field_ids) if field_ids else None,
+                "start_time": start_dt.isoformat(), "end_time": end_dt.isoformat(),
+                "title": f"{TEAMS[tidx][0]} Practice", "status": "completed",
+            })
+            if resp.status_code in (200, 201):
+                entry = resp.json()
+                pids = shuffled_players[ps:pe]
+                records = [{"player_id": pid, "status": random.choice(["present", "present", "present", "present", "absent", "late"])} for pid in pids]
+                resp2 = client.post(f"/api/schedules/{entry['id']}/attendance", json={"records": records})
+                if resp2.status_code in (200, 201):
+                    extra_att_count += len(records)
+    print(f"  + {extra_att_count} additional spring attendance records")
+
+    # 3 more development path entries showing players who advanced from Fall to Spring
+    print("  Adding advancement development path entries...")
+    advancement_paths = {
+        "Charlotte White": {
+            "current_level": "Select",
+            "path_entries": [
+                {"season": "Fall 2024", "level": "Tots", "date": "2024-09-01", "notes": "Started in tots program"},
+                {"season": "Spring 2025", "level": "Rec", "date": "2025-03-01", "notes": "Moved to rec"},
+                {"season": "Fall 2025", "level": "Pre-Travel", "date": "2025-09-01", "notes": "Pre-travel program"},
+                {"season": "Spring 2026", "level": "Select", "date": "2026-04-01", "notes": "Big jump to select — strong fall evaluations"},
+            ],
+        },
+        "Benjamin Harris": {
+            "current_level": "Travel",
+            "path_entries": [
+                {"season": "Spring 2025", "level": "Rec", "date": "2025-03-01", "notes": "Rec start"},
+                {"season": "Fall 2025", "level": "Pre-Travel", "date": "2025-09-01", "notes": "Pre-travel after strong fall tryout"},
+                {"season": "Spring 2026", "level": "Travel", "date": "2026-04-01", "notes": "Earned travel roster spot — U12 Red"},
+            ],
+        },
+        "Harper Lewis": {
+            "current_level": "Pre-Travel",
+            "path_entries": [
+                {"season": "Fall 2025", "level": "Rec", "date": "2025-09-01", "notes": "Started rec"},
+                {"season": "Spring 2026", "level": "Pre-Travel", "date": "2026-04-01", "notes": "Advanced to pre-travel — great improvement from fall to spring evals"},
+            ],
+        },
+    }
+
+    adv_count = 0
+    for pname, journey in advancement_paths.items():
+        pid = player_map.get(pname)
+        if not pid:
+            print(f"  SKIP: {pname} not found")
+            continue
+        resp = client.post(f"/api/players/{pid}/development-path", json={
+            "current_level": journey["current_level"],
+            "path_entries": journey["path_entries"],
+        })
+        if resp.status_code in (200, 201):
+            adv_count += 1
+            print(f"  + {pname}: advanced to {journey['current_level']}")
+    print(f"  {adv_count} advancement paths updated")
+
     # ========== SUMMARY ==========
+    fall_match_total = fall_match_count if fall_season_id else 0
+    fall_att_total = fall_att_count if fall_season_id else 0
     print("\n" + "=" * 60)
     print("OPERATIONS DATA SEEDED!")
     print(f"  Organization: {org['name']}")
     print(f"  Fields: {len(field_ids)}")
-    print(f"  Season: Spring 2026 (active)")
-    print(f"  Programs: {len(program_ids)}")
-    print(f"  Teams: {len(team_ids)}")
-    print(f"  Players rostered: {roster_count}")
-    print(f"  Schedule entries: {practice_count + game_count} ({practice_count} practices, {game_count} games)")
-    print(f"  Attendance records: {att_count}")
+    print(f"  Seasons: Spring 2026 (active) + Fall 2025 (completed)")
+    print(f"  Programs: {len(program_ids)} spring + {len(fall_program_ids) if fall_season_id else 0} fall")
+    print(f"  Teams: {len(team_ids)} spring + {len(fall_team_ids) if fall_season_id else 0} fall")
+    print(f"  Players rostered: {roster_count} spring + {fall_roster_count if fall_season_id else 0} fall")
+    print(f"  Schedule entries: {practice_count + game_count} spring + {fall_practice_count if fall_season_id else 0} fall")
+    print(f"  Attendance records: {att_count + extra_att_count} spring + {fall_att_total} fall")
     print(f"  Messages: {len(MESSAGES)}")
     print(f"  Coach certs updated: {len(COACH_CERTS)}")
     print(f"  Documents: 2 uploaded, {missing_count} missing waivers")
-    print(f"  Development paths: {dev_path_count}")
-    print(f"  Match results: {match_count}")
+    print(f"  Development paths: {dev_path_count} + {adv_count} advancement updates")
+    print(f"  Match results: {match_count + extra_match_count} spring + {fall_match_total} fall")
     print(f"\n  Admin: {args.api_url}/admin")
     print("=" * 60)
 

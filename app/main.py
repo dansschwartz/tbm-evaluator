@@ -18,6 +18,7 @@ from app.routers import (
     imports, fields, seasons, teams, schedules, ai_ops,
     communications, coaches, attendance, ops_analytics, documents,
     intelligence,
+    onboarding,
 )
 from app.routers.templates import SPORT_PRESETS
 
@@ -67,6 +68,9 @@ app.include_router(documents.router)
 # Intelligence & Benchmarking
 app.include_router(intelligence.router)
 
+# Onboarding
+app.include_router(onboarding.router)
+
 # Static files
 app.mount("/launcher/static", StaticFiles(directory="launcher"), name="launcher_static")
 app.mount("/admin/static", StaticFiles(directory="admin"), name="admin_static")
@@ -74,6 +78,7 @@ app.mount("/score/static", StaticFiles(directory="scoring"), name="scoring_stati
 app.mount("/report/static", StaticFiles(directory="reports"), name="report_static")
 app.mount("/parent/static", StaticFiles(directory="parent"), name="parent_static")
 app.mount("/self-assess/static", StaticFiles(directory="selfassess"), name="selfassess_static")
+app.mount("/onboard/static", StaticFiles(directory="onboard"), name="onboard_static")
 
 
 async def run_migrations(conn):
@@ -164,6 +169,11 @@ async def health():
 @app.get("/")
 async def launcher_page():
     return FileResponse("launcher/index.html")
+
+@app.get("/onboard")
+@app.get("/onboard/")
+async def onboard_page():
+    return FileResponse("onboard/index.html")
 
 @app.get("/admin")
 @app.get("/admin/")
