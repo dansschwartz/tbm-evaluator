@@ -1302,3 +1302,9 @@ path.leaflet-interactive:focus {
     box-shadow: none !important;
 }
 /* nav rebuild Sun Apr 26 16:38:27 EDT 2026 */
+
+/* Smaller icons for child nav items */
+.nav-group-items .nav-icon-lucide {
+    width: 14px !important;
+    height: 14px !important;
+}

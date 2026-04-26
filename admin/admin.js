@@ -5215,7 +5215,7 @@ function printDashboard() {
     // Ensure overview section is visible
     var currentActive = document.querySelector('.nav-item.active');
     var wasOverview = currentActive && currentActive.getAttribute('data-section') === 'overview';
-    if (!wasOverview) navigateTo('overview');
+    if (!wasOverview) navigateTo('players');
     setTimeout(function() {
         window.print();
         if (!wasOverview && currentActive) {
@@ -6223,14 +6223,14 @@ async function cancelBooking(bookingId) {
         console.log('TBM Admin: Initializing...');
         await loadOrgSelector();
         console.log('TBM Admin: Org selector loaded');
-        navigateTo('overview');
+        navigateTo('players');
         console.log('TBM Admin: Navigated to overview');
         refreshBadges();
         console.log('TBM Admin: Init complete');
     } catch(e) {
         console.error('TBM Admin init error:', e);
         // Try basic init without badges
-        try { navigateTo('overview'); } catch(e2) { console.error('Nav error:', e2); }
+        try { navigateTo('players'); } catch(e2) { console.error('Nav error:', e2); }
     }
 })();
 

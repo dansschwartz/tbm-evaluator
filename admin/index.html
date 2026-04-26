@@ -61,7 +61,7 @@
             <nav class="sidebar-nav">
                 <!-- Group 1: DASHBOARD (always visible) -->
                 <div class="nav-group" data-group="dashboard">
-                    <a href="#" class="nav-item active" data-section="overview">
+                    <a href="#" class="nav-item" data-section="overview">
                         <i data-lucide="layout-dashboard" class="nav-icon-lucide"></i>
                         <span class="nav-label">Overview</span>
                     </a>
@@ -75,7 +75,7 @@
                         <i data-lucide="chevron-down" class="nav-group-chevron" style="width:14px;height:14px;flex-shrink:0;transition:transform 0.2s;"></i>
                     </div>
                     <div class="nav-group-items">
-                        <a href="#" class="nav-item" data-section="players" style="padding-left:40px;">
+                        <a href="#" class="nav-item active" data-section="players" style="padding-left:40px;">
                             <i data-lucide="user" class="nav-icon-lucide"></i>
                             <span class="nav-label">Players</span>
                         </a>
@@ -254,7 +254,7 @@
 
             <div class="content-area" id="content-area">
                 <!-- Overview Section -->
-                <section class="section" id="section-overview">
+                <section class="section" id="section-overview" style="display:none;">
                     <div class="section-toolbar" style="margin-bottom:16px;">
                         <div></div>
                         <div class="toolbar-actions">
