@@ -6252,11 +6252,38 @@ document.addEventListener('click', function(e) {
     if (!label) return;
     var text = label.textContent.trim();
     var navMap = {
-        'Players': 'players', 'Teams': 'ops-teams', 'Fields': 'ops-fields',
-        'Coaches': 'ops-coaches', 'Events This Week': 'ops-schedule',
-        'Active Seasons': 'ops-seasons', 'Messages Sent': 'ops-comms',
-        'Total Teams': 'ops-teams', 'With Coach': 'ops-coaches',
-        'Need Coach': 'ops-coaches'
+        'Players': 'players',
+        'Teams': 'ops-teams',
+        'Fields': 'ops-fields',
+        'Coaches': 'ops-coaches',
+        'Events This Week': 'ops-schedule',
+        'Active Seasons': 'ops-seasons',
+        'Messages Sent': 'ops-comms',
+        'Total Teams': 'ops-teams',
+        'With Coach': 'ops-coaches',
+        'Need Coach': 'ops-coaches',
+        'Players Rostered': 'players',
+        'Events': 'events',
+        'Evaluators': 'ops-coaches',
+        'Reports': 'reports',
+        'Programs': 'ops-seasons',
+        'Matches': 'intel-competition',
+        'Goals': 'intel-competition',
+        'Health Score': 'intel-health',
+        'Compliance': 'intel-compliance',
+        'Attendance': 'ops-attendance',
+        'Documents': 'ops-documents',
+        'Bookings': 'ops-bookings',
+        'Messages': 'ops-comms',
+        'Automations': 'ops-automations',
+        'Videos': 'ops-videos',
+        'Threads': 'ops-messages',
+        'Players in Programs': 'ops-seasons',
+        'Avg Cost/Player': 'ops-seasons',
+        'Slots': 'ops-bookings',
+        'Total Bookings': 'ops-bookings',
+        'Active Rules': 'ops-automations',
+        'Rank': 'reports'
     };
     var section = navMap[text];
     if (section && typeof navigateTo === 'function') {
@@ -6267,6 +6294,7 @@ document.addEventListener('click', function(e) {
 // Add pointer cursor to all stat cards
 setInterval(function() {
     document.querySelectorAll('.stat-card').forEach(function(c) {
+        c.title = 'Click to view details';
         c.style.cursor = 'pointer';
     });
 }, 2000);
