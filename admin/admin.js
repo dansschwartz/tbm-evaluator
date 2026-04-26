@@ -4009,7 +4009,7 @@ async function askAiOps() {
     btnLoading(btn, true);
     try {
         var result = await api('POST', '/api/organizations/' + orgId + '/ai/ask', { question: q });
-        var html = '<p><strong>Answer:</strong></p><p>' + esc(result.answer) + '</p>';
+        var html = '<p><strong>Answer:</strong></p><p>' + renderMd(result.answer || '') + '</p>';
         if (result.suggestions && result.suggestions.length > 0) {
             html += '<p style="margin-top:8px;"><strong>Suggestions:</strong></p><ul>';
             result.suggestions.forEach(function(s) { html += '<li>' + esc(s) + '</li>'; });
@@ -4203,7 +4203,7 @@ async function aiRosterSuggest() {
         });
         resultDiv.querySelector('.card-body').innerHTML =
             '<strong style="color:#09A1A1;">AI Roster Suggestions</strong><br><br>' +
-            '<div style=";">' + esc(result.answer || 'No suggestions available.') + '</div>';
+            '<div style=";">' + renderMd(result.answer || '') + '</div>';
     } catch (e) {
         resultDiv.querySelector('.card-body').innerHTML = '<p style="color:#FA6E82;">Error: ' + esc(e.message) + '</p>';
     }
@@ -4222,7 +4222,7 @@ async function aiAttendanceInsights() {
         });
         resultDiv.querySelector('.card-body').innerHTML =
             '<strong style="color:#09A1A1;">AI Attendance Insights</strong><br><br>' +
-            '<div style=";">' + esc(result.answer || 'No insights available.') + '</div>';
+            '<div style=";">' + renderMd(result.answer || '') + '</div>';
     } catch (e) {
         resultDiv.querySelector('.card-body').innerHTML = '<p style="color:#FA6E82;">Error: ' + esc(e.message) + '</p>';
     }
@@ -4241,7 +4241,7 @@ async function aiAnalyticsInsights() {
         });
         resultDiv.querySelector('.card-body').innerHTML =
             '<strong style="color:#09A1A1;">AI Analytics Insights</strong><br><br>' +
-            '<div style=";">' + esc(result.answer || 'No insights available.') + '</div>';
+            '<div style=";">' + renderMd(result.answer || '') + '</div>';
     } catch (e) {
         resultDiv.querySelector('.card-body').innerHTML = '<p style="color:#FA6E82;">Error: ' + esc(e.message) + '</p>';
     }
@@ -4261,7 +4261,7 @@ async function aiCleanData() {
         });
         resultDiv.innerHTML = '<div style="padding:12px;background:#e8f2f2;border-left:4px solid #09A1A1;border-radius:6px;">' +
             '<strong style="color:#09A1A1;">AI Data Quality Report</strong><br><br>' +
-            '<div style=";">' + esc(result.answer || 'No issues found.') + '</div></div>';
+            '<div style=";">' + renderMd(result.answer || '') + '</div></div>';
     } catch (e) {
         resultDiv.innerHTML = '<p style="color:#FA6E82;">Error: ' + esc(e.message) + '</p>';
     }
@@ -6298,3 +6298,47 @@ setInterval(function() {
         c.style.cursor = 'pointer';
     });
 }, 2000);
+
+// Auto-add copy/download buttons to ALL AI output panels
+(function() {
+    function addAIButtons(el) {
+        if (el.dataset.aiButtonsAdded) return;
+        el.dataset.aiButtonsAdded = 'true';
+        var btnWrap = document.createElement('div');
+        btnWrap.style.cssText = 'display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid #e0e8e8;';
+        var copyBtn = document.createElement('button');
+        copyBtn.className = 'btn btn-xs btn-outline';
+        copyBtn.innerHTML = '<i data-lucide="copy" style="width:12px;height:12px;vertical-align:middle;margin-right:3px;"></i>Copy';
+        copyBtn.onclick = function() {
+            var text = el.innerText || el.textContent;
+            navigator.clipboard.writeText(text).then(function() { toast('Copied!', 'success'); });
+        };
+        var dlBtn = document.createElement('button');
+        dlBtn.className = 'btn btn-xs btn-outline';
+        dlBtn.innerHTML = '<i data-lucide="download" style="width:12px;height:12px;vertical-align:middle;margin-right:3px;"></i>Download';
+        dlBtn.onclick = function() {
+            var text = el.innerText || el.textContent;
+            var blob = new Blob([text], {type:'text/plain'});
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'ai-output.txt';
+            a.click();
+        };
+        btnWrap.appendChild(copyBtn);
+        btnWrap.appendChild(dlBtn);
+        el.appendChild(btnWrap);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    
+    // Scan for AI output every 2 seconds
+    setInterval(function() {
+        // Find panels with AI content
+        document.querySelectorAll('.ai-insight-panel > div:last-child, .ai-output-wrap > div:last-child').forEach(addAIButtons);
+        // Also find any div that contains "AI" in a sibling header and has rendered markdown
+        document.querySelectorAll('[id*="ai-"], [id*="health-ai"], [id*="assessment-ai"]').forEach(function(el) {
+            if (el.querySelector('p, strong, li') && !el.dataset.aiButtonsAdded) {
+                addAIButtons(el);
+            }
+        });
+    }, 2000);
+})();
