@@ -214,11 +214,17 @@
                         </a>
                     </div>
                 </div>
+            
+                <!-- Settings -->
+                <div style="margin-top:auto;border-top:1px solid rgba(255,255,255,0.08);padding-top:8px;">
+                    <a href="#" class="nav-item" data-section="settings" style="padding-left:16px;">
+                        <i data-lucide="settings-2" class="nav-icon-lucide"></i>
+                        <span class="nav-label">Settings</span>
+                    </a>
+                </div>
             </nav>
             <div id="shortcuts-footer" style="padding:8px 20px;border-top:1px solid rgba(255,255,255,0.08);font-size:11px;">
-                <a href="#" onclick="event.preventDefault();showShortcutsModal();" style="color:rgba(255,255,255,0.5);text-decoration:none;display:flex;align-items:center;gap:4px;">
-                    <i data-lucide="star" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i>Shortcuts
-                </a>
+                
             </div>
             <div class="sidebar-footer">
                 <button class="btn btn-sm btn-outline" id="btn-change-key">Change API Key</button>
@@ -1380,6 +1386,99 @@
                         </div>
                     </div>
                 </section>
+                <!-- Settings -->
+                <section class="section hidden" id="section-settings">
+                    <div style="max-width:800px;">
+                        <h2 style="margin-bottom:20px;">Settings</h2>
+                        
+                        <div class="card" style="margin-bottom:16px;">
+                            <div class="card-header"><h3>API Configuration</h3></div>
+                            <div class="card-body">
+                                <div style="margin-bottom:12px;">
+                                    <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Admin API Key</label>
+                                    <div style="display:flex;gap:8px;">
+                                        <input type="password" id="settings-api-key" class="form-input" style="flex:1;" placeholder="Current admin API key">
+                                        <button class="btn btn-outline btn-sm" onclick="document.getElementById('settings-api-key').type=document.getElementById('settings-api-key').type==='password'?'text':'password'">Show/Hide</button>
+                                        <button class="btn btn-primary btn-sm" onclick="var k=document.getElementById('settings-api-key').value;if(k){CONFIG.adminKey=k;toast('API key updated','success');}">Save</button>
+                                    </div>
+                                    <p style="font-size:11px;color:#888;margin-top:4px;">Change your admin API key. This is stored locally in your browser.</p>
+                                </div>
+                                <div>
+                                    <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">API Base URL</label>
+                                    <input type="text" class="form-input" value="" id="settings-api-url" placeholder="Auto-detected" disabled style="background:#f5f7fa;">
+                                    <p style="font-size:11px;color:#888;margin-top:4px;">Auto-detected from current URL.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card" style="margin-bottom:16px;">
+                            <div class="card-header"><h3>Email / SMTP Configuration</h3></div>
+                            <div class="card-body">
+                                <p style="font-size:13px;color:#555;margin-bottom:12px;">To enable email sending (report cards, notifications), set these environment variables in Railway:</p>
+                                <table class="data-table" style="font-size:12px;">
+                                    <thead><tr><th>Variable</th><th>Value</th><th>Example</th></tr></thead>
+                                    <tbody>
+                                        <tr><td><code>SMTP_HOST</code></td><td>SMTP server hostname</td><td>smtp.gmail.com</td></tr>
+                                        <tr><td><code>SMTP_PORT</code></td><td>SMTP port</td><td>587</td></tr>
+                                        <tr><td><code>SMTP_USER</code></td><td>Email username</td><td>club@gmail.com</td></tr>
+                                        <tr><td><code>SMTP_PASSWORD</code></td><td>App password</td><td>xxxx-xxxx-xxxx</td></tr>
+                                        <tr><td><code>SMTP_FROM_EMAIL</code></td><td>From address</td><td>club@gmail.com</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="card" style="margin-bottom:16px;">
+                            <div class="card-header"><h3>Keyboard Shortcuts</h3></div>
+                            <div class="card-body" id="settings-shortcuts-body">
+                                <table class="data-table" style="font-size:12px;">
+                                    <tbody>
+                                        <tr><td><kbd style="padding:2px 6px;background:#f0f2f5;border:1px solid #ddd;border-radius:3px;font-size:11px;">Ctrl+K</kbd> or <kbd style="padding:2px 6px;background:#f0f2f5;border:1px solid #ddd;border-radius:3px;font-size:11px;">/</kbd></td><td>Focus search bar</td></tr>
+                                        <tr><td><kbd style="padding:2px 6px;background:#f0f2f5;border:1px solid #ddd;border-radius:3px;font-size:11px;">Escape</kbd></td><td>Close modal</td></tr>
+                                        <tr><td><kbd style="padding:2px 6px;background:#f0f2f5;border:1px solid #ddd;border-radius:3px;font-size:11px;">?</kbd></td><td>Show keyboard shortcuts</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="card" style="margin-bottom:16px;">
+                            <div class="card-header"><h3>Display Preferences</h3></div>
+                            <div class="card-body">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                                    <div>
+                                        <div style="font-size:13px;font-weight:600;">Sidebar Groups</div>
+                                        <div style="font-size:11px;color:#888;">Expand or collapse all sidebar groups</div>
+                                    </div>
+                                    <div style="display:flex;gap:6px;">
+                                        <button class="btn btn-outline btn-sm" onclick="document.querySelectorAll('.nav-group-items').forEach(function(el){el.style.display='block';});document.querySelectorAll('.nav-group-chevron').forEach(function(el){el.style.transform='rotate(0)';});localStorage.removeItem('tbm_nav_collapsed');toast('All groups expanded','success');">Expand All</button>
+                                        <button class="btn btn-outline btn-sm" onclick="document.querySelectorAll('.nav-group-items').forEach(function(el){el.style.display='none';});document.querySelectorAll('.nav-group-chevron').forEach(function(el){el.style.transform='rotate(-90deg)';});toast('All groups collapsed','success');">Collapse All</button>
+                                    </div>
+                                </div>
+                                <div style="display:flex;align-items:center;justify-content:space-between;">
+                                    <div>
+                                        <div style="font-size:13px;font-weight:600;">Clear Cache</div>
+                                        <div style="font-size:11px;color:#888;">Clear local storage and reload</div>
+                                    </div>
+                                    <button class="btn btn-outline btn-sm" onclick="if(confirm('Clear all cached data and reload?')){localStorage.clear();location.reload();}">Clear & Reload</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card" style="margin-bottom:16px;">
+                            <div class="card-header"><h3>About</h3></div>
+                            <div class="card-body">
+                                <table style="font-size:12px;width:100%;">
+                                    <tr><td style="padding:4px 0;font-weight:600;width:120px;">Platform</td><td>TBM Operations</td></tr>
+                                    <tr><td style="padding:4px 0;font-weight:600;">Version</td><td>5.0.0</td></tr>
+                                    <tr><td style="padding:4px 0;font-weight:600;">Features</td><td>120+</td></tr>
+                                    <tr><td style="padding:4px 0;font-weight:600;">Models</td><td>42 database models</td></tr>
+                                    <tr><td style="padding:4px 0;font-weight:600;">API Endpoints</td><td>160+</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
 
             </div>
         </main>

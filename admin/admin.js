@@ -206,7 +206,7 @@ const navItems = document.querySelectorAll('.nav-item');
 const sections = ['overview', 'organizations', 'templates', 'events', 'players', 'reports', 'draft', 'analytics',
     'ops-overview', 'ops-seasons', 'ops-teams', 'ops-fields', 'ops-schedule', 'ops-coaches', 'ops-comms', 'ops-attendance', 'ops-documents', 'ops-import', 'ops-ai',
     't2-programs', 't2-messages', 't2-videos', 't2-automations', 't2-bookings',
-    'intel-health', 'intel-assessment', 'intel-development', 'intel-competition', 'intel-compliance'];
+    'intel-health', 'intel-assessment', 'intel-development', 'intel-competition', 'intel-compliance', 'settings'];
 
 const SECTION_TITLES = {
     'overview': 'Overview', 'organizations': 'Organizations', 'templates': 'Templates',
@@ -214,7 +214,7 @@ const SECTION_TITLES = {
     'ops-overview': 'Operations Dashboard', 'ops-seasons': 'Seasons & Programs', 'ops-teams': 'Teams',
     'ops-fields': 'Fields & Facilities', 'ops-schedule': 'Schedule', 'ops-coaches': 'Coaches & Staff',
     'ops-comms': 'Communications', 'ops-attendance': 'Attendance', 'ops-documents': 'Documents',
-    'ops-import': 'PlayMetrics Import', 'ops-ai': 'AI Assistant',
+    'ops-import': 'PlayMetrics Import', 'ops-ai': 'AI Assistant', 'settings': 'Settings',
     't2-programs': 'Training Programs', 't2-messages': 'Messages', 't2-videos': 'Videos',
     't2-automations': 'Automations', 't2-bookings': 'Bookings',
     'intel-health': 'Club Intelligence', 'intel-assessment': 'Best Practices',
@@ -257,6 +257,7 @@ function navigateTo(section) {
     else if (section === 'ops-attendance') loadOpsAttendance(orgId);
     else if (section === 'ops-documents') loadOpsDocuments(orgId);
     else if (section === 'ops-import') loadOpsImport(orgId);
+    else if (section === 'settings') { document.getElementById('settings-api-key').value = CONFIG.adminKey; document.getElementById('settings-api-url').value = CONFIG.apiBase; }
     else if (section === 'ops-ai') { /* AI assistant is static but needs org context */ }
     // Tier 2 feature sections
     else if (section === 't2-programs') loadPrograms(orgId);
