@@ -6349,3 +6349,32 @@ setInterval(function() {
         });
     }, 1000);
 })();
+
+// ===== Collapsible sidebar nav groups =====
+(function initNavGroups() {
+    var STORAGE_KEY = 'tbm_nav_collapsed';
+    var collapsed = {};
+    try { collapsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) {}
+
+    document.querySelectorAll('.nav-group-header').forEach(function(header) {
+        var group = header.closest('.nav-group');
+        var groupKey = group ? group.getAttribute('data-group') : null;
+        var items = header.nextElementSibling;
+        var chevron = header.querySelector('.nav-group-chevron');
+        if (!items || !groupKey) return;
+
+        // Restore saved state
+        if (collapsed[groupKey]) {
+            items.style.display = 'none';
+            if (chevron) chevron.style.transform = 'rotate(-90deg)';
+        }
+
+        header.addEventListener('click', function() {
+            var isHidden = items.style.display === 'none';
+            items.style.display = isHidden ? '' : 'none';
+            if (chevron) chevron.style.transform = isHidden ? '' : 'rotate(-90deg)';
+            collapsed[groupKey] = !isHidden;
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(collapsed)); } catch(e) {}
+        });
+    });
+})();

@@ -59,134 +59,161 @@
             <!-- Shortcuts footer in sidebar -->
             <div id="shortcuts-footer-top" style="display:none;"></div>
             <nav class="sidebar-nav">
-                <a href="#" class="nav-item active" data-section="overview">
-                    <i data-lucide="layout-dashboard" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Overview</span>
-                </a>
-                <a href="#" class="nav-item" data-section="organizations">
-                    <i data-lucide="building-2" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Organizations</span>
-                </a>
-                <a href="#" class="nav-item" data-section="templates">
-                    <i data-lucide="clipboard-list" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Templates</span>
-                </a>
-                <a href="#" class="nav-item" data-section="events">
-                    <i data-lucide="calendar-days" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Events</span>
-                </a>
-                <a href="#" class="nav-item" data-section="players">
-                    <i data-lucide="users" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Players</span>
-                </a>
-                <a href="#" class="nav-item" data-section="reports">
-                    <i data-lucide="file-bar-chart" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Reports</span>
-                </a>
-                <a href="#" class="nav-item" data-section="draft">
-                    <i data-lucide="trophy" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Draft</span>
-                </a>
-                <a href="#" class="nav-item" data-section="analytics">
-                    <i data-lucide="bar-chart-3" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Analytics</span>
-                </a>
+                <!-- Group 1: DASHBOARD (always visible) -->
+                <div class="nav-group" data-group="dashboard">
+                    <a href="#" class="nav-item active" data-section="overview">
+                        <i data-lucide="layout-dashboard" class="nav-icon-lucide"></i>
+                        <span class="nav-label">Overview</span>
+                    </a>
+                </div>
 
-                <div class="nav-divider" style="border-top:1px solid rgba(255,255,255,0.1);margin:12px 16px;"></div>
-                <div style="padding:4px 16px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);">Operations</div>
+                <!-- Group 2: PLAYER MANAGEMENT -->
+                <div class="nav-group" data-group="player-management">
+                    <div class="nav-group-header" style="display:flex;align-items:center;padding:10px 16px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);cursor:pointer;user-select:none;">
+                        <i data-lucide="users" style="width:14px;height:14px;margin-right:8px;flex-shrink:0;"></i>
+                        <span style="flex:1;">Player Management</span>
+                        <i data-lucide="chevron-down" class="nav-group-chevron" style="width:14px;height:14px;flex-shrink:0;transition:transform 0.2s;"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="#" class="nav-item" data-section="players" style="padding-left:40px;">
+                            <i data-lucide="user" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Players</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="events" style="padding-left:40px;">
+                            <i data-lucide="clipboard-check" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Evaluations</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="templates" style="padding-left:40px;">
+                            <i data-lucide="clipboard-list" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Templates</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="reports" style="padding-left:40px;">
+                            <i data-lucide="file-bar-chart" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Reports</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="intel-development" style="padding-left:40px;">
+                            <i data-lucide="trending-up" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Development</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="t2-programs" style="padding-left:40px;">
+                            <i data-lucide="dumbbell" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Training Programs</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="t2-videos" style="padding-left:40px;">
+                            <i data-lucide="video" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Videos</span>
+                        </a>
+                    </div>
+                </div>
 
-                <a href="#" class="nav-item" data-section="ops-overview">
-                    <i data-lucide="settings" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Ops Dashboard</span>
-                </a>
-                <a href="#" class="nav-item" data-section="ops-seasons">
-                    <i data-lucide="sun" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Seasons</span>
-                </a>
-                <a href="#" class="nav-item" data-section="ops-teams">
-                    <i data-lucide="shirt" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Teams</span>
-                </a>
-                <a href="#" class="nav-item" data-section="ops-fields">
-                    <i data-lucide="map-pin" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Fields</span>
-                </a>
-                <a href="#" class="nav-item" data-section="ops-schedule">
-                    <i data-lucide="calendar-clock" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Schedule</span>
-                </a>
-                <a href="#" class="nav-item" data-section="ops-coaches">
-                    <i data-lucide="graduation-cap" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Coaches</span>
-                </a>
-                <a href="#" class="nav-item" data-section="ops-comms">
-                    <i data-lucide="mail" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Communications</span>
-                </a>
-                <a href="#" class="nav-item" data-section="ops-attendance">
-                    <i data-lucide="clipboard-check" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Attendance</span>
-                </a>
-                <a href="#" class="nav-item" data-section="ops-documents">
-                    <i data-lucide="folder-open" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Documents</span>
-                </a>
-                <a href="#" class="nav-item" data-section="ops-import">
-                    <i data-lucide="upload" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Import</span>
-                </a>
-                <a href="#" class="nav-item" data-section="ops-ai">
-                    <i data-lucide="bot" class="nav-icon-lucide"></i>
-                    <span class="nav-label">AI Assistant</span>
-                </a>
+                <!-- Group 3: TEAMS & COMPETITION -->
+                <div class="nav-group" data-group="teams-competition">
+                    <div class="nav-group-header" style="display:flex;align-items:center;padding:10px 16px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);cursor:pointer;user-select:none;">
+                        <i data-lucide="trophy" style="width:14px;height:14px;margin-right:8px;flex-shrink:0;"></i>
+                        <span style="flex:1;">Teams &amp; Competition</span>
+                        <i data-lucide="chevron-down" class="nav-group-chevron" style="width:14px;height:14px;flex-shrink:0;transition:transform 0.2s;"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="#" class="nav-item" data-section="ops-teams" style="padding-left:40px;">
+                            <i data-lucide="shirt" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Teams</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="draft" style="padding-left:40px;">
+                            <i data-lucide="scale" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Draft</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="ops-schedule" style="padding-left:40px;">
+                            <i data-lucide="calendar-clock" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Scheduling</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="intel-competition" style="padding-left:40px;">
+                            <i data-lucide="medal" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Competition</span>
+                        </a>
+                    </div>
+                </div>
 
-                <div class="nav-divider" style="border-top:1px solid rgba(255,255,255,0.1);margin:12px 16px;"></div>
-                <div style="padding:4px 16px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);">Engagement</div>
+                <!-- Group 4: CLUB OPERATIONS -->
+                <div class="nav-group" data-group="club-operations">
+                    <div class="nav-group-header" style="display:flex;align-items:center;padding:10px 16px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);cursor:pointer;user-select:none;">
+                        <i data-lucide="settings" style="width:14px;height:14px;margin-right:8px;flex-shrink:0;"></i>
+                        <span style="flex:1;">Club Operations</span>
+                        <i data-lucide="chevron-down" class="nav-group-chevron" style="width:14px;height:14px;flex-shrink:0;transition:transform 0.2s;"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="#" class="nav-item" data-section="ops-fields" style="padding-left:40px;">
+                            <i data-lucide="map-pin" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Fields</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="ops-seasons" style="padding-left:40px;">
+                            <i data-lucide="sun" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Seasons &amp; Programs</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="ops-coaches" style="padding-left:40px;">
+                            <i data-lucide="graduation-cap" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Coaches &amp; Staff</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="ops-attendance" style="padding-left:40px;">
+                            <i data-lucide="clipboard-check" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Attendance</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="ops-comms" style="padding-left:40px;">
+                            <i data-lucide="mail" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Communications</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="t2-messages" style="padding-left:40px;">
+                            <i data-lucide="message-circle" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Messages</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="ops-documents" style="padding-left:40px;">
+                            <i data-lucide="folder-open" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Documents</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="t2-automations" style="padding-left:40px;">
+                            <i data-lucide="zap" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Automations</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="t2-bookings" style="padding-left:40px;">
+                            <i data-lucide="calendar-plus" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Bookings</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="ops-import" style="padding-left:40px;">
+                            <i data-lucide="upload" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Import</span>
+                        </a>
+                    </div>
+                </div>
 
-                <a href="#" class="nav-item" data-section="t2-programs">
-                    <i data-lucide="dumbbell" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Programs</span>
-                </a>
-                <a href="#" class="nav-item" data-section="t2-messages">
-                    <i data-lucide="message-circle" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Messages</span>
-                </a>
-                <a href="#" class="nav-item" data-section="t2-videos">
-                    <i data-lucide="video" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Videos</span>
-                </a>
-                <a href="#" class="nav-item" data-section="t2-automations">
-                    <i data-lucide="zap" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Automations</span>
-                </a>
-                <a href="#" class="nav-item" data-section="t2-bookings">
-                    <i data-lucide="ticket" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Bookings</span>
-                </a>
-
-                <div class="nav-divider" style="border-top:1px solid rgba(255,255,255,0.1);margin:12px 16px;"></div>
-                <div style="padding:4px 16px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);">Intelligence</div>
-
-                <a href="#" class="nav-item" data-section="intel-health">
-                    <i data-lucide="heart-pulse" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Intelligence</span>
-                </a>
-                <a href="#" class="nav-item" data-section="intel-assessment">
-                    <i data-lucide="clipboard-check" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Best Practices</span>
-                </a>
-                <a href="#" class="nav-item" data-section="intel-development">
-                    <i data-lucide="trending-up" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Development</span>
-                </a>
-                <a href="#" class="nav-item" data-section="intel-competition">
-                    <i data-lucide="swords" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Competition</span>
-                </a>
-                <a href="#" class="nav-item" data-section="intel-compliance">
-                    <i data-lucide="shield-check" class="nav-icon-lucide"></i>
-                    <span class="nav-label">Compliance</span>
-                </a>
+                <!-- Group 5: INTELLIGENCE -->
+                <div class="nav-group" data-group="intelligence">
+                    <div class="nav-group-header" style="display:flex;align-items:center;padding:10px 16px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);cursor:pointer;user-select:none;">
+                        <i data-lucide="bar-chart-3" style="width:14px;height:14px;margin-right:8px;flex-shrink:0;"></i>
+                        <span style="flex:1;">Intelligence</span>
+                        <i data-lucide="chevron-down" class="nav-group-chevron" style="width:14px;height:14px;flex-shrink:0;transition:transform 0.2s;"></i>
+                    </div>
+                    <div class="nav-group-items">
+                        <a href="#" class="nav-item" data-section="intel-health" style="padding-left:40px;">
+                            <i data-lucide="heart-pulse" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Health Score</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="intel-assessment" style="padding-left:40px;">
+                            <i data-lucide="check-square" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Best Practices</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="intel-compliance" style="padding-left:40px;">
+                            <i data-lucide="shield-check" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Compliance</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="analytics" style="padding-left:40px;">
+                            <i data-lucide="pie-chart" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Analytics</span>
+                        </a>
+                        <a href="#" class="nav-item" data-section="ops-ai" style="padding-left:40px;">
+                            <i data-lucide="bot" class="nav-icon-lucide"></i>
+                            <span class="nav-label">AI Assistant</span>
+                        </a>
+                    </div>
+                </div>
             </nav>
             <div id="shortcuts-footer" style="padding:8px 20px;border-top:1px solid rgba(255,255,255,0.08);font-size:11px;">
                 <a href="#" onclick="event.preventDefault();showShortcutsModal();" style="color:rgba(255,255,255,0.5);text-decoration:none;display:flex;align-items:center;gap:4px;">
@@ -213,6 +240,9 @@
                     <select id="global-org-select" class="form-select form-select-sm" aria-label="Select organization">
                         <option value="">-- Select Org --</option>
                     </select>
+                    <button onclick="if(typeof navigateTo==='function')navigateTo('organizations')" title="Manage Organizations" style="background:none;border:1px solid #ddd;border-radius:6px;padding:4px 6px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:6px;" aria-label="Manage Organizations">
+                        <i data-lucide="settings" style="width:14px;height:14px;color:#666;"></i>
+                    </button>
                 </div>
             </header>
 
