@@ -5628,3 +5628,31 @@ async function cancelBooking(bookingId) {
 // Refresh Lucide icons after DOM updates
 var _origSetInnerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML').set;
 setInterval(function() { if (typeof lucide !== 'undefined') try { lucide.createIcons(); } catch(e){} }, 1000);
+
+
+// Make stat cards clickable
+document.addEventListener('click', function(e) {
+    var card = e.target.closest('.stat-card');
+    if (!card) return;
+    var label = card.querySelector('.stat-label');
+    if (!label) return;
+    var text = label.textContent.trim();
+    var navMap = {
+        'Players': 'players', 'Teams': 'ops-teams', 'Fields': 'ops-fields',
+        'Coaches': 'ops-coaches', 'Events This Week': 'ops-schedule',
+        'Active Seasons': 'ops-seasons', 'Messages Sent': 'ops-comms',
+        'Total Teams': 'ops-teams', 'With Coach': 'ops-coaches',
+        'Need Coach': 'ops-coaches'
+    };
+    var section = navMap[text];
+    if (section && typeof navigateTo === 'function') {
+        navigateTo(section);
+    }
+});
+
+// Add pointer cursor to all stat cards
+setInterval(function() {
+    document.querySelectorAll('.stat-card').forEach(function(c) {
+        c.style.cursor = 'pointer';
+    });
+}, 2000);
