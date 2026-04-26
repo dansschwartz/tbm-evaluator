@@ -38,12 +38,13 @@ function wrapAIOutput(content, rerunFn, title) {
     setTimeout(function() { if (typeof lucide !== 'undefined') try { lucide.createIcons(); } catch(e){} }, 100);
     if (!content) return '';
     var id = 'ai-' + Math.random().toString(36).substr(2, 9);
-    return '<div style="position:relative;padding:12px 16px;border-left:3px solid #09A1A1;margin:8px 0;background:#fafffe;border-radius:0 8px 8px 0;">' +
-        '<div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;">' +
-            '<button onclick="navigator.clipboard.writeText(document.getElementById(\'' + id + '\').innerText);toast(\'Copied\',\'success\')" style="background:none;border:1px solid #ACC0D3;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;color:#5484A4;" title="Copy">Copy</button>' +
-            (rerunFn ? '<button onclick="' + rerunFn + '" style="background:none;border:1px solid #ACC0D3;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;color:#09A1A1;" title="Rerun AI">Rerun</button>' : '') +
+    return '<div style="padding:0;">' +
+        '<div id="' + id + '" style="font-size:14px;line-height:1.6;color:#333;">' + renderMd(content) + '</div>' +
+        '<div style="display:flex;gap:12px;margin-top:10px;padding-top:8px;border-top:1px solid #e8ecf0;">' +
+            '<span onclick="navigator.clipboard.writeText(document.getElementById(\'' + id + '\').innerText);toast(\'Copied\',\'success\')" style="cursor:pointer;color:#ACC0D3;display:flex;align-items:center;gap:2px;" title="Copy"><i data-lucide="copy" style="width:14px;height:14px;"></i></span>' +
+            '<span onclick="var t=document.getElementById(\'' + id + '\').innerText;var b=new Blob([t],{type:\'text/plain\'});var a=document.createElement(\'a\');a.href=URL.createObjectURL(b);a.download=\'ai-output.txt\';a.click();" style="cursor:pointer;color:#ACC0D3;display:flex;align-items:center;gap:2px;" title="Download"><i data-lucide="download" style="width:14px;height:14px;"></i></span>' +
+            (rerunFn ? '<span onclick="' + rerunFn + '" style="cursor:pointer;color:#ACC0D3;display:flex;align-items:center;gap:2px;" title="Rerun AI"><i data-lucide="refresh-cw" style="width:14px;height:14px;"></i></span>' : '') +
         '</div>' +
-        '<div id="' + id + '">' + renderMd(content) + '</div>' +
     '</div>';
 }
 
