@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
-from app.models import *  # Import ALL models so create_all sees them
+from app.models import (Base, Organization, EvaluationTemplate, Player, EvaluationEvent, EventPlayer, Evaluator, Score, PlayerReport, DraftTeam, DraftPick, APIToken, PlayMetricsImport, Field, FieldBooking, Season, Program, Team, TeamRoster, ScheduleEntry, Message, MessageRecipient, AttendanceRecord, ClubHealthScore, BestPracticeAssessment, ClubLifecycleScore, PlayerDevelopmentPath, RegistrationForecast, ParentEngagement, SeasonReport, CompetitionResult, ComplianceItem, PlayerDocument, TrainingProgram, ProgramWeek, ProgramSession, ChatThread, ChatMessage, PlayerVideo, AutomationRule, BookableSlot, Booking)
 from app.routers import (
     analytics, draft, evaluators, events, features, notifications,
     organizations, players, reports, scoring, templates,
