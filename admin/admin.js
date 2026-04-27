@@ -297,10 +297,9 @@ try { document.getElementById('menu-toggle').addEventListener('click', function(
     this.setAttribute('aria-expanded', sidebar.classList.contains('open') ? 'true' : 'false');
 }); } catch(e) { console.warn('Menu toggle not found:', e); }
 
-// Change API key button
-document.getElementById('btn-change-key').addEventListener('click', function() {
-    promptAdminKey();
-});
+// Change API key button (moved to Settings tab)
+var _btnKey = document.getElementById('btn-change-key');
+if (_btnKey) _btnKey.addEventListener('click', function() { promptAdminKey(); });
 
 // ---- SELECTED ORG ----
 function getSelectedOrg() {
