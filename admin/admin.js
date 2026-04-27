@@ -93,7 +93,11 @@ function renderMd(text) {
 })();
 
 function promptAdminKey() {
-    const key = prompt('Enter your Admin API Key:');
+    var key = prompt('Enter your Admin API Key:');
+    while (!key || !key.trim()) {
+        key = prompt('Admin API Key is required to use this dashboard:');
+        if (key === null) break; // User hit cancel
+    }
     if (key && key.trim()) {
         CONFIG.adminKey = key.trim();
     }
@@ -341,7 +345,12 @@ async function loadOrgSelector() {
             setTimeout(function() { select.dispatchEvent(new Event('change')); }, 100);
         }
     } catch (e) {
-        // silent
+        console.error('loadOrgSelector error:', e);
+        // If auth failed, prompt for key and retry
+        if (e.message && e.message.includes('Unauthorized')) {
+            promptAdminKey();
+            return loadOrgSelector();
+        }
     }
 }
 
