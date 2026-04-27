@@ -6224,6 +6224,8 @@ async function cancelBooking(bookingId) {
         console.log('TBM Admin: Initializing...');
         await loadOrgSelector();
         console.log('TBM Admin: Org selector loaded');
+        // Hide all sections first, then show players
+        document.querySelectorAll('.section').forEach(function(s) { s.classList.add('hidden'); });
         navigateTo('players');
         console.log('TBM Admin: Navigated to overview');
         refreshBadges();
