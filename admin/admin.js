@@ -4663,7 +4663,7 @@ async function loadIntelDevelopment(orgId) {
                     var p = lvlPlayers[pi];
                     var scoreText = p.latest_score ? p.latest_score.toFixed(1) : '--';
                     var likColor = p.advancement_likelihood === 'likely' ? '#09A1A1' : p.advancement_likelihood === 'developing' ? '#F6C992' : '#FA6E82';
-                    pathHtml += '<div style="background:#fff;border:1px solid #e5e7eb;border-left:3px solid ' + likColor + ';border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:12px;">';
+                    pathHtml += '<div onclick="showPlayerDetail(\'' + (p.player_id || '') + '\')" style="cursor:pointer;background:#fff;border:1px solid #e5e7eb;border-left:3px solid ' + likColor + ';border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:12px;">';
                     pathHtml += '<div style="font-weight:600;font-size:13px;">' + esc(p.player_name) + '</div>';
                     pathHtml += '<div style="display:flex;justify-content:space-between;margin-top:2px;color:#6b7280;"><span>' + esc(p.age_group || '') + '</span><span style="font-weight:700;color:' + likColor + ';">' + scoreText + '</span></div>';
                     pathHtml += '</div>';
