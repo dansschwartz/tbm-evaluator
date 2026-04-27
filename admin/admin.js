@@ -1655,7 +1655,7 @@ async function loadReportsSection(orgId) {
     var tbody = document.getElementById('reports-table-body');
 
     if (!orgId) {
-        select.innerHTML = '<option value="">-- Select Org First --</option>';
+        select.innerHTML = '';
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Select an organization first.</td></tr>';
         return;
     }
@@ -1787,7 +1787,7 @@ async function loadDraftSection(orgId) {
     var teamsContainer = document.getElementById('draft-teams-container');
 
     if (!orgId) {
-        select.innerHTML = '<option value="">-- Select Org First --</option>';
+        select.innerHTML = '';
         availBody.innerHTML = '<p class="text-muted">Select an organization first.</p>';
         teamsContainer.innerHTML = '';
         return;
@@ -1991,7 +1991,7 @@ async function loadAnalyticsSection(orgId) {
         distEl.innerHTML = '<p class="text-muted">Select an organization first.</p>';
         skillsEl.innerHTML = '';
         topEl.innerHTML = '';
-        eventSelect.innerHTML = '<option value="">-- Select Org First --</option>';
+        eventSelect.innerHTML = '';
         return;
     }
 
