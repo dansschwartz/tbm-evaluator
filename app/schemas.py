@@ -619,6 +619,7 @@ class TeamUpdate(BaseModel):
     practice_day: Optional[str] = None
     practice_time: Optional[str] = None
     practice_field_id: Optional[UUID] = None
+    lineup: Optional[dict] = None
 
 
 class TeamResponse(BaseModel):
@@ -634,6 +635,7 @@ class TeamResponse(BaseModel):
     practice_day: Optional[str] = None
     practice_time: Optional[str] = None
     practice_field_id: Optional[UUID] = None
+    lineup: Optional[dict] = None
     created_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
@@ -848,3 +850,60 @@ class PlayerDocumentResponse(BaseModel):
     created_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
+
+
+# --- Team Invites ---
+class TeamInviteCreate(BaseModel):
+    player_ids: list[UUID]
+    message: Optional[str] = None
+    expires_at: Optional[datetime] = None
+
+
+class TeamInviteUpdate(BaseModel):
+    status: str  # accepted/declined
+
+
+class TeamInviteResponse(BaseModel):
+    id: UUID
+    team_id: UUID
+    player_id: UUID
+    status: str
+    invited_at: Optional[datetime] = None
+    responded_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    message: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+# --- Notifications ---
+class NotificationCreate(BaseModel):
+    type: str
+    title: str
+    message: Optional[str] = None
+    recipients: list = []
+
+
+class NotificationResponse(BaseModel):
+    id: UUID
+    org_id: UUID
+    type: str
+    title: str
+    message: Optional[str] = None
+    recipients: list = []
+    status: str
+    created_at: Optional[datetime] = None
+    sent_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# --- Rec League Matchup Generator ---
+class GenerateMatchupsRequest(BaseModel):
+    program_id: Optional[UUID] = None
+    team_ids: list[UUID] = []
+    rounds: int = 1
+    game_day: str = "saturday"
+    start_time: str = "09:00"
+    game_duration_minutes: int = 60
+    field_ids: list[UUID] = []

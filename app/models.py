@@ -391,6 +391,7 @@ class Team(Base):
     practice_day = Column(String(20), nullable=True)
     practice_time = Column(String(20), nullable=True)
     practice_field_id = Column(UUID(as_uuid=True), ForeignKey("fields.id", ondelete="SET NULL"), nullable=True)
+    lineup = Column(JSONB, nullable=True)  # {formation: '4-3-3', positions: [{slot: 'GK', player_id: 'xxx'}, ...]}
     created_at = Column(DateTime, server_default=func.now())
 
     program = relationship("Program", back_populates="teams")
@@ -401,6 +402,7 @@ class Team(Base):
     field_bookings = relationship("FieldBooking", back_populates="team", cascade="all, delete-orphan")
     schedule_entries = relationship("ScheduleEntry", back_populates="team", foreign_keys="ScheduleEntry.team_id")
     attendance_records = relationship("AttendanceRecord", back_populates="team", cascade="all, delete-orphan")
+    invites = relationship("TeamInvite", back_populates="team", cascade="all, delete-orphan")
 
 
 class TeamRoster(Base):
@@ -416,6 +418,36 @@ class TeamRoster(Base):
 
     team = relationship("Team", back_populates="roster")
     player = relationship("Player")
+
+
+class TeamInvite(Base):
+    __tablename__ = "team_invites"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
+    player_id = Column(UUID(as_uuid=True), ForeignKey("players.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String(50), default="invited")  # invited/accepted/declined/expired
+    invited_at = Column(DateTime, server_default=func.now())
+    responded_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+    message = Column(Text, nullable=True)
+
+    team = relationship("Team", back_populates="invites")
+    player = relationship("Player")
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    type = Column(String(50), nullable=False)  # field_change/schedule_update/payment_overdue/weather/cert_expiring
+    title = Column(String(500), nullable=False)
+    message = Column(Text, nullable=True)
+    recipients = Column(JSONB, default=list)  # array of recipient identifiers
+    status = Column(String(50), default="pending")  # pending/sent
+    created_at = Column(DateTime, server_default=func.now())
+    sent_at = Column(DateTime, nullable=True)
 
 
 # Module 5: Scheduling Engine

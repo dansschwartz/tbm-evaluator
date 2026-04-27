@@ -261,7 +261,7 @@ function navigateTo(section) {
     else if (section === 'ops-fields') _safe(function(){ loadOpsFields(orgId); });
     else if (section === 'ops-schedule') _safe(function(){ loadOpsSchedule(orgId); });
     else if (section === 'ops-coaches') _safe(function(){ loadOpsCoaches(orgId); });
-    else if (section === 'ops-comms') _safe(function(){ loadOpsComms(orgId); loadMessages(orgId); });
+    else if (section === 'ops-comms') _safe(function(){ loadOpsComms(orgId); loadMessages(orgId); loadNotifications(); });
     else if (section === 'ops-attendance') _safe(function(){ loadOpsAttendance(orgId); });
     else if (section === 'ops-documents') _safe(function(){ loadOpsDocuments(orgId); });
     else if (section === 'ops-import') _safe(function(){ loadOpsImport(orgId); });
@@ -2544,12 +2544,48 @@ async function renderTeamSubtabContent(tab) {
 
     } else if (tab === 'roster') {
         contentEl.innerHTML = '<div style="text-align:center;padding:24px;"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
-        var roster = [];
-        try { roster = await api('GET', '/api/teams/' + team.id + '/roster'); } catch (_) {}
+        var roster = [], invites = [];
+        try {
+            var rRes = await Promise.allSettled([
+                api('GET', '/api/teams/' + team.id + '/roster'),
+                api('GET', '/api/teams/' + team.id + '/invites'),
+            ]);
+            roster = rRes[0].status === 'fulfilled' ? rRes[0].value : [];
+            invites = rRes[1].status === 'fulfilled' ? rRes[1].value : [];
+        } catch (_) {}
 
-        var html = '<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">' +
-            '<span style="font-size:14px;color:var(--text-secondary);">' + roster.length + ' players on roster</span>' +
+        var accepted = invites.filter(function(i) { return i.status === 'accepted'; }).length;
+        var invited = invites.filter(function(i) { return i.status === 'invited'; }).length;
+        var declined = invites.filter(function(i) { return i.status === 'declined'; }).length;
+        var capacity = team.max_roster_size || '--';
+
+        var html = '<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
+            '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">' +
+                '<span style="font-size:14px;color:var(--text-secondary);">' + roster.length + ' players on roster</span>' +
+                '<span style="font-size:13px;"><span style="color:#22c55e;font-weight:600;">Accepted: ' + accepted + '</span></span>' +
+                '<span style="font-size:13px;"><span style="color:var(--gold);font-weight:600;">Invited: ' + invited + '</span></span>' +
+                '<span style="font-size:13px;"><span style="color:var(--coral);font-weight:600;">Declined: ' + declined + '</span></span>' +
+                '<span style="font-size:13px;color:var(--text-muted);">Capacity: ' + capacity + '</span>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;">' +
+                '<button class="btn btn-sm btn-primary" onclick="openSendInvitesModal(\'' + team.id + '\')"><i data-lucide="mail-plus" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Send Invites</button>' +
+                '<button class="btn btn-sm btn-secondary" onclick="renderDragDropAssignment(\'' + team.id + '\',\'' + orgId + '\')"><i data-lucide="move" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Assign Players</button>' +
+            '</div>' +
             '</div>';
+
+        // Invite status list
+        if (invites.length > 0) {
+            html += '<div class="card" style="margin-bottom:12px;"><div class="card-header"><h3>Invites</h3></div><div class="card-body">';
+            invites.forEach(function(inv) {
+                var badgeClass = inv.status === 'accepted' ? 'badge-yes' : inv.status === 'invited' ? 'badge-draft' : inv.status === 'declined' ? 'badge-no' : 'badge-inactive';
+                var badgeColor = inv.status === 'accepted' ? '#22c55e' : inv.status === 'invited' ? 'var(--gold)' : inv.status === 'declined' ? 'var(--coral)' : '#8c99a9';
+                html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;">' +
+                    '<span>' + esc(inv.player_name || 'Player') + '</span>' +
+                    '<span class="badge" style="background:' + badgeColor + ';color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;">' + esc(inv.status) + '</span>' +
+                '</div>';
+            });
+            html += '</div></div>';
+        }
 
         if (roster.length === 0) {
             html += '<div class="card"><div class="card-body" style="text-align:center;padding:24px;">' +
@@ -2579,6 +2615,9 @@ async function renderTeamSubtabContent(tab) {
         }
         contentEl.innerHTML = html;
         if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    } else if (tab === 'lineup') {
+        renderLineupBuilder(team, orgId, contentEl);
 
     } else if (tab === 'schedule') {
         contentEl.innerHTML = '<div style="text-align:center;padding:24px;"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
@@ -6890,4 +6929,556 @@ function clearTeamFilters() {
         if (el) el.value = '';
     });
     filterTeams();
+}
+
+
+// ============================================================
+// FEATURE 1: DRAG-AND-DROP TEAM ASSIGNMENT
+// ============================================================
+async function renderDragDropAssignment(teamId, orgId) {
+    var contentEl = document.getElementById('team-subtab-content');
+    contentEl.innerHTML = '<div style="text-align:center;padding:24px;"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
+
+    var unassigned = [], teams = [], roster = [];
+    try {
+        var res = await Promise.allSettled([
+            api('GET', '/api/organizations/' + orgId + '/teams/' + teamId + '/unassigned-players'),
+            api('GET', '/api/organizations/' + orgId + '/teams'),
+            api('GET', '/api/teams/' + teamId + '/roster'),
+        ]);
+        unassigned = res[0].status === 'fulfilled' ? res[0].value : [];
+        teams = res[1].status === 'fulfilled' ? res[1].value : [];
+        roster = res[2].status === 'fulfilled' ? res[2].value : [];
+    } catch (_) {}
+
+    // Find current team to get age group context
+    var currentTeam = teams.find(function(t) { return t.id === teamId; });
+    var sameGroupTeams = teams.filter(function(t) {
+        return t.id === teamId || (currentTeam && currentTeam.program_id && t.program_id === currentTeam.program_id);
+    });
+    if (sameGroupTeams.length <= 1) sameGroupTeams = teams.slice(0, 5);
+
+    function scoreColor(s) {
+        if (s == null) return '#8c99a9';
+        if (s >= 4) return '#22c55e';
+        if (s >= 2.5) return 'var(--gold)';
+        return 'var(--coral)';
+    }
+
+    function playerCard(p, draggable) {
+        var sc = p.overall_score != null ? (typeof p.overall_score === 'number' ? p.overall_score.toFixed(1) : p.overall_score) : '--';
+        return '<div class="dd-player-card" draggable="' + (draggable ? 'true' : 'false') + '" ' +
+            'data-player-id="' + esc(p.id || p.player_id || '') + '" ' +
+            'ondragstart="ddDragStart(event)" ' +
+            'style="padding:8px 12px;margin:4px 0;border-radius:6px;background:#fff;border:1px solid #e0e0e0;cursor:' + (draggable ? 'grab' : 'default') + ';display:flex;align-items:center;gap:8px;transition:opacity 0.2s,border-color 0.2s;">' +
+            '<span style="width:28px;height:28px;border-radius:50%;background:' + scoreColor(p.overall_score) + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">' + sc + '</span>' +
+            '<div style="flex:1;min-width:0;">' +
+                '<div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(p.name || p.player_name || '--') + '</div>' +
+                '<div style="font-size:11px;color:var(--text-secondary);">' + esc(p.position || '') + '</div>' +
+            '</div>' +
+        '</div>';
+    }
+
+    var html = '<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">' +
+        '<h3 style="margin:0;">Drag & Drop Player Assignment</h3>' +
+        '<button class="btn btn-sm btn-outline" onclick="switchTeamSubtab(\'roster\')"><i data-lucide="arrow-left" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Back to Roster</button>' +
+    '</div>';
+
+    html += '<div style="display:flex;gap:16px;overflow-x:auto;min-height:400px;">';
+
+    // Unassigned column
+    html += '<div class="dd-column" data-team-id="" ' +
+        'ondragover="ddDragOver(event)" ondrop="ddDrop(event)" ondragleave="ddDragLeave(event)" ' +
+        'style="min-width:220px;max-width:260px;flex-shrink:0;background:#f8f9fa;border-radius:8px;padding:12px;border:2px dashed transparent;">' +
+        '<div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--text-secondary);">Unassigned (' + unassigned.length + ')</div>' +
+        '<div class="dd-player-list">';
+    unassigned.forEach(function(p) { html += playerCard(p, true); });
+    html += '</div></div>';
+
+    // Team columns
+    sameGroupTeams.forEach(function(t) {
+        var teamRosterPlayers = [];
+        if (t.id === teamId) {
+            teamRosterPlayers = roster.map(function(r) {
+                return { id: r.player_id, name: r.player_name, position: r.position, overall_score: r.overall_score || r.score };
+            });
+        }
+        var isCurrent = t.id === teamId;
+        html += '<div class="dd-column" data-team-id="' + t.id + '" ' +
+            'ondragover="ddDragOver(event)" ondrop="ddDrop(event)" ondragleave="ddDragLeave(event)" ' +
+            'style="min-width:220px;max-width:260px;flex-shrink:0;background:' + (isCurrent ? '#e8f2f2' : '#f8f9fa') + ';border-radius:8px;padding:12px;border:2px ' + (isCurrent ? 'solid var(--teal)' : 'dashed transparent') + ';">' +
+            '<div style="font-weight:700;font-size:14px;margin-bottom:8px;' + (isCurrent ? 'color:var(--teal);' : '') + '">' + esc(t.name) + ' (' + teamRosterPlayers.length + ')</div>' +
+            '<div class="dd-player-list">';
+        teamRosterPlayers.forEach(function(p) { html += playerCard(p, true); });
+        html += '</div></div>';
+    });
+
+    html += '</div>';
+
+    contentEl.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function ddDragStart(e) {
+    e.dataTransfer.setData('text/plain', e.target.getAttribute('data-player-id'));
+    e.target.style.opacity = '0.4';
+}
+
+function ddDragOver(e) {
+    e.preventDefault();
+    var col = e.currentTarget;
+    col.style.borderColor = 'var(--teal)';
+    col.style.borderStyle = 'solid';
+}
+
+function ddDragLeave(e) {
+    var col = e.currentTarget;
+    var isCurrent = col.getAttribute('data-team-id') === (_currentTeamDetail ? _currentTeamDetail.id : '');
+    col.style.borderColor = isCurrent ? 'var(--teal)' : 'transparent';
+    col.style.borderStyle = isCurrent ? 'solid' : 'dashed';
+}
+
+async function ddDrop(e) {
+    e.preventDefault();
+    var col = e.currentTarget;
+    var isCurrent = col.getAttribute('data-team-id') === (_currentTeamDetail ? _currentTeamDetail.id : '');
+    col.style.borderColor = isCurrent ? 'var(--teal)' : 'transparent';
+    col.style.borderStyle = isCurrent ? 'solid' : 'dashed';
+
+    var playerId = e.dataTransfer.getData('text/plain');
+    var targetTeamId = col.getAttribute('data-team-id');
+    if (!playerId) return;
+
+    // Find the dragged card and move it visually
+    var card = document.querySelector('[data-player-id="' + playerId + '"]');
+    if (card) {
+        card.style.opacity = '1';
+        col.querySelector('.dd-player-list').appendChild(card);
+    }
+
+    // If dropped on a team column, add to roster
+    if (targetTeamId) {
+        try {
+            await api('POST', '/api/teams/' + targetTeamId + '/roster', { player_id: playerId });
+            toast('Player assigned!', 'success');
+        } catch (err) {
+            toast('Error: ' + (err.message || 'Could not assign'), 'error');
+        }
+    }
+}
+
+
+// ============================================================
+// FEATURE 2: INVITE / ACCEPT / DECLINE FLOW
+// ============================================================
+async function openSendInvitesModal(teamId) {
+    var orgId = getSelectedOrg();
+    if (!orgId) return;
+
+    var players = [];
+    try { players = await api('GET', '/api/organizations/' + orgId + '/teams/' + teamId + '/unassigned-players'); } catch (_) {}
+
+    var html = '<div style="margin-bottom:12px;">' +
+        '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Message (optional)</label>' +
+        '<textarea id="invite-message" class="form-input" rows="2" placeholder="You\'ve been selected for the team!"></textarea>' +
+    '</div>' +
+    '<div style="margin-bottom:8px;font-size:13px;font-weight:600;">Select players to invite:</div>' +
+    '<div style="max-height:300px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:8px;">';
+
+    if (players.length === 0) {
+        html += '<p class="text-muted">No unassigned players found.</p>';
+    } else {
+        players.forEach(function(p) {
+            html += '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;">' +
+                '<input type="checkbox" class="invite-player-cb" value="' + p.id + '">' +
+                '<span style="font-weight:500;">' + esc(p.name) + '</span>' +
+                (p.position ? '<span style="font-size:11px;color:var(--text-secondary);">' + esc(p.position) + '</span>' : '') +
+            '</label>';
+        });
+    }
+    html += '</div>';
+
+    openModal('Send Invites', html,
+        '<button class="btn btn-primary" onclick="submitInvites(\'' + teamId + '\')">Send Invites</button>' +
+        '<button class="btn btn-outline" onclick="closeModal()">Cancel</button>'
+    );
+}
+
+async function submitInvites(teamId) {
+    var checkboxes = document.querySelectorAll('.invite-player-cb:checked');
+    var playerIds = [];
+    checkboxes.forEach(function(cb) { playerIds.push(cb.value); });
+    if (playerIds.length === 0) { toast('Select at least one player', 'error'); return; }
+
+    var message = (document.getElementById('invite-message') || {}).value || '';
+
+    try {
+        await api('POST', '/api/teams/' + teamId + '/invites', {
+            player_ids: playerIds,
+            message: message || null,
+        });
+        toast(playerIds.length + ' invite(s) sent!', 'success');
+        closeModal();
+        switchTeamSubtab('roster');
+    } catch (err) {
+        toast('Error: ' + (err.message || 'Failed to send'), 'error');
+    }
+}
+
+
+// ============================================================
+// FEATURE 3: AUTO NOTIFICATIONS
+// ============================================================
+async function loadNotifications() {
+    var orgId = getSelectedOrg();
+    if (!orgId) return;
+    var el = document.getElementById('notifications-list');
+    if (!el) return;
+    el.innerHTML = '<div style="text-align:center;padding:12px;"><div class="spinner" style="width:20px;height:20px;margin:0 auto;"></div></div>';
+
+    try {
+        var notifs = await api('GET', '/api/organizations/' + orgId + '/notifications');
+        if (!notifs || notifs.length === 0) {
+            el.innerHTML = '<p class="text-muted">No notifications yet.</p>';
+            return;
+        }
+        var html = '<table class="data-table" style="min-width:auto;"><thead><tr><th>Type</th><th>Title</th><th>Recipients</th><th>Status</th><th>Date</th></tr></thead><tbody>';
+        notifs.forEach(function(n) {
+            var typeBadge = {
+                field_change: 'var(--coral)',
+                schedule_update: 'var(--gold)',
+                weather: '#5484A4',
+                cert_expiring: 'var(--coral)',
+                payment_overdue: 'var(--coral)',
+            };
+            var color = typeBadge[n.type] || 'var(--teal)';
+            var recipCount = Array.isArray(n.recipients) ? n.recipients.length : 0;
+            var statusColor = n.status === 'sent' ? '#22c55e' : 'var(--gold)';
+            var dateStr = n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '--';
+            html += '<tr>' +
+                '<td><span style="background:' + color + ';color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;">' + esc(n.type) + '</span></td>' +
+                '<td>' + esc(n.title) + '</td>' +
+                '<td>' + recipCount + '</td>' +
+                '<td><span style="background:' + statusColor + ';color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;">' + esc(n.status) + '</span></td>' +
+                '<td>' + dateStr + '</td>' +
+            '</tr>';
+        });
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    } catch (err) {
+        el.innerHTML = '<p class="text-muted">Failed to load notifications.</p>';
+    }
+}
+
+
+// ============================================================
+// FEATURE 4: DEPTH CHART / LINEUP BUILDER
+// ============================================================
+var _lineupFormations = {
+    '4-3-3': [
+        { slot: 'GK', x: 50, y: 90 },
+        { slot: 'LB', x: 15, y: 70 }, { slot: 'CB', x: 37, y: 72 }, { slot: 'CB', x: 63, y: 72 }, { slot: 'RB', x: 85, y: 70 },
+        { slot: 'LM', x: 20, y: 45 }, { slot: 'CM', x: 50, y: 48 }, { slot: 'RM', x: 80, y: 45 },
+        { slot: 'LW', x: 20, y: 20 }, { slot: 'ST', x: 50, y: 18 }, { slot: 'RW', x: 80, y: 20 },
+    ],
+    '4-4-2': [
+        { slot: 'GK', x: 50, y: 90 },
+        { slot: 'LB', x: 15, y: 70 }, { slot: 'CB', x: 37, y: 72 }, { slot: 'CB', x: 63, y: 72 }, { slot: 'RB', x: 85, y: 70 },
+        { slot: 'LM', x: 15, y: 45 }, { slot: 'CM', x: 37, y: 48 }, { slot: 'CM', x: 63, y: 48 }, { slot: 'RM', x: 85, y: 45 },
+        { slot: 'ST', x: 37, y: 20 }, { slot: 'ST', x: 63, y: 20 },
+    ],
+    '3-5-2': [
+        { slot: 'GK', x: 50, y: 90 },
+        { slot: 'CB', x: 25, y: 72 }, { slot: 'CB', x: 50, y: 74 }, { slot: 'CB', x: 75, y: 72 },
+        { slot: 'LWB', x: 10, y: 50 }, { slot: 'CM', x: 33, y: 48 }, { slot: 'CM', x: 50, y: 45 }, { slot: 'CM', x: 67, y: 48 }, { slot: 'RWB', x: 90, y: 50 },
+        { slot: 'ST', x: 37, y: 20 }, { slot: 'ST', x: 63, y: 20 },
+    ],
+    '4-2-3-1': [
+        { slot: 'GK', x: 50, y: 90 },
+        { slot: 'LB', x: 15, y: 70 }, { slot: 'CB', x: 37, y: 72 }, { slot: 'CB', x: 63, y: 72 }, { slot: 'RB', x: 85, y: 70 },
+        { slot: 'CDM', x: 37, y: 52 }, { slot: 'CDM', x: 63, y: 52 },
+        { slot: 'LW', x: 20, y: 32 }, { slot: 'CAM', x: 50, y: 35 }, { slot: 'RW', x: 80, y: 32 },
+        { slot: 'ST', x: 50, y: 15 },
+    ],
+};
+
+async function renderLineupBuilder(team, orgId, contentEl) {
+    contentEl.innerHTML = '<div style="text-align:center;padding:24px;"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
+    var roster = [];
+    try { roster = await api('GET', '/api/teams/' + team.id + '/roster'); } catch (_) {}
+
+    var lineup = team.lineup || { formation: '4-3-3', positions: [] };
+    var currentFormation = lineup.formation || '4-3-3';
+
+    function buildField() {
+        var positions = _lineupFormations[currentFormation] || _lineupFormations['4-3-3'];
+        var assignedIds = {};
+        (lineup.positions || []).forEach(function(p) { if (p.player_id) assignedIds[p.slot + '_' + positions.indexOf(positions.find(function(pp) { return pp.slot === p.slot; }))] = p.player_id; });
+
+        // Build slot->player mapping using index for duplicate slots
+        var slotPlayerMap = {};
+        (lineup.positions || []).forEach(function(p, idx) { slotPlayerMap[idx] = p.player_id; });
+
+        var assignedPlayerIds = new Set();
+        Object.values(slotPlayerMap).forEach(function(pid) { if (pid) assignedPlayerIds.add(pid); });
+
+        var html = '<div style="margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+            '<label style="font-weight:600;font-size:14px;">Formation:</label>' +
+            '<select class="form-select form-select-sm" id="lineup-formation" onchange="changeFormation()" style="width:auto;">';
+        Object.keys(_lineupFormations).forEach(function(f) {
+            html += '<option value="' + f + '"' + (f === currentFormation ? ' selected' : '') + '>' + f + '</option>';
+        });
+        html += '</select>' +
+            '<button class="btn btn-sm btn-primary" onclick="saveLineup(\'' + team.id + '\',\'' + orgId + '\')"><i data-lucide="save" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Save Lineup</button>' +
+        '</div>';
+
+        // Soccer field
+        html += '<div style="display:flex;gap:16px;flex-wrap:wrap;">';
+        html += '<div id="lineup-field" style="position:relative;width:480px;height:640px;background:#2d8a4e;border-radius:8px;border:3px solid #fff;overflow:hidden;flex-shrink:0;">';
+
+        // Field markings
+        html += '<div style="position:absolute;top:50%;left:10%;right:10%;border-top:2px solid rgba(255,255,255,0.4);"></div>'; // halfway line
+        html += '<div style="position:absolute;top:50%;left:50%;width:80px;height:80px;border:2px solid rgba(255,255,255,0.4);border-radius:50%;transform:translate(-50%,-50%);"></div>'; // center circle
+        html += '<div style="position:absolute;top:0;left:25%;right:25%;height:16%;border:2px solid rgba(255,255,255,0.4);border-top:none;"></div>'; // top box
+        html += '<div style="position:absolute;bottom:0;left:25%;right:25%;height:16%;border:2px solid rgba(255,255,255,0.4);border-bottom:none;"></div>'; // bottom box
+        html += '<div style="position:absolute;top:0;left:35%;right:35%;height:8%;border:2px solid rgba(255,255,255,0.3);border-top:none;"></div>'; // top goal box
+        html += '<div style="position:absolute;bottom:0;left:35%;right:35%;height:8%;border:2px solid rgba(255,255,255,0.3);border-bottom:none;"></div>'; // bottom goal box
+
+        // Position slots
+        positions.forEach(function(pos, idx) {
+            var pid = slotPlayerMap[idx] || null;
+            var player = pid ? roster.find(function(r) { return (r.player_id || r.id) === pid; }) : null;
+            var initials = player ? (player.player_name || player.first_name || '').split(' ').map(function(w) { return w[0]; }).join('').toUpperCase().substring(0, 2) : '';
+
+            html += '<div class="lineup-slot" data-slot-idx="' + idx + '" ' +
+                'style="position:absolute;left:' + pos.x + '%;top:' + pos.y + '%;transform:translate(-50%,-50%);text-align:center;cursor:pointer;" ' +
+                'onclick="openSlotDropdown(' + idx + ')">' +
+                '<div style="width:40px;height:40px;border-radius:50%;background:' + (player ? 'var(--teal)' : 'rgba(255,255,255,0.3)') + ';border:2px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;margin:0 auto;">' +
+                    (initials || '<i data-lucide="plus" style="width:16px;height:16px;"></i>') +
+                '</div>' +
+                '<div style="color:#fff;font-size:10px;font-weight:600;margin-top:2px;text-shadow:0 1px 2px rgba(0,0,0,0.5);">' + esc(pos.slot) + '</div>' +
+                (player ? '<div style="color:rgba(255,255,255,0.8);font-size:9px;text-shadow:0 1px 2px rgba(0,0,0,0.5);">' + esc(player.player_name || '') + '</div>' : '') +
+            '</div>';
+        });
+
+        html += '</div>';
+
+        // Bench
+        html += '<div style="flex:1;min-width:200px;">' +
+            '<div style="font-weight:700;font-size:14px;margin-bottom:8px;"><i data-lucide="armchair" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Bench</div>' +
+            '<div id="lineup-bench" style="max-height:600px;overflow-y:auto;">';
+        roster.forEach(function(r) {
+            var pid = r.player_id || r.id;
+            if (!assignedPlayerIds.has(pid)) {
+                html += '<div style="padding:6px 8px;margin:4px 0;background:#f8f9fa;border-radius:6px;border:1px solid #e0e0e0;font-size:13px;display:flex;align-items:center;gap:6px;" data-bench-player="' + pid + '">' +
+                    '<span style="font-weight:600;">' + esc(r.player_name || '--') + '</span>' +
+                    (r.position ? '<span style="font-size:11px;color:var(--text-secondary);">' + esc(r.position) + '</span>' : '') +
+                '</div>';
+            }
+        });
+        html += '</div></div>';
+        html += '</div>';
+        return html;
+    }
+
+    contentEl.innerHTML = buildField();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Store lineup data globally for mutations
+    window._currentLineup = lineup;
+    window._currentLineupRoster = roster;
+}
+
+function changeFormation() {
+    var sel = document.getElementById('lineup-formation');
+    if (!sel || !_currentTeamDetail) return;
+    window._currentLineup.formation = sel.value;
+    window._currentLineup.positions = [];
+    renderLineupBuilder(_currentTeamDetail, getSelectedOrg(), document.getElementById('team-subtab-content'));
+}
+
+function openSlotDropdown(slotIdx) {
+    var roster = window._currentLineupRoster || [];
+    var lineup = window._currentLineup || { formation: '4-3-3', positions: [] };
+    var assignedIds = new Set();
+    (lineup.positions || []).forEach(function(p) { if (p.player_id) assignedIds.add(p.player_id); });
+
+    var available = roster.filter(function(r) { return !assignedIds.has(r.player_id || r.id); });
+    var formation = _lineupFormations[lineup.formation] || _lineupFormations['4-3-3'];
+    var slotName = formation[slotIdx] ? formation[slotIdx].slot : '';
+
+    var html = '<div style="max-height:300px;overflow-y:auto;">';
+    html += '<div style="padding:8px;cursor:pointer;border-bottom:1px solid #eee;color:var(--coral);font-weight:600;" onclick="assignToSlot(' + slotIdx + ', null)">Clear slot</div>';
+    available.forEach(function(r) {
+        var pid = r.player_id || r.id;
+        html += '<div style="padding:8px;cursor:pointer;border-bottom:1px solid #eee;" onclick="assignToSlot(' + slotIdx + ', \'' + pid + '\')">' +
+            '<span style="font-weight:500;">' + esc(r.player_name || '--') + '</span> ' +
+            (r.position ? '<span style="font-size:11px;color:var(--text-secondary);">(' + esc(r.position) + ')</span>' : '') +
+        '</div>';
+    });
+    if (available.length === 0) html += '<p class="text-muted" style="padding:8px;">All players assigned.</p>';
+    html += '</div>';
+
+    openModal('Assign ' + slotName, html, '<button class="btn btn-outline" onclick="closeModal()">Close</button>');
+}
+
+function assignToSlot(slotIdx, playerId) {
+    var lineup = window._currentLineup;
+    var formation = _lineupFormations[lineup.formation] || _lineupFormations['4-3-3'];
+    if (!lineup.positions) lineup.positions = [];
+
+    // Remove existing assignment for this slot index
+    var slotName = formation[slotIdx].slot;
+    // Build positions array matching formation slots
+    while (lineup.positions.length < formation.length) {
+        lineup.positions.push({ slot: formation[lineup.positions.length].slot, player_id: null });
+    }
+    lineup.positions[slotIdx] = { slot: slotName, player_id: playerId };
+
+    closeModal();
+    renderLineupBuilder(_currentTeamDetail, getSelectedOrg(), document.getElementById('team-subtab-content'));
+}
+
+async function saveLineup(teamId, orgId) {
+    var lineup = window._currentLineup;
+    try {
+        var updated = await api('PATCH', '/api/organizations/' + orgId + '/teams/' + teamId, { lineup: lineup });
+        if (_currentTeamDetail) _currentTeamDetail.lineup = lineup;
+        toast('Lineup saved!', 'success');
+    } catch (err) {
+        toast('Error: ' + (err.message || 'Failed to save'), 'error');
+    }
+}
+
+
+// ============================================================
+// FEATURE 5: REC LEAGUE GAME SCHEDULER (MATCHUP GENERATOR)
+// ============================================================
+async function openMatchupModal() {
+    var orgId = requireOrg();
+    if (!orgId) return;
+
+    var programs = [], fields = [], teams = [];
+    try {
+        var res = await Promise.allSettled([
+            api('GET', '/api/organizations/' + orgId + '/programs'),
+            api('GET', '/api/organizations/' + orgId + '/fields'),
+            api('GET', '/api/organizations/' + orgId + '/teams'),
+        ]);
+        programs = res[0].status === 'fulfilled' ? res[0].value : [];
+        fields = res[1].status === 'fulfilled' ? res[1].value : [];
+        teams = res[2].status === 'fulfilled' ? res[2].value : [];
+    } catch (_) {}
+
+    var html = '<div class="form-row">' +
+        '<div><label class="form-label">Program (to get teams)</label>' +
+        '<select class="form-select" id="matchup-program" onchange="matchupProgramChanged()">' +
+        '<option value="">-- Select or pick teams manually --</option>';
+    programs.forEach(function(p) {
+        html += '<option value="' + p.id + '">' + esc(p.name) + '</option>';
+    });
+    html += '</select></div>' +
+        '<div><label class="form-label">Rounds</label>' +
+        '<input type="number" class="form-input" id="matchup-rounds" value="1" min="1" max="4"></div>' +
+    '</div>';
+
+    html += '<div class="form-row">' +
+        '<div><label class="form-label">Game Day</label>' +
+        '<select class="form-select" id="matchup-day">' +
+        '<option value="saturday">Saturday</option><option value="sunday">Sunday</option>' +
+        '<option value="friday">Friday</option><option value="monday">Monday</option>' +
+        '<option value="tuesday">Tuesday</option><option value="wednesday">Wednesday</option>' +
+        '<option value="thursday">Thursday</option>' +
+        '</select></div>' +
+        '<div><label class="form-label">Start Time</label>' +
+        '<input type="time" class="form-input" id="matchup-time" value="09:00"></div>' +
+    '</div>';
+
+    html += '<div class="form-row">' +
+        '<div><label class="form-label">Game Duration (min)</label>' +
+        '<input type="number" class="form-input" id="matchup-duration" value="60" min="20" max="120"></div>' +
+        '<div></div>' +
+    '</div>';
+
+    // Team selection
+    html += '<div style="margin-top:8px;"><label class="form-label">Teams (select if no program chosen)</label>' +
+        '<div id="matchup-teams-list" style="max-height:150px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:8px;">';
+    teams.forEach(function(t) {
+        html += '<label style="display:block;padding:3px 0;cursor:pointer;">' +
+            '<input type="checkbox" class="matchup-team-cb" value="' + t.id + '"> ' + esc(t.name) +
+        '</label>';
+    });
+    html += '</div></div>';
+
+    // Field selection
+    html += '<div style="margin-top:8px;"><label class="form-label">Available Fields</label>' +
+        '<div style="max-height:120px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:8px;">';
+    fields.forEach(function(f) {
+        html += '<label style="display:block;padding:3px 0;cursor:pointer;">' +
+            '<input type="checkbox" class="matchup-field-cb" value="' + f.id + '" checked> ' + esc(f.name) +
+        '</label>';
+    });
+    html += '</div></div>';
+
+    html += '<div id="matchup-preview" style="margin-top:12px;display:none;"></div>';
+
+    openModal('Generate Rec League Matchups', html,
+        '<button class="btn btn-primary" id="btn-run-matchups" onclick="runMatchupGenerator()"><i data-lucide="play" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Generate</button>' +
+        '<button class="btn btn-outline" onclick="closeModal()">Cancel</button>'
+    );
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function runMatchupGenerator() {
+    var orgId = getSelectedOrg();
+    if (!orgId) return;
+
+    var programId = (document.getElementById('matchup-program') || {}).value || null;
+    var rounds = parseInt((document.getElementById('matchup-rounds') || {}).value) || 1;
+    var gameDay = (document.getElementById('matchup-day') || {}).value || 'saturday';
+    var startTime = (document.getElementById('matchup-time') || {}).value || '09:00';
+    var duration = parseInt((document.getElementById('matchup-duration') || {}).value) || 60;
+
+    var teamIds = [];
+    document.querySelectorAll('.matchup-team-cb:checked').forEach(function(cb) { teamIds.push(cb.value); });
+    var fieldIds = [];
+    document.querySelectorAll('.matchup-field-cb:checked').forEach(function(cb) { fieldIds.push(cb.value); });
+
+    if (!programId && teamIds.length < 2) {
+        toast('Select a program or at least 2 teams', 'error');
+        return;
+    }
+
+    var btn = document.getElementById('btn-run-matchups');
+    if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+
+    try {
+        var result = await api('POST', '/api/organizations/' + orgId + '/schedules/generate-matchups', {
+            program_id: programId || undefined,
+            team_ids: teamIds,
+            rounds: rounds,
+            game_day: gameDay,
+            start_time: startTime,
+            game_duration_minutes: duration,
+            field_ids: fieldIds,
+        });
+
+        // Show preview
+        var preview = document.getElementById('matchup-preview');
+        if (preview && result.schedule) {
+            var ph = '<div style="font-weight:700;margin-bottom:8px;color:var(--teal);">' + result.games_scheduled + ' games scheduled (' + result.rounds + ' round' + (result.rounds > 1 ? 's' : '') + ')</div>' +
+                '<div style="max-height:200px;overflow-y:auto;"><table class="data-table" style="min-width:auto;font-size:12px;"><thead><tr><th>Home</th><th>Away</th><th>Date</th><th>Time</th><th>Field</th></tr></thead><tbody>';
+            result.schedule.forEach(function(g) {
+                ph += '<tr><td>' + esc(g.home) + '</td><td>' + esc(g.away) + '</td><td>' + esc(g.date) + '</td><td>' + esc(g.time) + '</td><td>' + esc(g.field) + '</td></tr>';
+            });
+            ph += '</tbody></table></div>';
+            preview.innerHTML = ph;
+            preview.style.display = '';
+        }
+
+        toast(result.games_scheduled + ' matchups generated!', 'success');
+    } catch (err) {
+        toast('Error: ' + (err.message || 'Failed to generate'), 'error');
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Generate'; }
 }

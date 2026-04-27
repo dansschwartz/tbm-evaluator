@@ -5,15 +5,16 @@ from datetime import datetime, date, timedelta
 from itertools import combinations
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import ScheduleEntry, Team, Field, FieldBooking
+from app.models import ScheduleEntry, Team, Field, FieldBooking, Notification, Program
 from app.routers.auth import verify_admin_key
 from app.schemas import (
     ScheduleEntryCreate, ScheduleEntryUpdate, ScheduleEntryResponse,
     GenerateGamesRequest, GeneratePracticesRequest,
+    NotificationCreate, NotificationResponse, GenerateMatchupsRequest,
 )
 
 router = APIRouter(tags=["Scheduling"], dependencies=[Depends(verify_admin_key)])
@@ -484,3 +485,158 @@ async def weather_cancel_schedule(org_id: uuid.UUID, request: dict, db: AsyncSes
         cancelled += 1
 
     return {"cancelled": cancelled, "date": cancel_date}
+
+
+# --- Notifications ---
+@router.post("/api/organizations/{org_id}/notifications/send")
+async def send_notification(org_id: uuid.UUID, data: NotificationCreate, db: AsyncSession = Depends(get_db)):
+    """Create and send a notification."""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    notif = Notification(
+        org_id=org_id,
+        type=data.type,
+        title=data.title,
+        message=data.message,
+        recipients=data.recipients,
+        status="sent",
+        sent_at=func.now(),
+    )
+    db.add(notif)
+    await db.flush()
+    await db.refresh(notif)
+
+    logger.info(f"Notification sent: [{data.type}] {data.title} to {len(data.recipients)} recipients")
+    return NotificationResponse.model_validate(notif)
+
+
+@router.get("/api/organizations/{org_id}/notifications")
+async def list_notifications(org_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """List recent notifications."""
+    result = await db.execute(
+        select(Notification).where(Notification.org_id == org_id)
+        .order_by(Notification.created_at.desc())
+        .limit(50)
+    )
+    return [NotificationResponse.model_validate(n) for n in result.scalars().all()]
+
+
+# --- Rec League Matchup Generator ---
+@router.post("/api/organizations/{org_id}/schedules/generate-matchups")
+async def generate_matchups(org_id: uuid.UUID, req: GenerateMatchupsRequest, db: AsyncSession = Depends(get_db)):
+    """Generate round-robin matchups for rec league."""
+    team_ids = list(req.team_ids)
+
+    # If program_id given, get teams from that program
+    if req.program_id and not team_ids:
+        teams_result = await db.execute(
+            select(Team).where(Team.program_id == req.program_id, Team.org_id == org_id)
+        )
+        team_ids = [t.id for t in teams_result.scalars().all()]
+
+    if len(team_ids) < 2:
+        raise HTTPException(400, "Need at least 2 teams")
+
+    teams = (await db.execute(select(Team).where(Team.id.in_(team_ids)))).scalars().all()
+    team_map = {t.id: t for t in teams}
+
+    fields = []
+    if req.field_ids:
+        fields = (await db.execute(select(Field).where(Field.id.in_(req.field_ids)))).scalars().all()
+
+    # Round-robin matchups
+    team_list = list(teams)
+    n = len(team_list)
+    all_matchups = list(combinations(range(n), 2))
+
+    # Repeat for number of rounds
+    matchups = []
+    for _ in range(req.rounds):
+        matchups.extend(all_matchups)
+
+    # Map game_day to weekday number
+    day_map = {"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+               "friday": 4, "saturday": 5, "sunday": 6}
+    target_day = day_map.get(req.game_day.lower(), 5)
+
+    # Find next target day from today
+    today = date.today()
+    days_ahead = (target_day - today.weekday()) % 7
+    if days_ahead == 0:
+        days_ahead = 7
+    current_date = today + timedelta(days=days_ahead)
+
+    schedule = []
+    games_per_day = len(fields) if fields else 1
+    time_parts = req.start_time.split(":")
+    base_hour, base_min = int(time_parts[0]), int(time_parts[1]) if len(time_parts) > 1 else 0
+
+    team_games_today = {}
+    slot_idx = 0
+    field_idx = 0
+
+    for home_idx, away_idx in matchups:
+        home = team_list[home_idx]
+        away = team_list[away_idx]
+        date_key = str(current_date)
+
+        if date_key not in team_games_today:
+            team_games_today[date_key] = set()
+
+        # Ensure no team plays twice on the same day
+        while str(home.id) in team_games_today.get(str(current_date), set()) or \
+              str(away.id) in team_games_today.get(str(current_date), set()):
+            slot_idx = 0
+            field_idx = 0
+            current_date += timedelta(weeks=1)
+            date_key = str(current_date)
+            if date_key not in team_games_today:
+                team_games_today[date_key] = set()
+
+        # Calculate time slot
+        slot_offset = slot_idx * req.game_duration_minutes
+        hour = base_hour + slot_offset // 60
+        minute = base_min + slot_offset % 60
+        start = datetime.fromisoformat(f"{current_date}T{hour:02d}:{minute:02d}:00")
+        end = start + timedelta(minutes=req.game_duration_minutes)
+
+        field = fields[field_idx % len(fields)] if fields else None
+
+        entry = ScheduleEntry(
+            org_id=org_id,
+            entry_type="game",
+            team_id=home.id,
+            opponent_team_id=away.id,
+            field_id=field.id if field else None,
+            start_time=start,
+            end_time=end,
+            title=f"{home.name} vs {away.name}",
+            status="scheduled",
+        )
+        db.add(entry)
+
+        team_games_today.setdefault(str(current_date), set()).update([str(home.id), str(away.id)])
+
+        schedule.append({
+            "home": home.name,
+            "away": away.name,
+            "date": str(current_date),
+            "time": f"{hour:02d}:{minute:02d}",
+            "field": field.name if field else "TBD",
+        })
+
+        slot_idx += 1
+        field_idx += 1
+        if fields and slot_idx >= len(fields):
+            slot_idx = 0
+            field_idx = 0
+            current_date += timedelta(weeks=1)
+
+    await db.flush()
+
+    return {
+        "games_scheduled": len(schedule),
+        "rounds": req.rounds,
+        "schedule": schedule,
+    }

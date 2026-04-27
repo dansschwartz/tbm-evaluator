@@ -646,6 +646,7 @@
                         <div class="team-subtabs" id="team-subtabs">
                             <button class="team-subtab active" data-subtab="summary" onclick="switchTeamSubtab('summary')">Summary</button>
                             <button class="team-subtab" data-subtab="roster" onclick="switchTeamSubtab('roster')">Roster</button>
+                            <button class="team-subtab" data-subtab="lineup" onclick="switchTeamSubtab('lineup')">Lineup</button>
                             <button class="team-subtab" data-subtab="schedule" onclick="switchTeamSubtab('schedule')">Schedule</button>
                             <button class="team-subtab" data-subtab="attendance" onclick="switchTeamSubtab('attendance')">Attendance</button>
                         </div>
@@ -830,6 +831,7 @@
                             <button class="btn btn-primary" id="btn-create-schedule">+ New Entry</button>
                             <button class="btn btn-secondary" id="btn-generate-games">Generate Games</button>
                             <button class="btn btn-secondary" id="btn-generate-practices">Generate Practices</button>
+                            <button class="btn btn-gold" id="btn-generate-matchups" onclick="openMatchupModal()"><i data-lucide="trophy" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Generate Matchups</button>
                             <button class="btn btn-outline" id="btn-check-conflicts"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Find Conflicts</button>
                             <button class="btn btn-outline" onclick="exportSchedule()"><i data-lucide="download" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Export CSV</button>
                         </div>
@@ -903,6 +905,17 @@
                                 </thead>
                                 <tbody id="messages-table-body"></tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <!-- Notifications -->
+                    <div class="card" style="margin-top:16px;">
+                        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+                            <h3><i data-lucide="bell" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:6px;"></i>Auto Notifications</h3>
+                            <button class="btn btn-sm btn-outline" onclick="loadNotifications()"><i data-lucide="refresh-cw" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> Refresh</button>
+                        </div>
+                        <div class="card-body">
+                            <div id="notifications-list"><p class="text-muted">Select an organization to view notifications.</p></div>
                         </div>
                     </div>
                 </section>

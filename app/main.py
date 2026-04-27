@@ -126,6 +126,8 @@ async def run_migrations(conn):
         "ALTER TABLE fields ADD COLUMN IF NOT EXISTS weather_cancellations INTEGER DEFAULT 0",
         # Player home ward for drive-time analysis
         "ALTER TABLE players ADD COLUMN IF NOT EXISTS home_ward VARCHAR(10)",
+        # Team lineup (depth chart)
+        "ALTER TABLE teams ADD COLUMN IF NOT EXISTS lineup JSONB",
     ]
     for sql in migrations:
         try:

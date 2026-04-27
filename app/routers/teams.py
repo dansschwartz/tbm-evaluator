@@ -7,11 +7,12 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Team, TeamRoster, Player, PlayerReport, Field, FieldBooking
+from app.models import Team, TeamRoster, TeamInvite, Player, PlayerReport, Field, FieldBooking
 from app.routers.auth import verify_admin_key
 from app.schemas import (
     TeamCreate, TeamUpdate, TeamResponse,
     TeamRosterAdd, TeamRosterResponse,
+    TeamInviteCreate, TeamInviteUpdate, TeamInviteResponse,
 )
 from app.services.ai import call_openai
 
@@ -277,3 +278,130 @@ async def assign_practice_schedule(team_id: uuid.UUID, request: dict, db: AsyncS
         "practice_time": team.practice_time,
         "practice_field_id": str(team.practice_field_id) if team.practice_field_id else None,
     }
+
+
+# --- Team Invites ---
+@router.post("/api/teams/{team_id}/invites")
+async def send_invites(team_id: uuid.UUID, data: TeamInviteCreate, db: AsyncSession = Depends(get_db)):
+    """Send invites to an array of players."""
+    team = (await db.execute(select(Team).where(Team.id == team_id))).scalars().first()
+    if not team:
+        raise HTTPException(404, "Team not found")
+
+    created = []
+    for pid in data.player_ids:
+        existing = (await db.execute(
+            select(TeamInvite).where(
+                TeamInvite.team_id == team_id,
+                TeamInvite.player_id == pid,
+                TeamInvite.status == "invited",
+            )
+        )).scalars().first()
+        if existing:
+            continue
+        invite = TeamInvite(
+            team_id=team_id,
+            player_id=pid,
+            message=data.message,
+            expires_at=data.expires_at,
+        )
+        db.add(invite)
+        created.append(invite)
+    await db.flush()
+    for inv in created:
+        await db.refresh(inv)
+    return [TeamInviteResponse.model_validate(inv) for inv in created]
+
+
+@router.get("/api/teams/{team_id}/invites")
+async def list_invites(team_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """List all invites for a team."""
+    result = await db.execute(
+        select(TeamInvite).where(TeamInvite.team_id == team_id)
+        .order_by(TeamInvite.invited_at.desc())
+    )
+    invites = result.scalars().all()
+    out = []
+    for inv in invites:
+        player = (await db.execute(select(Player).where(Player.id == inv.player_id))).scalars().first()
+        d = TeamInviteResponse.model_validate(inv).model_dump()
+        d["player_name"] = f"{player.first_name} {player.last_name}" if player else "Unknown"
+        out.append(d)
+    return out
+
+
+@router.patch("/api/invites/{invite_id}")
+async def update_invite(invite_id: uuid.UUID, data: TeamInviteUpdate, db: AsyncSession = Depends(get_db)):
+    """Accept or decline an invite."""
+    invite = (await db.execute(select(TeamInvite).where(TeamInvite.id == invite_id))).scalars().first()
+    if not invite:
+        raise HTTPException(404, "Invite not found")
+    invite.status = data.status
+    invite.responded_at = func.now()
+
+    # If accepted, add to roster
+    if data.status == "accepted":
+        existing = (await db.execute(
+            select(TeamRoster).where(
+                TeamRoster.team_id == invite.team_id,
+                TeamRoster.player_id == invite.player_id,
+                TeamRoster.status == "active",
+            )
+        )).scalars().first()
+        if not existing:
+            roster_entry = TeamRoster(
+                team_id=invite.team_id,
+                player_id=invite.player_id,
+            )
+            db.add(roster_entry)
+
+    await db.flush()
+    await db.refresh(invite)
+    return TeamInviteResponse.model_validate(invite)
+
+
+@router.get("/api/players/{player_id}/invites")
+async def player_invites(player_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Get all invites for a player."""
+    result = await db.execute(
+        select(TeamInvite).where(TeamInvite.player_id == player_id)
+        .order_by(TeamInvite.invited_at.desc())
+    )
+    return [TeamInviteResponse.model_validate(inv) for inv in result.scalars().all()]
+
+
+# --- Unassigned Players (for drag-drop assignment) ---
+@router.get("/api/organizations/{org_id}/teams/{team_id}/unassigned-players")
+async def get_unassigned_players(org_id: uuid.UUID, team_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Get players in the same age group not assigned to any team."""
+    team = (await db.execute(select(Team).where(Team.id == team_id, Team.org_id == org_id))).scalars().first()
+    if not team:
+        raise HTTPException(404, "Team not found")
+
+    # Get all active roster player IDs in the org
+    all_rostered = (await db.execute(
+        select(TeamRoster.player_id).join(Team, TeamRoster.team_id == Team.id)
+        .where(Team.org_id == org_id, TeamRoster.status == "active")
+    )).scalars().all()
+    rostered_set = set(all_rostered)
+
+    # Get all players in org
+    players = (await db.execute(
+        select(Player).where(Player.organization_id == org_id, Player.active == True)
+    )).scalars().all()
+
+    unassigned = []
+    for p in players:
+        if p.id not in rostered_set:
+            report = (await db.execute(
+                select(PlayerReport).where(PlayerReport.player_id == p.id)
+                .order_by(PlayerReport.created_at.desc())
+            )).scalars().first()
+            unassigned.append({
+                "id": str(p.id),
+                "name": f"{p.first_name} {p.last_name}",
+                "position": p.position,
+                "age_group": p.age_group,
+                "overall_score": report.weighted_overall_score or report.overall_score if report else None,
+            })
+    return unassigned
