@@ -261,7 +261,7 @@ function navigateTo(section) {
     else if (section === 'ops-fields') _safe(function(){ loadOpsFields(orgId); });
     else if (section === 'ops-schedule') _safe(function(){ loadOpsSchedule(orgId); });
     else if (section === 'ops-coaches') _safe(function(){ loadOpsCoaches(orgId); });
-    else if (section === 'ops-comms') _safe(function(){ loadOpsComms(orgId); });
+    else if (section === 'ops-comms') _safe(function(){ loadOpsComms(orgId); loadMessages(orgId); });
     else if (section === 'ops-attendance') _safe(function(){ loadOpsAttendance(orgId); });
     else if (section === 'ops-documents') _safe(function(){ loadOpsDocuments(orgId); });
     else if (section === 'ops-import') _safe(function(){ loadOpsImport(orgId); });
