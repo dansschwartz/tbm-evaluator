@@ -7206,9 +7206,11 @@ async function renderLineupBuilder(team, orgId, contentEl) {
     contentEl.innerHTML = '<div style="text-align:center;padding:24px;"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
     var roster = [];
     try { roster = await api('GET', '/api/teams/' + team.id + '/roster'); } catch (_) {}
+    window._currentLineupRoster = roster;
 
-    var lineup = team.lineup || { formation: '4-3-3', positions: [] };
-    var currentFormation = lineup.formation || '4-3-3';
+    var lineup = window._currentLineup || team.lineup || { formation: '4-3-3', positions: [] };
+    window._currentLineup = lineup;
+    var currentFormation = (window._currentLineup && window._currentLineup.formation) || lineup.formation || '4-3-3';
 
     function buildField() {
         var positions = _lineupFormations[currentFormation] || _lineupFormations['4-3-3'];
@@ -7225,6 +7227,7 @@ async function renderLineupBuilder(team, orgId, contentEl) {
         var html = '<div style="margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
             '<label style="font-weight:600;font-size:14px;">Formation:</label>' +
             '<select class="form-select form-select-sm" id="lineup-formation" onchange="changeFormation()" style="width:auto;">';
+        var _selFormation = currentFormation;
         Object.keys(_lineupFormations).forEach(function(f) {
             html += '<option value="' + f + '"' + (f === currentFormation ? ' selected' : '') + '>' + f + '</option>';
         });
@@ -7289,12 +7292,21 @@ async function renderLineupBuilder(team, orgId, contentEl) {
     window._currentLineupRoster = roster;
 }
 
+// After lineup render, restore formation dropdown
+function _restoreFormationDropdown() {
+    var sel = document.getElementById('lineup-formation');
+    if (sel && window._currentLineup) {
+        sel.value = window._currentLineup.formation || '4-3-3';
+    }
+}
+
 function changeFormation() {
     var sel = document.getElementById('lineup-formation');
     if (!sel || !_currentTeamDetail) return;
     window._currentLineup.formation = sel.value;
     window._currentLineup.positions = [];
     renderLineupBuilder(_currentTeamDetail, getSelectedOrg(), document.getElementById('team-subtab-content'));
+    setTimeout(_restoreFormationDropdown, 100);
 }
 
 function openSlotDropdown(slotIdx) {
@@ -7337,6 +7349,7 @@ function assignToSlot(slotIdx, playerId) {
 
     closeModal();
     renderLineupBuilder(_currentTeamDetail, getSelectedOrg(), document.getElementById('team-subtab-content'));
+    setTimeout(_restoreFormationDropdown, 100);
 }
 
 async function saveLineup(teamId, orgId) {
