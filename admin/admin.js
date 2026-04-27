@@ -346,10 +346,12 @@ async function loadOrgSelector() {
         }
     } catch (e) {
         console.error('loadOrgSelector error:', e);
+        var select = document.getElementById('global-org-select');
+        select.innerHTML = '<option value="">Error loading orgs - check API key</option>';
         // If auth failed, prompt for key and retry
-        if (e.message && e.message.includes('Unauthorized')) {
+        if (e.message && (e.message.includes('Unauthorized') || e.message.includes('401'))) {
             promptAdminKey();
-            return loadOrgSelector();
+            if (CONFIG.adminKey) return loadOrgSelector();
         }
     }
 }
@@ -5225,7 +5227,7 @@ function printDashboard() {
     // Ensure overview section is visible
     var currentActive = document.querySelector('.nav-item.active');
     var wasOverview = currentActive && currentActive.getAttribute('data-section') === 'overview';
-    if (!wasOverview) navigateTo('players');
+    if (!wasOverview) navigateTo('players'); document.getElementById('page-title').textContent = 'Players';
     setTimeout(function() {
         window.print();
         if (!wasOverview && currentActive) {
@@ -6235,14 +6237,14 @@ async function cancelBooking(bookingId) {
         console.log('TBM Admin: Org selector loaded');
         // Hide all sections first, then show players
         document.querySelectorAll('.section').forEach(function(s) { s.classList.add('hidden'); });
-        navigateTo('players');
+        navigateTo('players'); document.getElementById('page-title').textContent = 'Players';
         console.log('TBM Admin: Navigated to overview');
         refreshBadges();
         console.log('TBM Admin: Init complete');
     } catch(e) {
         console.error('TBM Admin init error:', e);
         // Try basic init without badges
-        try { navigateTo('players'); } catch(e2) { console.error('Nav error:', e2); }
+        try { navigateTo('players'); document.getElementById('page-title').textContent = 'Players'; } catch(e2) { console.error('Nav error:', e2); }
     }
 })();
 
