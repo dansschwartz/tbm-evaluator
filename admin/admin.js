@@ -269,7 +269,7 @@ function navigateTo(section) {
     else if (section === 'ops-ai') { /* AI assistant is static but needs org context */ }
 
     // Tier 2 feature sections
-    else if (section === 't2-programs') _safe(function(){ loadPrograms(orgId); });
+    else if (section === 't2-programs') _safe(function(){ loadPrograms(orgId); loadVideos(orgId); });
     else if (section === 't2-messages') _safe(function(){ loadMessages(orgId); });
     else if (section === 't2-videos') _safe(function(){ loadVideos(orgId); });
     else if (section === 't2-automations') _safe(function(){ loadAutomations(orgId); });
