@@ -6352,30 +6352,37 @@ setInterval(function() {
 })();
 
 // ===== Collapsible sidebar nav groups =====
+// Nav group collapse — runs immediately + retries to catch late-rendered elements
 (function initNavGroups() {
     var STORAGE_KEY = 'tbm_nav_collapsed';
-    var collapsed = {};
-    try { collapsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) {}
-
-    document.querySelectorAll('.nav-group-header').forEach(function(header) {
-        var group = header.closest('.nav-group');
-        var groupKey = group ? group.getAttribute('data-group') : null;
-        var items = header.nextElementSibling;
-        var chevron = header.querySelector('.nav-group-chevron');
-        if (!items || !groupKey) return;
-
-        // Restore saved state
-        if (collapsed[groupKey]) {
-            items.style.display = 'none';
-            if (chevron) chevron.style.transform = 'rotate(-90deg)';
-        }
-
-        header.addEventListener('click', function() {
-            var isHidden = items.style.display === 'none';
-            items.style.display = isHidden ? '' : 'none';
-            if (chevron) chevron.style.transform = isHidden ? '' : 'rotate(-90deg)';
-            collapsed[groupKey] = !isHidden;
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(collapsed)); } catch(e) {}
+    var bound = {};
+    function bindGroups() {
+        var collapsed = {};
+        try { collapsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) {}
+        document.querySelectorAll('.nav-group-header').forEach(function(header) {
+            var group = header.closest('.nav-group');
+            var groupKey = group ? group.getAttribute('data-group') : null;
+            var items = header.nextElementSibling;
+            var chevron = header.querySelector('.nav-group-chevron');
+            if (!items || !groupKey || bound[groupKey]) return;
+            bound[groupKey] = true;
+            if (collapsed[groupKey]) {
+                items.style.display = 'none';
+                if (chevron) chevron.style.transform = 'rotate(-90deg)';
+            }
+            header.style.cursor = 'pointer';
+            header.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var isHidden = items.style.display === 'none';
+                items.style.display = isHidden ? 'block' : 'none';
+                if (chevron) chevron.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+                collapsed[groupKey] = !isHidden;
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(collapsed)); } catch(e) {}
+            });
         });
-    });
+    }
+    bindGroups();
+    setTimeout(bindGroups, 500);
+    setTimeout(bindGroups, 1500);
 })();
