@@ -666,6 +666,13 @@ function renderBadges() {
             var badge = document.createElement('span');
             badge.className = 'nav-badge';
             badge.textContent = mapping[section];
+            badge.title = 'Click to dismiss';
+            badge.style.cursor = 'pointer';
+            badge.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.remove();
+            });
             badge.style.cssText = 'position:absolute;top:50%;right:8px;transform:translateY(-50%);background:#FA6E82;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;line-height:18px;text-align:center;border-radius:9px;padding:0 4px;';
             navEl.style.position = 'relative';
             navEl.appendChild(badge);
@@ -2312,6 +2319,20 @@ async function loadOpsTeams(orgId) {
         ]);
 
         var container = document.getElementById('teams-grouped-container');
+        // Add filter bar
+        var filterBar = document.getElementById('teams-filter-bar');
+        if (!filterBar) {
+            filterBar = document.createElement('div');
+            filterBar.id = 'teams-filter-bar';
+            filterBar.style.cssText = 'display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;';
+            filterBar.innerHTML = 
+                '<select id="team-filter-gender" onchange="filterTeams()" style="padding:8px 12px;border:1px solid #ACC0D3;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;"><option value="">All Genders</option><option value="coed">Coed</option><option value="girls">Girls</option><option value="boys">Boys</option></select>' +
+                '<select id="team-filter-level" onchange="filterTeams()" style="padding:8px 12px;border:1px solid #ACC0D3;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;"><option value="">All Levels</option><option value="Recreational">Recreational</option><option value="Pre-Travel">Pre-Travel</option><option value="Travel">Competitive</option><option value="Academy">Academy</option><option value="Camp">Camps</option></select>' +
+                '<select id="team-filter-age" onchange="filterTeams()" style="padding:8px 12px;border:1px solid #ACC0D3;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;"><option value="">All Ages</option><option value="u8">U8</option><option value="u10">U10</option><option value="u12">U12</option><option value="u14">U14</option></select>' +
+                '<input type="text" id="team-filter-search" oninput="filterTeams()" placeholder="Search teams..." style="padding:8px 12px;border:1px solid #ACC0D3;border-radius:8px;font-size:13px;font-family:inherit;flex:1;min-width:150px;">' +
+                '<button class="btn btn-outline btn-sm" onclick="clearTeamFilters()">Clear</button>';
+            container.parentNode.insertBefore(filterBar, container);
+        }
         if (teams.length === 0) {
             container.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;padding:32px;">' +
                 '<i data-lucide="users" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>' +
