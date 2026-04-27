@@ -244,42 +244,42 @@ function navigateTo(section) {
     document.getElementById('page-title').textContent = SECTION_TITLES[section] || section;
 
     var orgId = getSelectedOrg();
-    try { // Catch errors in individual tab loading
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
 
-    if (section === 'overview') loadOverview(orgId);
+    if (section === 'overview') _safe(function(){ loadOverview(orgId); });
     else if (section === 'organizations') loadOrganizations();
-    else if (section === 'templates') loadTemplates(orgId);
-    else if (section === 'events') loadEvents(orgId);
-    else if (section === 'players') loadPlayers(orgId);
-    else if (section === 'reports') loadReportsSection(orgId);
-    else if (section === 'draft') loadDraftSection(orgId);
-    else if (section === 'analytics') loadAnalyticsSection(orgId);
+    else if (section === 'templates') _safe(function(){ loadTemplates(orgId); });
+    else if (section === 'events') _safe(function(){ loadEvents(orgId); });
+    else if (section === 'players') _safe(function(){ loadPlayers(orgId); });
+    else if (section === 'reports') _safe(function(){ loadReportsSection(orgId); });
+    else if (section === 'draft') _safe(function(){ loadDraftSection(orgId); });
+    else if (section === 'analytics') _safe(function(){ loadAnalyticsSection(orgId); });
     // Operations sections
-    else if (section === 'ops-overview') loadOpsDashboard(orgId);
-    else if (section === 'ops-seasons') loadOpsSeasons(orgId);
-    else if (section === 'ops-teams') loadOpsTeams(orgId);
-    else if (section === 'ops-fields') loadOpsFields(orgId);
-    else if (section === 'ops-schedule') loadOpsSchedule(orgId);
-    else if (section === 'ops-coaches') loadOpsCoaches(orgId);
-    else if (section === 'ops-comms') loadOpsComms(orgId);
-    else if (section === 'ops-attendance') loadOpsAttendance(orgId);
-    else if (section === 'ops-documents') loadOpsDocuments(orgId);
-    else if (section === 'ops-import') loadOpsImport(orgId);
+    else if (section === 'ops-overview') _safe(function(){ loadOpsDashboard(orgId); });
+    else if (section === 'ops-seasons') _safe(function(){ loadOpsSeasons(orgId); });
+    else if (section === 'ops-teams') _safe(function(){ loadOpsTeams(orgId); });
+    else if (section === 'ops-fields') _safe(function(){ loadOpsFields(orgId); });
+    else if (section === 'ops-schedule') _safe(function(){ loadOpsSchedule(orgId); });
+    else if (section === 'ops-coaches') _safe(function(){ loadOpsCoaches(orgId); });
+    else if (section === 'ops-comms') _safe(function(){ loadOpsComms(orgId); });
+    else if (section === 'ops-attendance') _safe(function(){ loadOpsAttendance(orgId); });
+    else if (section === 'ops-documents') _safe(function(){ loadOpsDocuments(orgId); });
+    else if (section === 'ops-import') _safe(function(){ loadOpsImport(orgId); });
     else if (section === 'settings') { document.getElementById('settings-api-key').value = CONFIG.adminKey; document.getElementById('settings-api-url').value = CONFIG.apiBase; }
     else if (section === 'ops-ai') { /* AI assistant is static but needs org context */ }
-    } catch(tabErr) { console.error('Tab load error:', section, tabErr); }
+
     // Tier 2 feature sections
-    else if (section === 't2-programs') loadPrograms(orgId);
-    else if (section === 't2-messages') loadMessages(orgId);
-    else if (section === 't2-videos') loadVideos(orgId);
-    else if (section === 't2-automations') loadAutomations(orgId);
-    else if (section === 't2-bookings') loadBookings(orgId);
+    else if (section === 't2-programs') _safe(function(){ loadPrograms(orgId); });
+    else if (section === 't2-messages') _safe(function(){ loadMessages(orgId); });
+    else if (section === 't2-videos') _safe(function(){ loadVideos(orgId); });
+    else if (section === 't2-automations') _safe(function(){ loadAutomations(orgId); });
+    else if (section === 't2-bookings') _safe(function(){ loadBookings(orgId); });
     // Intelligence sections
-    else if (section === 'intel-health') loadIntelHealth(orgId);
-    else if (section === 'intel-assessment') loadIntelAssessment(orgId);
-    else if (section === 'intel-development') loadIntelDevelopment(orgId);
-    else if (section === 'intel-competition') loadIntelCompetition(orgId);
-    else if (section === 'intel-compliance') loadIntelCompliance(orgId);
+    else if (section === 'intel-health') _safe(function(){ loadIntelHealth(orgId); });
+    else if (section === 'intel-assessment') _safe(function(){ loadIntelAssessment(orgId); });
+    else if (section === 'intel-development') _safe(function(){ loadIntelDevelopment(orgId); });
+    else if (section === 'intel-competition') _safe(function(){ loadIntelCompetition(orgId); });
+    else if (section === 'intel-compliance') _safe(function(){ loadIntelCompliance(orgId); });
 }
 
 navItems.forEach(function(item) {
@@ -310,6 +310,7 @@ function getSelectedOrg() {
 
 function requireOrg() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) {
         toast('Please select an organization first.', 'warning');
         return null;
@@ -626,6 +627,7 @@ var _badgeCounts = { coaches: 0, documents: 0, compliance: 0 };
 
 async function refreshBadges() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) {
         _badgeCounts = { coaches: 0, documents: 0, compliance: 0 };
         renderBadges();
@@ -679,6 +681,7 @@ function globalSearch(query) {
     var dropdown = document.getElementById('global-search-dropdown');
     if (!query || query.length < 2) { dropdown.classList.add('hidden'); return; }
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) { dropdown.innerHTML = '<div style="padding:12px;color:#888;">Select an organization first</div>'; dropdown.classList.remove('hidden'); return; }
 
     clearTimeout(_searchTimeout);
@@ -1039,6 +1042,7 @@ function gatherSkills() {
 
 async function submitTemplate(editId) {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) { toast('Select an organization.', 'error'); return; }
 
     var categories = document.getElementById('f-tpl-categories').value
@@ -1520,6 +1524,7 @@ function showPlayerForm(player) {
 
 async function submitPlayer(editId) {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) { toast('Select an organization.', 'error'); return; }
 
     var data = {
@@ -1616,6 +1621,7 @@ function showBulkImportForm() {
 
 async function submitBulkImport() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) { toast('Select an organization.', 'error'); return; }
 
     var format = document.getElementById('f-import-format').value;
@@ -2041,6 +2047,7 @@ document.getElementById('analytics-event-select').addEventListener('change', fun
         loadEventAnalytics(eventId);
     } else {
         var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
         if (orgId) loadOrgAnalytics(orgId);
     }
 });
@@ -3246,6 +3253,7 @@ document.getElementById('attendance-team-select').addEventListener('change', asy
     var teamId = this.value;
     var entrySelect = document.getElementById('attendance-entry-select');
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!teamId || !orgId) {
         entrySelect.innerHTML = '<option value="">-- Select Schedule Entry --</option>';
         document.getElementById('attendance-stats-bar').innerHTML = '';
@@ -3295,6 +3303,7 @@ document.getElementById('attendance-entry-select').addEventListener('change', as
     var teamId = document.getElementById('attendance-team-select').value;
     var rosterBody = document.getElementById('attendance-roster-body');
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!entryId || !teamId) {
         rosterBody.innerHTML = '<p class="text-muted">Select a schedule entry to mark attendance.</p>';
         return;
@@ -4819,7 +4828,8 @@ async function loadIntelCompetition(orgId) {
 
 // League filter change
 document.getElementById('competition-league-filter').addEventListener('change', function() {
-    var orgId = getSelectedOrg(); if (!orgId) return;
+    var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } } if (!orgId) return;
     loadIntelCompetition(orgId);
 });
 
@@ -5388,6 +5398,7 @@ function injectSortingAndEditing(section) {
                 var playerId = tr.getAttribute('data-id');
                 if (!playerId) { toast('Cannot update: missing player ID', 'error'); return; }
                 var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
                 if (!orgId) return;
                 var body = {};
                 if (field === 'name') {
@@ -5411,6 +5422,7 @@ function injectSortingAndEditing(section) {
                 var teamId = tr.getAttribute('data-id');
                 if (!teamId) { toast('Cannot update: missing team ID', 'error'); return; }
                 var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
                 if (!orgId) return;
                 api('PATCH', '/api/organizations/' + orgId + '/teams/' + teamId, { name: newVal })
                     .then(function() { toast('Team updated'); })
@@ -5446,6 +5458,7 @@ function formatTimeAgo(isoStr) {
 // ===================================================================
 async function showPlayerDetail(playerId) {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId || !playerId) return;
 
     openModal('Player Details', '<div style="text-align:center;padding:24px;"><div class="spinner" style="width:32px;height:32px;margin:0 auto;"></div><p class="text-muted">Loading player data...</p></div>', '');
@@ -5709,6 +5722,7 @@ async function loadPrograms(orgId) {
 
 function showCreateProgramModal() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) { toast('Select an organization first', 'warning'); return; }
     openModal('Create Training Program',
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
@@ -5726,6 +5740,7 @@ function showCreateProgramModal() {
 
 async function createProgram() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     try {
         await api('POST', '/api/organizations/' + orgId + '/training-programs', {
             template_name: document.getElementById('prog-name').value,
@@ -5742,6 +5757,7 @@ async function createProgram() {
 
 function showAIGenerateProgramModal() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) { toast('Select an organization first', 'warning'); return; }
     openModal('AI Generate Program',
         '<p style="margin-bottom:12px;color:#666;">Create a program first, then use AI to generate the weekly plan. Optionally assign a player so AI can tailor exercises to their evaluation data.</p>' +
@@ -5757,6 +5773,7 @@ function showAIGenerateProgramModal() {
 
 async function aiGenerateProgram() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     showLoading();
     try {
         var prog = await api('POST', '/api/organizations/' + orgId + '/training-programs', {
@@ -5886,6 +5903,7 @@ async function sendMessage() {
 
 function showCreateThreadModal() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) { toast('Select an organization first', 'warning'); return; }
     openModal('Create Thread',
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
@@ -5898,6 +5916,7 @@ function showCreateThreadModal() {
 
 async function createThread() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     try {
         await api('POST', '/api/organizations/' + orgId + '/threads', {
             title: document.getElementById('thread-title').value,
@@ -6041,6 +6060,7 @@ async function loadAutomations(orgId) {
 
 function showCreateAutomationModal() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) { toast('Select an organization first', 'warning'); return; }
     openModal('Create Automation Rule',
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
@@ -6067,6 +6087,7 @@ function showCreateAutomationModal() {
 
 async function createAutomation() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     try {
         await api('POST', '/api/organizations/' + orgId + '/automations', {
             name: document.getElementById('auto-name').value,
@@ -6093,6 +6114,7 @@ async function testAutomation(ruleId) {
 
 function showTriggerEventModal() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) { toast('Select an organization first', 'warning'); return; }
     openModal('Trigger Event',
         '<p style="color:#666;margin-bottom:12px;">Manually fire an event to test matching automation rules.</p>' +
@@ -6110,6 +6132,7 @@ function showTriggerEventModal() {
 
 async function triggerEvent() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     try {
         var result = await api('POST', '/api/organizations/' + orgId + '/automations/trigger', {
             event: document.getElementById('trigger-event').value,
@@ -6185,6 +6208,7 @@ async function loadBookings(orgId) {
 
 function showCreateSlotModal() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) { toast('Select an organization first', 'warning'); return; }
     openModal('Create Bookable Slot',
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
@@ -6204,6 +6228,7 @@ function showCreateSlotModal() {
 
 async function createSlot() {
     var orgId = getSelectedOrg();
+    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     try {
         await api('POST', '/api/organizations/' + orgId + '/bookings/slots', {
             title: document.getElementById('slot-title').value,
