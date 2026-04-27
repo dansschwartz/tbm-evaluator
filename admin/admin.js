@@ -1412,7 +1412,7 @@ async function loadPlayers(orgId) {
         var query = [];
         if (activeFilter) query.push('active=' + activeFilter);
         if (ageFilter) query.push('age_group=' + encodeURIComponent(ageFilter));
-        if (query.length) params = '' + query.join('&');
+        if (query.length) params = '?' + query.join('&');
 
         cachedPlayers = await api('GET', '/api/organizations/' + orgId + '/players' + params);
         renderPlayers(cachedPlayers);
