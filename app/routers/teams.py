@@ -37,7 +37,18 @@ async def list_teams(org_id: uuid.UUID, season_id: uuid.UUID = None, program_id:
     if program_id:
         query = query.where(Team.program_id == program_id)
     result = await db.execute(query.order_by(Team.name))
-    return [TeamResponse.model_validate(t) for t in result.scalars().all()]
+    teams = result.scalars().all()
+    
+    # Add roster count for each team
+    team_dicts = []
+    for t in teams:
+        td = TeamResponse.model_validate(t).model_dump()
+        count = (await db.execute(
+            select(func.count()).select_from(TeamRoster).where(TeamRoster.team_id == t.id)
+        )).scalar() or 0
+        td['roster_count'] = count
+        team_dicts.append(td)
+    return team_dicts
 
 
 @router.get("/api/organizations/{org_id}/teams/{team_id}", response_model=TeamResponse)
