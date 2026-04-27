@@ -244,6 +244,7 @@ function navigateTo(section) {
     document.getElementById('page-title').textContent = SECTION_TITLES[section] || section;
 
     var orgId = getSelectedOrg();
+    try { // Catch errors in individual tab loading
 
     if (section === 'overview') loadOverview(orgId);
     else if (section === 'organizations') loadOrganizations();
@@ -266,6 +267,7 @@ function navigateTo(section) {
     else if (section === 'ops-import') loadOpsImport(orgId);
     else if (section === 'settings') { document.getElementById('settings-api-key').value = CONFIG.adminKey; document.getElementById('settings-api-url').value = CONFIG.apiBase; }
     else if (section === 'ops-ai') { /* AI assistant is static but needs org context */ }
+    } catch(tabErr) { console.error('Tab load error:', section, tabErr); }
     // Tier 2 feature sections
     else if (section === 't2-programs') loadPrograms(orgId);
     else if (section === 't2-messages') loadMessages(orgId);
@@ -1407,8 +1409,8 @@ async function loadPlayers(orgId) {
 
     try {
         var params = '';
-        var activeFilter = document.getElementById('player-active-filter').value;
-        var ageFilter = document.getElementById('player-age-filter').value;
+        var activeFilter = (document.getElementById('player-active-filter') || {}).value || '';
+        var ageFilter = (document.getElementById('player-age-filter') || {}).value || '';
         var query = [];
         if (activeFilter) query.push('active=' + activeFilter);
         if (ageFilter) query.push('age_group=' + encodeURIComponent(ageFilter));
