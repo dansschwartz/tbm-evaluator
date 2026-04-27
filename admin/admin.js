@@ -2247,14 +2247,63 @@ async function loadOpsSeasons(orgId) {
 }
 
 // --- Teams ---
+var _teamsCache = [];
+var _evaluatorsCache = [];
+var _currentTeamDetail = null;
+
+var TEAM_LEVEL_GROUPS = [
+    { key: 'RECREATIONAL', label: 'Recreational', levels: ['Recreational'], defaultOpen: true },
+    { key: 'PRE_TRAVEL', label: 'Pre-Travel', levels: ['Pre-Travel'], defaultOpen: true },
+    { key: 'COMPETITIVE', label: 'Competitive', levels: ['Blue', 'Red', 'White', 'Select', 'Travel'], defaultOpen: true },
+    { key: 'ACADEMY', label: 'Academy', levels: ['Academy'], defaultOpen: true },
+    { key: 'CAMPS', label: 'Camps', levels: ['Camp'], defaultOpen: true },
+    { key: 'HISTORICAL', label: 'Historical', levels: ['Fall'], defaultOpen: false },
+];
+
+var LEVEL_COLORS = {
+    'Recreational': '#22c55e', 'Pre-Travel': '#3b82f6', 'Blue': '#3b82f6', 'Red': '#3b82f6',
+    'White': '#3b82f6', 'Select': '#5484A4', 'Travel': '#3b82f6', 'Academy': '#F6C992',
+    'Camp': '#FA6E82', 'Fall': '#8c99a9'
+};
+
+function getLevelColor(level) { return LEVEL_COLORS[level] || '#5a6a7e'; }
+
+function getLevelBadgeHtml(level) {
+    var c = getLevelColor(level);
+    return '<span class="team-level-badge" style="background:' + c + '15;color:' + c + ';border:1px solid ' + c + '30;">' + esc(level || 'Unknown') + '</span>';
+}
+
+function getCoachName(team) {
+    if (!team.head_coach_id) return null;
+    var coach = _evaluatorsCache.find(function(e) { return e.id === team.head_coach_id; });
+    return coach ? coach.name : null;
+}
+
+function getRosterCount(team) {
+    if (team.roster && Array.isArray(team.roster)) return team.roster.length;
+    if (team.roster_count != null) return team.roster_count;
+    return 0;
+}
+
+function getPracticeInfo(team) {
+    if (team.practice_day && team.practice_time) {
+        return esc(team.practice_day) + ' ' + esc(team.practice_time);
+    }
+    if (team.schedule_summary) return esc(team.schedule_summary);
+    return null;
+}
+
 async function loadOpsTeams(orgId) {
     if (!orgId) return;
     try {
-        var teams = await api('GET', '/api/organizations/' + orgId + '/teams');
-        // Fetch evaluators for coach assignment dropdown
-        var evaluators = [];
-        try { evaluators = await api('GET', '/api/organizations/' + orgId + '/evaluators'); } catch (ee) {}
+        var results = await Promise.allSettled([
+            api('GET', '/api/organizations/' + orgId + '/teams'),
+            api('GET', '/api/organizations/' + orgId + '/evaluators'),
+        ]);
+        _teamsCache = results[0].status === 'fulfilled' ? results[0].value : [];
+        _evaluatorsCache = results[1].status === 'fulfilled' ? results[1].value : [];
 
+        var teams = _teamsCache;
         var withCoach = teams.filter(function(t) { return t.head_coach_id; }).length;
         document.getElementById('teams-stats-bar').innerHTML = buildStatCards([
             { value: teams.length, label: 'Total Teams', cls: '' },
@@ -2262,26 +2311,355 @@ async function loadOpsTeams(orgId) {
             { value: teams.length - withCoach, label: 'Need Coach', cls: 'coral' },
         ]);
 
-        var tbody = document.getElementById('ops-teams-table-body');
+        var container = document.getElementById('teams-grouped-container');
         if (teams.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:32px;"><div style="color:#888;margin-bottom:12px;"><i data-lucide="users" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>No teams yet</div><button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-add-team\')&&document.getElementById(\'btn-add-team\').click()">Create Your First Team</button><p style="font-size:12px;color:#aaa;margin-top:8px;">Or use AI Form Teams to auto-generate balanced teams</p></div></td></tr>';
+            container.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;padding:32px;">' +
+                '<i data-lucide="users" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>' +
+                '<div style="color:#888;margin-bottom:12px;">No teams yet</div>' +
+                '<button class="btn btn-primary btn-sm" onclick="document.getElementById(\'btn-create-team\')&&document.getElementById(\'btn-create-team\').click()">Create Your First Team</button>' +
+                '<p style="font-size:12px;color:#aaa;margin-top:8px;">Or use AI Form Teams to auto-generate balanced teams</p>' +
+                '</div></div>';
             if (typeof lucide !== 'undefined') lucide.createIcons();
-        } else {
-            var coachOpts = '<option value="">-- Select --</option>' + evaluators.map(function(ev) {
-                return '<option value="' + ev.id + '">' + esc(ev.name) + '</option>';
-            }).join('');
-            tbody.innerHTML = teams.map(function(t) {
-                var selectedCoachOpts = coachOpts.replace('value="' + (t.head_coach_id || '') + '"', 'value="' + (t.head_coach_id || '') + '" selected');
-                return '<tr data-id="' + (t.id || '') + '"><td>' + esc(t.name) + '</td><td>' + esc(t.team_level || '-') + '</td>' +
-                    '<td>' + esc(t.program_id ? 'Assigned' : '-') + '</td>' +
-                    '<td>' + (t.head_coach_id ? '<span class="badge badge-yes">Assigned</span>' : '<span class="badge badge-no">None</span>') + '</td>' +
-                    '<td><select class="form-select form-select-sm" onchange="assignCoachToTeam(\'' + t.id + '\', this.value)" style="min-width:140px;font-size:12px;">' + selectedCoachOpts + '</select></td>' +
-                    '<td><button class="btn btn-sm btn-outline" onclick="viewRoster(\'' + t.id + '\')">Roster</button></td>' +
-                    '<td><button class="btn btn-sm btn-outline" onclick="deleteOpsItem(\'teams\',\'' + t.id + '\')">Delete</button></td></tr>';
-            }).join('');
+            return;
         }
+
+        // Group teams by level
+        var grouped = {};
+        teams.forEach(function(t) {
+            var lvl = t.team_level || 'Unknown';
+            var groupKey = 'OTHER';
+            TEAM_LEVEL_GROUPS.forEach(function(g) {
+                if (g.levels.indexOf(lvl) !== -1) groupKey = g.key;
+            });
+            if (!grouped[groupKey]) grouped[groupKey] = [];
+            grouped[groupKey].push(t);
+        });
+
+        // If there are ungrouped teams, add an OTHER group
+        var allGroups = TEAM_LEVEL_GROUPS.slice();
+        if (grouped['OTHER'] && grouped['OTHER'].length > 0) {
+            allGroups.push({ key: 'OTHER', label: 'Other', levels: [], defaultOpen: true });
+        }
+
+        var html = '';
+        allGroups.forEach(function(g) {
+            var groupTeams = grouped[g.key];
+            if (!groupTeams || groupTeams.length === 0) return;
+            var isOpen = g.defaultOpen;
+            html += '<div class="team-group card" data-group="' + g.key + '">' +
+                '<div class="team-group-header" onclick="toggleTeamGroup(this)">' +
+                    '<div style="display:flex;align-items:center;gap:10px;">' +
+                        '<i data-lucide="' + (isOpen ? 'chevron-down' : 'chevron-right') + '" class="team-group-chevron" style="width:18px;height:18px;color:var(--text-secondary);transition:transform 0.2s;"></i>' +
+                        '<span class="team-group-label">' + esc(g.label) + '</span>' +
+                        '<span class="team-group-count">' + groupTeams.length + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="team-group-body" style="' + (isOpen ? '' : 'display:none;') + '">' +
+                    '<div class="team-cards-grid">';
+            groupTeams.forEach(function(t) {
+                var coachName = getCoachName(t);
+                var rosterCount = getRosterCount(t);
+                var practiceInfo = getPracticeInfo(t);
+                html += '<div class="team-card" onclick="openTeamDetail(\'' + t.id + '\')">' +
+                    '<div class="team-card-top">' +
+                        '<div class="team-card-name">' + esc(t.name) + '</div>' +
+                        getLevelBadgeHtml(t.team_level) +
+                    '</div>' +
+                    '<div class="team-card-info">' +
+                        '<div class="team-card-row"><i data-lucide="user" style="width:14px;height:14px;color:var(--text-muted);"></i> ' +
+                            (coachName ? esc(coachName) : '<span style="color:var(--text-muted);">No Coach</span>') + '</div>' +
+                        '<div class="team-card-row"><i data-lucide="users" style="width:14px;height:14px;color:var(--text-muted);"></i> ' + rosterCount + ' players</div>' +
+                        (practiceInfo ? '<div class="team-card-row"><i data-lucide="calendar" style="width:14px;height:14px;color:var(--text-muted);"></i> ' + practiceInfo + '</div>' : '') +
+                    '</div>' +
+                '</div>';
+            });
+            html += '</div></div></div>';
+        });
+        container.innerHTML = html;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     } catch (e) {
         toast('Error: ' + e.message, 'error');
+    }
+}
+
+function toggleTeamGroup(header) {
+    var body = header.nextElementSibling;
+    var chevron = header.querySelector('.team-group-chevron');
+    if (body.style.display === 'none') {
+        body.style.display = '';
+        if (chevron) chevron.setAttribute('data-lucide', 'chevron-down');
+    } else {
+        body.style.display = 'none';
+        if (chevron) chevron.setAttribute('data-lucide', 'chevron-right');
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function showTeamsList() {
+    document.getElementById('teams-list-view').style.display = '';
+    document.getElementById('teams-detail-view').style.display = 'none';
+    _currentTeamDetail = null;
+}
+
+function switchTeamSubtab(tab) {
+    document.querySelectorAll('.team-subtab').forEach(function(el) {
+        el.classList.toggle('active', el.getAttribute('data-subtab') === tab);
+    });
+    renderTeamSubtabContent(tab);
+}
+
+async function openTeamDetail(teamId) {
+    var team = _teamsCache.find(function(t) { return t.id === teamId; });
+    if (!team) { toast('Team not found', 'error'); return; }
+    _currentTeamDetail = team;
+
+    document.getElementById('teams-list-view').style.display = 'none';
+    document.getElementById('teams-detail-view').style.display = '';
+
+    // Header
+    var coachName = getCoachName(team);
+    var rosterCount = getRosterCount(team);
+    var maxRoster = team.max_roster_size || '--';
+    document.getElementById('team-detail-header').innerHTML =
+        '<div class="team-detail-header-card">' +
+            '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+                '<h2 style="margin:0;font-size:22px;">' + esc(team.name) + '</h2>' +
+                getLevelBadgeHtml(team.team_level) +
+                (team.season ? '<span class="badge badge-draft">' + esc(team.season) + '</span>' : '') +
+            '</div>' +
+            '<div class="team-detail-assignment" style="margin-top:12px;">' +
+                '<span><i data-lucide="clipboard-list" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Rostered: <strong>' + rosterCount + '</strong></span>' +
+                '<span style="margin-left:16px;"><i data-lucide="target" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Capacity: <strong>' + maxRoster + '</strong></span>' +
+                (coachName ? '<span style="margin-left:16px;"><i data-lucide="user" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Coach: <strong>' + esc(coachName) + '</strong></span>' : '') +
+            '</div>' +
+        '</div>';
+
+    // Reset to summary tab
+    document.querySelectorAll('.team-subtab').forEach(function(el) {
+        el.classList.toggle('active', el.getAttribute('data-subtab') === 'summary');
+    });
+    renderTeamSubtabContent('summary');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function renderTeamSubtabContent(tab) {
+    var contentEl = document.getElementById('team-subtab-content');
+    var team = _currentTeamDetail;
+    if (!team) return;
+    var orgId = getSelectedOrg();
+
+    if (tab === 'summary') {
+        contentEl.innerHTML = '<div style="text-align:center;padding:24px;"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
+        var rosterCount = getRosterCount(team);
+        var coachName = getCoachName(team);
+
+        // Fetch schedules and competition data
+        var schedules = [], standings = [];
+        try {
+            var sRes = await Promise.allSettled([
+                api('GET', '/api/organizations/' + orgId + '/schedules'),
+                api('GET', '/api/organizations/' + orgId + '/competition/standings'),
+            ]);
+            schedules = sRes[0].status === 'fulfilled' ? sRes[0].value : [];
+            standings = sRes[1].status === 'fulfilled' ? sRes[1].value : [];
+        } catch (_) {}
+
+        // Filter schedules for this team
+        var teamSchedules = (Array.isArray(schedules) ? schedules : []).filter(function(s) {
+            return s.team_id === team.id;
+        });
+        var upcoming = teamSchedules.filter(function(s) {
+            return new Date(s.date || s.event_date) >= new Date();
+        }).sort(function(a, b) {
+            return new Date(a.date || a.event_date) - new Date(b.date || b.event_date);
+        }).slice(0, 3);
+
+        // Find game results for this team
+        var teamStandings = (Array.isArray(standings) ? standings : []).filter(function(s) {
+            return s.team_id === team.id || (s.team_name && s.team_name === team.name);
+        });
+        var wins = 0, losses = 0, draws = 0;
+        teamStandings.forEach(function(s) {
+            wins += (s.wins || 0); losses += (s.losses || 0); draws += (s.draws || 0);
+        });
+
+        // Attendance rate placeholder
+        var attendanceRate = team.attendance_rate != null ? Math.round(team.attendance_rate) + '%' : '--';
+        var avgScore = team.avg_score != null ? team.avg_score.toFixed(1) : '--';
+
+        var html = '<div class="team-summary-grid">' +
+            '<div class="team-summary-stat"><div class="team-summary-stat-value">' + rosterCount + '</div><div class="team-summary-stat-label">Total Players</div></div>' +
+            '<div class="team-summary-stat"><div class="team-summary-stat-value">' + attendanceRate + '</div><div class="team-summary-stat-label">Attendance Rate</div></div>' +
+            '<div class="team-summary-stat"><div class="team-summary-stat-value">' + avgScore + '</div><div class="team-summary-stat-label">Avg Score</div></div>' +
+            '<div class="team-summary-stat"><div class="team-summary-stat-value">' + wins + '-' + losses + '-' + draws + '</div><div class="team-summary-stat-label">W-L-D</div></div>' +
+        '</div>';
+
+        // Upcoming events
+        html += '<div class="card" style="margin-bottom:16px;"><div class="card-header"><h3><i data-lucide="calendar" style="width:15px;height:15px;display:inline;vertical-align:middle;margin-right:6px;"></i>Upcoming Events</h3></div><div class="card-body">';
+        if (upcoming.length === 0) {
+            html += '<p class="text-muted">No upcoming events scheduled.</p>';
+        } else {
+            upcoming.forEach(function(ev) {
+                var d = new Date(ev.date || ev.event_date);
+                var dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                var timeStr = ev.time || ev.start_time || '';
+                var evType = ev.event_type || ev.type || 'Event';
+                var loc = ev.field_name || ev.location || '';
+                html += '<div class="team-event-row">' +
+                    '<span class="team-event-type badge ' + (evType.toLowerCase() === 'game' ? 'badge-game' : 'badge-practice') + '">' + esc(evType) + '</span>' +
+                    '<span class="team-event-date">' + dateStr + (timeStr ? ' ' + esc(timeStr) : '') + '</span>' +
+                    (loc ? '<span class="team-event-loc"><i data-lucide="map-pin" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> ' + esc(loc) + '</span>' : '') +
+                '</div>';
+            });
+        }
+        html += '</div></div>';
+
+        // Recent game results
+        html += '<div class="card" style="margin-bottom:16px;"><div class="card-header"><h3><i data-lucide="trophy" style="width:15px;height:15px;display:inline;vertical-align:middle;margin-right:6px;"></i>Recent Game Results</h3></div><div class="card-body">';
+        if (teamStandings.length === 0) {
+            html += '<p class="text-muted">No competition results found.</p>';
+        } else {
+            html += '<table class="data-table" style="min-width:auto;"><thead><tr><th>Competition</th><th>W</th><th>L</th><th>D</th><th>GF</th><th>GA</th></tr></thead><tbody>';
+            teamStandings.forEach(function(s) {
+                html += '<tr><td>' + esc(s.competition_name || s.league || '--') + '</td><td>' + (s.wins || 0) + '</td><td>' + (s.losses || 0) + '</td><td>' + (s.draws || 0) + '</td><td>' + (s.goals_for || 0) + '</td><td>' + (s.goals_against || 0) + '</td></tr>';
+            });
+            html += '</tbody></table>';
+        }
+        html += '</div></div>';
+
+        // Coach info
+        if (coachName) {
+            var coach = _evaluatorsCache.find(function(e) { return e.id === team.head_coach_id; });
+            html += '<div class="card"><div class="card-header"><h3><i data-lucide="user-check" style="width:15px;height:15px;display:inline;vertical-align:middle;margin-right:6px;"></i>Coach</h3></div><div class="card-body">' +
+                '<div style="display:flex;align-items:center;gap:12px;">' +
+                    '<div style="width:48px;height:48px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;">' + esc((coachName[0] || '').toUpperCase()) + '</div>' +
+                    '<div><div style="font-weight:600;font-size:15px;">' + esc(coachName) + '</div>' +
+                    (coach && coach.email ? '<div style="font-size:13px;color:var(--teal);">' + esc(coach.email) + '</div>' : '') +
+                    (coach && coach.phone ? '<div style="font-size:13px;color:var(--text-secondary);">' + esc(coach.phone) + '</div>' : '') +
+                    '</div>' +
+                '</div></div></div>';
+        }
+        contentEl.innerHTML = html;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    } else if (tab === 'roster') {
+        contentEl.innerHTML = '<div style="text-align:center;padding:24px;"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
+        var roster = [];
+        try { roster = await api('GET', '/api/teams/' + team.id + '/roster'); } catch (_) {}
+
+        var html = '<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">' +
+            '<span style="font-size:14px;color:var(--text-secondary);">' + roster.length + ' players on roster</span>' +
+            '</div>';
+
+        if (roster.length === 0) {
+            html += '<div class="card"><div class="card-body" style="text-align:center;padding:24px;">' +
+                '<i data-lucide="user-plus" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>' +
+                '<p class="text-muted">No players on this roster.</p></div></div>';
+        } else {
+            html += '<div class="team-roster-grid">';
+            roster.forEach(function(r) {
+                var score = r.overall_score != null ? r.overall_score : (r.score != null ? r.score : null);
+                var scoreHtml = score != null
+                    ? '<div class="roster-score-circle">' + (typeof score === 'number' ? score.toFixed(1) : score) + '</div>'
+                    : '<div class="roster-score-circle roster-score-na">--</div>';
+                var playerId = r.player_id || r.id || '';
+                html += '<div class="roster-player-card" onclick="showPlayerDetail(\'' + playerId + '\')">' +
+                    scoreHtml +
+                    '<div class="roster-player-info">' +
+                        '<div class="roster-player-name">' + esc(r.player_name || (r.first_name ? r.first_name + ' ' + r.last_name : '--')) + '</div>' +
+                        (r.position ? '<span class="roster-position-badge">' + esc(r.position) + '</span>' : '') +
+                    '</div>' +
+                    '<div class="roster-player-right">' +
+                        '<span class="badge badge-active">' + esc(r.status || 'Rostered') + '</span>' +
+                        (r.jersey_number ? '<span style="font-size:12px;color:var(--text-muted);">#' + r.jersey_number + '</span>' : '') +
+                    '</div>' +
+                '</div>';
+            });
+            html += '</div>';
+        }
+        contentEl.innerHTML = html;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    } else if (tab === 'schedule') {
+        contentEl.innerHTML = '<div style="text-align:center;padding:24px;"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
+        var schedules = [];
+        try { schedules = await api('GET', '/api/organizations/' + orgId + '/schedules'); } catch (_) {}
+        var teamSchedules = (Array.isArray(schedules) ? schedules : []).filter(function(s) {
+            return s.team_id === team.id;
+        }).sort(function(a, b) {
+            return new Date(a.date || a.event_date) - new Date(b.date || b.event_date);
+        });
+
+        var html = '';
+        if (teamSchedules.length === 0) {
+            html = '<div class="card"><div class="card-body" style="text-align:center;padding:24px;">' +
+                '<i data-lucide="calendar-x" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>' +
+                '<p class="text-muted">No schedule entries for this team.</p></div></div>';
+        } else {
+            html = '<div class="team-schedule-list">';
+            teamSchedules.forEach(function(s) {
+                var d = new Date(s.date || s.event_date);
+                var dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                var timeStr = s.time || s.start_time || '';
+                var endTime = s.end_time || '';
+                var evType = s.event_type || s.type || 'Event';
+                var loc = s.field_name || s.location || '';
+                var isPast = d < new Date();
+                html += '<div class="team-schedule-item' + (isPast ? ' team-schedule-past' : '') + '">' +
+                    '<div class="team-schedule-date">' +
+                        '<div class="team-schedule-day">' + d.toLocaleDateString('en-US', { weekday: 'short' }) + '</div>' +
+                        '<div class="team-schedule-daynum">' + d.getDate() + '</div>' +
+                        '<div class="team-schedule-month">' + d.toLocaleDateString('en-US', { month: 'short' }) + '</div>' +
+                    '</div>' +
+                    '<div class="team-schedule-details">' +
+                        '<span class="badge ' + (evType.toLowerCase() === 'game' ? 'badge-game' : 'badge-practice') + '">' + esc(evType) + '</span>' +
+                        '<div style="font-weight:500;margin-top:4px;">' + (timeStr ? esc(timeStr) + (endTime ? ' - ' + esc(endTime) : '') : 'Time TBD') + '</div>' +
+                        (loc ? '<div style="font-size:13px;color:var(--text-secondary);margin-top:2px;"><i data-lucide="map-pin" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> ' + esc(loc) + '</div>' : '') +
+                    '</div>' +
+                '</div>';
+            });
+            html += '</div>';
+        }
+        contentEl.innerHTML = html;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    } else if (tab === 'attendance') {
+        contentEl.innerHTML = '<div style="text-align:center;padding:24px;"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
+        var stats = [];
+        try { stats = await api('GET', '/api/organizations/' + orgId + '/teams/' + team.id + '/attendance-stats'); } catch (_) {}
+
+        var html = '';
+        if (!stats || (Array.isArray(stats) && stats.length === 0)) {
+            html = '<div class="card"><div class="card-body" style="text-align:center;padding:24px;">' +
+                '<i data-lucide="clipboard-check" style="width:32px;height:32px;display:block;margin:0 auto 8px;color:#ACC0D3;"></i>' +
+                '<p class="text-muted">No attendance data available.</p></div></div>';
+        } else {
+            var playerStats = Array.isArray(stats) ? stats : (stats.players || []);
+            if (stats.summary) {
+                html += '<div class="team-summary-grid" style="margin-bottom:16px;">' +
+                    '<div class="team-summary-stat"><div class="team-summary-stat-value">' + (stats.summary.total_sessions || '--') + '</div><div class="team-summary-stat-label">Total Sessions</div></div>' +
+                    '<div class="team-summary-stat"><div class="team-summary-stat-value">' + (stats.summary.avg_attendance != null ? Math.round(stats.summary.avg_attendance) + '%' : '--') + '</div><div class="team-summary-stat-label">Avg Attendance</div></div>' +
+                '</div>';
+            }
+            if (playerStats.length > 0) {
+                html += '<div class="card"><div class="card-header"><h3>Per-Player Attendance</h3></div><div class="card-body">';
+                playerStats.sort(function(a, b) { return (b.attendance_pct || 0) - (a.attendance_pct || 0); });
+                playerStats.forEach(function(p) {
+                    var pct = p.attendance_pct != null ? Math.round(p.attendance_pct) : 0;
+                    var barColor = pct >= 80 ? '#22c55e' : (pct >= 50 ? '#F6C992' : '#FA6E82');
+                    html += '<div class="attendance-player-row">' +
+                        '<span class="attendance-player-name">' + esc(p.player_name || p.name || '--') + '</span>' +
+                        '<div class="attendance-bar-wrap">' +
+                            '<div class="attendance-bar" style="width:' + pct + '%;background:' + barColor + ';"></div>' +
+                        '</div>' +
+                        '<span class="attendance-pct">' + pct + '%</span>' +
+                    '</div>';
+                });
+                html += '</div></div>';
+            }
+        }
+        contentEl.innerHTML = html;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
 
@@ -5413,22 +5791,7 @@ function injectSortingAndEditing(section) {
             }
         );
     }
-    if (section === 'ops-teams') {
-        enableTableSorting('ops-teams-table', [5]); // exclude Actions
-        enableInlineEdit('ops-teams-table-body',
-            [{ index: 0, field: 'name' }],
-            function(tr, field, newVal) {
-                var teamId = tr.getAttribute('data-id');
-                if (!teamId) { toast('Cannot update: missing team ID', 'error'); return; }
-                var orgId = getSelectedOrg();
-    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
-                if (!orgId) return;
-                api('PATCH', '/api/organizations/' + orgId + '/teams/' + teamId, { name: newVal })
-                    .then(function() { toast('Team updated'); })
-                    .catch(function(e) { toast('Update failed: ' + e.message, 'error'); });
-            }
-        );
-    }
+    // ops-teams uses card-based UI — no table sorting/inline edit needed
     if (section === 'ops-schedule') enableTableSorting('schedule-table', [6]);
     if (section === 'intel-competition') enableTableSorting('standings-table');
     if (section === 'ops-attendance') enableTableSorting('attendance-table');

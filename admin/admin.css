@@ -1308,3 +1308,183 @@ path.leaflet-interactive:focus {
     width: 14px !important;
     height: 14px !important;
 }
+
+/* ===== Teams Redesign ===== */
+
+/* Group sections */
+.team-group { margin-bottom: 12px; overflow: hidden; }
+.team-group-header {
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid var(--border-light);
+    transition: background var(--transition);
+}
+.team-group-header:hover { background: var(--bg); }
+.team-group-label { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text); }
+.team-group-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 24px; height: 22px; padding: 0 7px;
+    border-radius: 12px; background: var(--teal); color: #fff;
+    font-size: 12px; font-weight: 600;
+}
+.team-group-body { padding: 16px 20px; }
+
+/* Team cards grid */
+.team-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+}
+.team-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.team-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+.team-card-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+}
+.team-card-name { font-size: 16px; font-weight: 700; color: var(--text); }
+.team-card-info { display: flex; flex-direction: column; gap: 6px; }
+.team-card-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--text-secondary);
+}
+
+/* Level badges */
+.team-level-badge {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 20px; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.3px; white-space: nowrap;
+}
+
+/* Team detail header */
+.team-detail-header-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+}
+.team-detail-assignment {
+    font-size: 14px; color: var(--text-secondary);
+}
+
+/* Sub-tabs */
+.team-subtabs {
+    display: flex; gap: 0; border-bottom: 2px solid var(--border-light);
+    margin-bottom: 20px;
+}
+.team-subtab {
+    padding: 10px 20px; font-size: 14px; font-weight: 500;
+    color: var(--text-secondary); background: none; border: none;
+    cursor: pointer; position: relative;
+    transition: color var(--transition);
+}
+.team-subtab:hover { color: var(--text); }
+.team-subtab.active {
+    color: var(--teal); font-weight: 600;
+}
+.team-subtab.active::after {
+    content: ''; position: absolute; bottom: -2px; left: 0; right: 0;
+    height: 2px; background: var(--teal); border-radius: 2px 2px 0 0;
+}
+
+/* Summary stats row */
+.team-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+}
+.team-summary-stat {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px; text-align: center;
+    border-top: 3px solid var(--teal);
+}
+.team-summary-stat-value { font-size: 24px; font-weight: 700; color: var(--text); }
+.team-summary-stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+/* Event rows */
+.team-event-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border-light);
+}
+.team-event-row:last-child { border-bottom: none; }
+.team-event-date { font-size: 14px; font-weight: 500; color: var(--text); }
+.team-event-loc { font-size: 13px; color: var(--text-secondary); }
+.badge-practice { background: #e0f5f0; color: #0a7a6e; }
+.badge-game { background: #e8f0fe; color: #3b82f6; }
+
+/* Roster player cards */
+.team-roster-grid { display: flex; flex-direction: column; gap: 8px; }
+.roster-player-card {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 16px;
+    cursor: pointer; transition: box-shadow 0.2s, transform 0.2s;
+}
+.roster-player-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+.roster-score-circle {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--teal); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0;
+}
+.roster-score-na { background: var(--border); color: var(--text-muted); }
+.roster-player-info { flex: 1; min-width: 0; }
+.roster-player-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.roster-position-badge {
+    display: inline-block; margin-top: 4px;
+    padding: 2px 8px; border-radius: 4px;
+    background: var(--bg); font-size: 11px;
+    font-weight: 500; color: var(--text-secondary);
+}
+.roster-player-right {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+}
+
+/* Schedule list */
+.team-schedule-list { display: flex; flex-direction: column; gap: 8px; }
+.team-schedule-item {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 16px;
+}
+.team-schedule-past { opacity: 0.5; }
+.team-schedule-date {
+    text-align: center; min-width: 52px;
+    padding: 6px; border-radius: var(--radius-sm);
+    background: var(--bg);
+}
+.team-schedule-day { font-size: 10px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+.team-schedule-daynum { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1.1; }
+.team-schedule-month { font-size: 11px; color: var(--text-secondary); }
+.team-schedule-details { flex: 1; }
+
+/* Attendance bars */
+.attendance-player-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 0; border-bottom: 1px solid var(--border-light);
+}
+.attendance-player-row:last-child { border-bottom: none; }
+.attendance-player-name { width: 140px; font-size: 13px; font-weight: 500; color: var(--text); flex-shrink: 0; }
+.attendance-bar-wrap {
+    flex: 1; height: 18px; background: var(--bg);
+    border-radius: 9px; overflow: hidden;
+}
+.attendance-bar { height: 100%; border-radius: 9px; transition: width 0.4s ease; }
+.attendance-pct { width: 40px; text-align: right; font-size: 13px; font-weight: 600; color: var(--text); }

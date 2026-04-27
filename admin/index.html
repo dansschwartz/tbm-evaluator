@@ -618,28 +618,38 @@
 
                 <!-- Teams -->
                 <section class="section hidden" id="section-ops-teams">
-                    <div class="section-toolbar">
-                        <h2>Teams</h2>
-                        <div class="toolbar-actions">
-                            <select class="form-select form-select-sm" id="teams-season-filter">
-                                <option value="">All Seasons</option>
-                            </select>
-                            <button class="btn btn-primary" id="btn-create-team">+ New Team</button>
-                            <button class="btn btn-secondary" id="btn-ai-form-teams"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Form Teams</button>
-                            <button class="btn btn-secondary" id="btn-ai-roster-suggest"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Suggest Roster Changes</button>
+                    <!-- Team List View -->
+                    <div id="teams-list-view">
+                        <div class="section-toolbar">
+                            <h2>Teams</h2>
+                            <div class="toolbar-actions">
+                                <select class="form-select form-select-sm" id="teams-season-filter">
+                                    <option value="">All Seasons</option>
+                                </select>
+                                <button class="btn btn-primary" id="btn-create-team">+ New Team</button>
+                                <button class="btn btn-secondary" id="btn-ai-form-teams"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Form Teams</button>
+                                <button class="btn btn-secondary" id="btn-ai-roster-suggest"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:2px;"></i> AI Suggest Roster Changes</button>
+                            </div>
                         </div>
+                        <div class="stats-grid" id="teams-stats-bar"></div>
+                        <div id="ai-teams-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:#e8f2f2;border-left:4px solid #09A1A1;"></div></div>
+                        <div id="teams-grouped-container"></div>
                     </div>
-                    <div class="stats-grid" id="teams-stats-bar"></div>
-                    <div id="ai-teams-result" style="display:none;margin-bottom:16px;" class="card"><div class="card-body" style="background:#e8f2f2;border-left:4px solid #09A1A1;"></div></div>
-                    <div class="card">
-                        <div class="card-body">
-                            <table class="data-table" id="ops-teams-table">
-                                <thead>
-                                    <tr><th>Name</th><th>Level</th><th>Program</th><th>Head Coach</th><th>Assign Coach</th><th>Roster</th><th>Actions</th></tr>
-                                </thead>
-                                <tbody id="ops-teams-table-body"></tbody>
-                            </table>
+                    <!-- Team Detail View -->
+                    <div id="teams-detail-view" style="display:none;">
+                        <div style="margin-bottom:16px;">
+                            <button class="btn btn-outline btn-sm" id="btn-back-to-teams" onclick="showTeamsList()">
+                                <i data-lucide="arrow-left" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Back to Teams
+                            </button>
                         </div>
+                        <div id="team-detail-header"></div>
+                        <div class="team-subtabs" id="team-subtabs">
+                            <button class="team-subtab active" data-subtab="summary" onclick="switchTeamSubtab('summary')">Summary</button>
+                            <button class="team-subtab" data-subtab="roster" onclick="switchTeamSubtab('roster')">Roster</button>
+                            <button class="team-subtab" data-subtab="schedule" onclick="switchTeamSubtab('schedule')">Schedule</button>
+                            <button class="team-subtab" data-subtab="attendance" onclick="switchTeamSubtab('attendance')">Attendance</button>
+                        </div>
+                        <div id="team-subtab-content"></div>
                     </div>
                 </section>
 
