@@ -6234,7 +6234,14 @@ async function cancelBooking(bookingId) {
     try {
         console.log('TBM Admin: Initializing...');
         await loadOrgSelector();
-        console.log('TBM Admin: Org selector loaded');
+        // If org selector is still empty, auth probably failed — retry
+        var sel = document.getElementById('global-org-select');
+        if (!sel || sel.options.length === 0) {
+            console.log('TBM Admin: Org selector empty, retrying auth...');
+            promptAdminKey();
+            await loadOrgSelector();
+        }
+        console.log('TBM Admin: Org selector loaded, options:', sel ? sel.options.length : 0);
         // Hide all sections first, then show players
         document.querySelectorAll('.section').forEach(function(s) { s.classList.add('hidden'); });
         navigateTo('players'); document.getElementById('page-title').textContent = 'Players';
