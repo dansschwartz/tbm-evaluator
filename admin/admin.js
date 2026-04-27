@@ -86,21 +86,24 @@ function renderMd(text) {
     return '<div style="font-size:14px;line-height:1.6;color:#333;"><p style="margin:8px 0;">' + s + '</p></div>';
 }
 
-(function initKey() {
-    if (!CONFIG.adminKey) {
-        promptAdminKey();
-    }
-})();
-
+// Admin key initialization
 function promptAdminKey() {
-    var key = prompt('Enter your Admin API Key:');
-    while (!key || !key.trim()) {
-        key = prompt('Admin API Key is required to use this dashboard:');
-        if (key === null) break; // User hit cancel
-    }
+    var key = prompt('Enter Admin API Key:');
     if (key && key.trim()) {
         CONFIG.adminKey = key.trim();
+        return true;
     }
+    return false;
+}
+
+// Test if current key works
+async function testAdminKey() {
+    try {
+        var resp = await fetch(CONFIG.apiBase + '/api/organizations', {
+            headers: {'X-Admin-Key': CONFIG.adminKey, 'Content-Type': 'application/json'}
+        });
+        return resp.ok;
+    } catch(e) { return false; }
 }
 
 // ---- API CACHE (Performance Optimization) ----
@@ -6233,14 +6236,19 @@ async function cancelBooking(bookingId) {
 (async function init() {
     try {
         console.log('TBM Admin: Initializing...');
-        await loadOrgSelector();
-        // If org selector is still empty, auth probably failed — retry
-        var sel = document.getElementById('global-org-select');
-        if (!sel || sel.options.length === 0) {
-            console.log('TBM Admin: Org selector empty, retrying auth...');
+        
+        // Test if stored key works, prompt if not
+        if (!CONFIG.adminKey || !(await testAdminKey())) {
+            CONFIG.adminKey = '';
             promptAdminKey();
-            await loadOrgSelector();
         }
+        // Still no good key? Try once more
+        if (!CONFIG.adminKey || !(await testAdminKey())) {
+            promptAdminKey();
+        }
+        
+        await loadOrgSelector();
+        var sel = document.getElementById('global-org-select');
         console.log('TBM Admin: Org selector loaded, options:', sel ? sel.options.length : 0);
         // Hide all sections first, then show players
         document.querySelectorAll('.section').forEach(function(s) { s.classList.add('hidden'); });
