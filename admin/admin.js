@@ -6444,3 +6444,44 @@ setInterval(function() {
     setTimeout(bindGroups, 500);
     setTimeout(bindGroups, 1500);
 })();
+
+
+// Floating AI Chat Widget
+function toggleAIChat() {
+    var win = document.getElementById('ai-chat-window');
+    if (win.style.display === 'none' || !win.style.display) {
+        win.style.display = 'flex';
+        document.getElementById('ai-chat-input').focus();
+    } else {
+        win.style.display = 'none';
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function sendAIChat() {
+    var input = document.getElementById('ai-chat-input');
+    var msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    
+    var messages = document.getElementById('ai-chat-messages');
+    
+    // Add user message
+    messages.innerHTML += '<div style="background:#09A1A1;color:#fff;padding:10px 14px;border-radius:10px;border-bottom-right-radius:4px;font-size:13px;max-width:85%;align-self:flex-end;">' + msg.replace(/</g,'&lt;') + '</div>';
+    messages.scrollTop = messages.scrollHeight;
+    
+    // Add typing indicator
+    messages.innerHTML += '<div id="ai-typing" style="background:#e8ecf0;padding:10px 14px;border-radius:10px;border-bottom-left-radius:4px;font-size:13px;color:#888;max-width:85%;">Thinking...</div>';
+    messages.scrollTop = messages.scrollHeight;
+    
+    try {
+        var orgId = getSelectedOrg();
+        var result = await api("POST", "/api/organizations/" + orgId + "/ai/ask", {question: msg});
+        document.getElementById("ai-typing").remove();
+        messages.innerHTML += '<div style="background:#e8f2f2;padding:10px 14px;border-radius:10px;border-bottom-left-radius:4px;font-size:13px;color:#333;max-width:85%;">' + renderMd(result.answer || 'No response.') + '</div>';
+    } catch(e) {
+        document.getElementById("ai-typing").remove();
+        messages.innerHTML += '<div style="background:#fde8e8;padding:10px 14px;border-radius:10px;border-bottom-left-radius:4px;font-size:13px;color:#FA6E82;max-width:85%;">Error: ' + (e.message || 'Something went wrong') + '</div>';
+    }
+    messages.scrollTop = messages.scrollHeight;
+}
