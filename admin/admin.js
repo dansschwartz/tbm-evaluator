@@ -211,7 +211,7 @@ document.getElementById('modal-overlay').addEventListener('click', function(e) {
 // ---- NAVIGATION ----
 const navItems = document.querySelectorAll('.nav-item');
 const sections = ['overview', 'organizations', 'templates', 'events', 'players', 'reports', 'draft', 'analytics',
-    'ops-overview', 'ops-seasons', 'ops-teams', 'ops-fields', 'ops-schedule', 'ops-coaches', 'ops-comms', 'ops-attendance', 'ops-documents', 'ops-import', 'ops-ai',
+    'ops-overview', 'ops-seasons', 'ops-teams', 'ops-fields', 'ops-schedule', 'ops-coaches', 'ops-comms', 'ops-attendance', 'ops-documents', 'ops-chatbot', 'ops-import', 'ops-ai',
     't2-programs', 't2-messages', 't2-videos', 't2-automations', 't2-bookings',
     'intel-health', 'intel-assessment', 'intel-development', 'intel-competition', 'intel-compliance', 'settings'];
 
@@ -221,7 +221,7 @@ const SECTION_TITLES = {
     'ops-overview': 'Operations Dashboard', 'ops-seasons': 'Seasons & Programs', 'ops-teams': 'Teams',
     'ops-fields': 'Fields & Facilities', 'ops-schedule': 'Schedule', 'ops-coaches': 'Coaches & Staff',
     'ops-comms': 'Communications', 'ops-attendance': 'Attendance', 'ops-documents': 'Documents',
-    'ops-import': 'PlayMetrics Import', 'ops-ai': 'AI Assistant', 'settings': 'Settings',
+    'ops-chatbot': 'Chatbot Insights', 'ops-import': 'PlayMetrics Import', 'ops-ai': 'AI Assistant', 'settings': 'Settings',
     't2-programs': 'Training Programs', 't2-messages': 'Messages', 't2-videos': 'Videos',
     't2-automations': 'Automations', 't2-bookings': 'Bookings',
     'intel-health': 'Club Intelligence', 'intel-assessment': 'Best Practices',
@@ -264,6 +264,7 @@ function navigateTo(section) {
     else if (section === 'ops-comms') _safe(function(){ loadOpsComms(orgId); loadMessages(orgId); loadNotifications(); });
     else if (section === 'ops-attendance') _safe(function(){ loadOpsAttendance(orgId); });
     else if (section === 'ops-documents') _safe(function(){ loadOpsDocuments(orgId); });
+    else if (section === 'ops-chatbot') _safe(function(){ loadChatbotInsights(orgId); });
     else if (section === 'ops-import') _safe(function(){ loadOpsImport(orgId); });
     else if (section === 'settings') { document.getElementById('settings-api-key').value = CONFIG.adminKey; document.getElementById('settings-api-url').value = CONFIG.apiBase; }
     else if (section === 'ops-ai') { /* AI assistant is static but needs org context */ }
@@ -7515,4 +7516,274 @@ async function runMatchupGenerator() {
         toast('Error: ' + (err.message || 'Failed to generate'), 'error');
     }
     if (btn) { btn.disabled = false; btn.textContent = 'Generate'; }
+}
+
+// =====================================================================
+// CHATBOT INSIGHTS MODULE
+// =====================================================================
+var _chatbotConversations = [];
+
+async function loadChatbotInsights(orgId) {
+    if (!orgId) return;
+    var days = document.getElementById('chatbot-filter-days').value || 30;
+    // Load stats, conversations, and unanswered in parallel
+    var statsP = api('GET', '/api/organizations/' + orgId + '/chatbot/stats').catch(function(e) { return null; });
+    var convosP = api('GET', '/api/organizations/' + orgId + '/chatbot/conversations?days=' + days).catch(function(e) { return null; });
+    var gapsP = api('GET', '/api/organizations/' + orgId + '/chatbot/unanswered').catch(function(e) { return null; });
+
+    var tbody = document.getElementById('chatbot-conversations-body');
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">Loading conversations...</td></tr>';
+
+    try {
+        var results = await Promise.all([statsP, convosP, gapsP]);
+        var stats = results[0];
+        var convos = results[1];
+        var gaps = results[2];
+
+        // Render stats
+        if (stats) {
+            document.getElementById('chatbot-stat-total').textContent = stats.total_conversations || 0;
+            var resRate = stats.resolution_rate;
+            document.getElementById('chatbot-stat-resolution').textContent = (typeof resRate === 'number') ? resRate + '%' : (resRate || '—');
+            var avgSent = stats.avg_sentiment || 'neutral';
+            var sentIcon = avgSent === 'positive' ? '😊' : avgSent === 'negative' ? '😟' : '😐';
+            document.getElementById('chatbot-stat-sentiment').textContent = sentIcon + ' ' + avgSent;
+            document.getElementById('chatbot-stat-unanswered').textContent = stats.unanswered_count || 0;
+        }
+
+        // Store and render conversations
+        _chatbotConversations = (convos && convos.conversations) ? convos.conversations : [];
+        renderChatbotConversations(_chatbotConversations);
+
+        // Render content gaps
+        if (gaps && gaps.clusters) {
+            renderChatbotContentGaps(gaps.clusters);
+        }
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--coral);">Chatbot API not configured. Set CHATBOT_API_URL and CHATBOT_ADMIN_KEY in environment variables.</td></tr>';
+    }
+    try { lucide.createIcons(); } catch(e) {}
+}
+
+function renderChatbotConversations(conversations) {
+    var tbody = document.getElementById('chatbot-conversations-body');
+    if (!conversations || conversations.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No conversations found.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = conversations.map(function(c) {
+        var dt = c.created_at || c.timestamp || '';
+        var dateStr = '';
+        if (dt) {
+            try { var d = new Date(dt); dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); } catch(e) { dateStr = dt; }
+        }
+        var name = c.visitor_name || 'Anonymous';
+        var msgCount = c.message_count || 0;
+
+        // Duration
+        var durSec = c.duration_seconds || 0;
+        var durStr = durSec < 60 ? durSec + 's' : Math.round(durSec / 60) + ' min';
+
+        // Topic pills
+        var topics = (c.topic_tags || []).map(function(t) {
+            var colors = {registration:'#09A1A1',schedule:'#5484A4',fees:'#F6C992',uniforms:'#9b59b6',tryouts:'#e67e22',coaching:'#2ecc71',fields:'#3498db',weather:'#e74c3c',volunteer:'#1abc9c',contact:'#FA6E82',refund:'#e74c3c'};
+            var bg = colors[t] || '#95a5a6';
+            return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;color:#fff;background:' + bg + ';margin-right:3px;">' + t + '</span>';
+        }).join('');
+
+        // Sentiment icon
+        var sentMap = {positive:'<span style="color:#2ecc71;font-size:18px;" title="Positive">😊</span>', negative:'<span style="color:var(--coral);font-size:18px;" title="Negative">😟</span>', neutral:'<span style="color:#95a5a6;font-size:18px;" title="Neutral">😐</span>'};
+        var sentHtml = sentMap[c.sentiment] || sentMap.neutral;
+
+        // Resolved
+        var resolvedHtml = c.resolved
+            ? '<span style="color:#2ecc71;" title="Resolved"><i data-lucide="check-circle" style="width:18px;height:18px;"></i></span>'
+            : '<span style="color:var(--coral);" title="Unresolved"><i data-lucide="x-circle" style="width:18px;height:18px;"></i></span>';
+
+        return '<tr style="cursor:pointer;" onclick="showChatbotConversation(\'' + (c.id || '') + '\')">'
+            + '<td style="white-space:nowrap;font-size:12px;">' + dateStr + '</td>'
+            + '<td>' + name + '</td>'
+            + '<td style="text-align:center;">' + msgCount + '</td>'
+            + '<td style="text-align:center;">' + durStr + '</td>'
+            + '<td>' + topics + '</td>'
+            + '<td style="text-align:center;">' + sentHtml + '</td>'
+            + '<td style="text-align:center;">' + resolvedHtml + '</td>'
+            + '<td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showChatbotConversation(\'' + (c.id || '') + '\')">View</button></td>'
+            + '</tr>';
+    }).join('');
+    try { lucide.createIcons(); } catch(e) {}
+}
+
+function filterChatbotConversations() {
+    var sentiment = document.getElementById('chatbot-filter-sentiment').value;
+    var resolved = document.getElementById('chatbot-filter-resolved').value;
+    var search = (document.getElementById('chatbot-search').value || '').toLowerCase();
+
+    var filtered = _chatbotConversations.filter(function(c) {
+        if (sentiment && c.sentiment !== sentiment) return false;
+        if (resolved === 'yes' && !c.resolved) return false;
+        if (resolved === 'no' && c.resolved) return false;
+        if (search) {
+            var allText = (c.messages || []).map(function(m) { return m.content || ''; }).join(' ').toLowerCase();
+            var nameMatch = (c.visitor_name || '').toLowerCase().indexOf(search) >= 0;
+            if (allText.indexOf(search) < 0 && !nameMatch) return false;
+        }
+        return true;
+    });
+    renderChatbotConversations(filtered);
+}
+
+function showChatbotConversation(convId) {
+    var conv = _chatbotConversations.find(function(c) { return c.id === convId; });
+    if (!conv) { toast('Conversation not found', 'error'); return; }
+
+    var msgs = conv.messages || [];
+    var meta = '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:var(--radius);font-size:12px;">'
+        + '<div><strong>Visitor:</strong> ' + (conv.visitor_name || 'Anonymous') + '</div>'
+        + '<div><strong>Email:</strong> ' + (conv.visitor_email || '—') + '</div>'
+        + '<div><strong>Session:</strong> ' + (conv.id || '—').substring(0, 12) + '…</div>'
+        + '<div><strong>Sentiment:</strong> ' + (conv.sentiment || 'neutral') + '</div>'
+        + '<div><strong>Topics:</strong> ' + (conv.topic_tags || []).join(', ') + '</div>'
+        + '<div><strong>Resolved:</strong> ' + (conv.resolved ? 'Yes' : 'No') + '</div>'
+        + '</div>';
+
+    var bubbles = msgs.map(function(m) {
+        var isUser = m.role === 'user' || m.role === 'human';
+        var isFallback = false;
+        if (!isUser) {
+            var lower = (m.content || '').toLowerCase();
+            isFallback = ["i'm not sure","i don't have","i couldn't find","i apologize","i'm unable to","unfortunately, i don't","i don't know","please contact","reach out to"].some(function(p) { return lower.indexOf(p) >= 0; });
+        }
+        var ts = m.created_at || m.timestamp || '';
+        var timeStr = '';
+        if (ts) { try { timeStr = new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); } catch(e) {} }
+
+        var feedbackHtml = '';
+        if (m.feedback === 'positive' || m.thumbs_up) feedbackHtml = '<div style="margin-top:4px;font-size:11px;">👍 Helpful</div>';
+        if (m.feedback === 'negative' || m.thumbs_down) feedbackHtml = '<div style="margin-top:4px;font-size:11px;">👎 Not helpful</div>';
+
+        var align = isUser ? 'flex-end' : 'flex-start';
+        var bg = isUser ? 'var(--steel)' : '#f0f2f5';
+        var color = isUser ? '#fff' : 'var(--text)';
+        var border = isFallback ? 'border-left:3px solid var(--coral);' : '';
+
+        return '<div style="display:flex;justify-content:' + align + ';margin-bottom:8px;">'
+            + '<div style="max-width:75%;padding:10px 14px;border-radius:12px;background:' + bg + ';color:' + color + ';font-size:13px;line-height:1.5;' + border + '">'
+            + '<div>' + (m.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>') + '</div>'
+            + (timeStr ? '<div style="font-size:10px;opacity:0.6;margin-top:4px;">' + timeStr + '</div>' : '')
+            + feedbackHtml
+            + '</div></div>';
+    }).join('');
+
+    var html = meta + '<div style="max-height:500px;overflow-y:auto;padding:16px;background:#fafbfc;border-radius:var(--radius);">' + bubbles + '</div>';
+
+    openModal('Conversation — ' + (conv.visitor_name || 'Anonymous'), html, '<button class="btn btn-outline" onclick="closeModal()">Close</button>');
+}
+
+function renderChatbotContentGaps(clusters) {
+    var el = document.getElementById('chatbot-content-gaps');
+    if (!clusters || clusters.length === 0) {
+        el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No unanswered questions found. 🎉</p>';
+        return;
+    }
+    el.innerHTML = clusters.map(function(cl) {
+        var questions = (cl.questions || []).map(function(q) {
+            return '<div style="font-size:12px;color:var(--text-secondary);padding:3px 0;border-bottom:1px solid var(--border-light);">"' + (q.length > 80 ? q.substring(0, 80) + '…' : q) + '"</div>';
+        }).join('');
+        return '<div style="margin-bottom:12px;padding:10px;background:var(--bg);border-radius:var(--radius-sm);border-left:3px solid var(--coral);">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+            + '<strong style="font-size:13px;text-transform:capitalize;">' + cl.topic + '</strong>'
+            + '<span style="background:var(--coral);color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">' + cl.count + ' unanswered</span>'
+            + '</div>'
+            + questions
+            + '<button class="btn btn-outline btn-sm" style="margin-top:6px;font-size:11px;" disabled title="Coming soon">Add to Knowledge Base</button>'
+            + '</div>';
+    }).join('');
+}
+
+async function generateChatbotDigest(orgId) {
+    if (!orgId) return;
+    var btn = document.getElementById('chatbot-digest-btn');
+    var content = document.getElementById('chatbot-digest-content');
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;animation:spin 1s linear infinite;"></i> Generating...';
+    content.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Analyzing conversations and generating AI digest...</p>';
+
+    try {
+        var resp = await api('GET', '/api/organizations/' + orgId + '/chatbot/digest');
+        var digest = resp.digest || {};
+
+        var html = '';
+
+        // Director Brief
+        if (digest.director_brief && digest.director_brief.length) {
+            html += '<div style="margin-bottom:16px;padding:12px;background:linear-gradient(135deg,rgba(9,161,161,0.08),rgba(84,132,164,0.08));border-radius:var(--radius);border:1px solid var(--teal);">';
+            html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--teal);margin-bottom:8px;">Director Brief</div>';
+            digest.director_brief.forEach(function(bullet) {
+                var icon = '📌';
+                if (bullet.indexOf('TRENDING') === 0) icon = '📈';
+                else if (bullet.indexOf('BROKEN') === 0) icon = '🔴';
+                else if (bullet.indexOf('PRAISED') === 0) icon = '⭐';
+                else if (bullet.indexOf('ATTENTION') === 0) icon = '⚠️';
+                html += '<div style="font-size:12px;line-height:1.6;margin-bottom:4px;">' + icon + ' ' + bullet + '</div>';
+            });
+            html += '</div>';
+        }
+
+        // Top Topics
+        if (digest.top_topics && digest.top_topics.length) {
+            html += '<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Top Topics</div>';
+            digest.top_topics.forEach(function(t) {
+                var arrow = t.trend === 'up' ? '↑' : t.trend === 'down' ? '↓' : '→';
+                var arrowColor = t.trend === 'up' ? '#2ecc71' : t.trend === 'down' ? 'var(--coral)' : '#95a5a6';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:12px;">'
+                    + '<span style="text-transform:capitalize;">' + t.topic + '</span>'
+                    + '<span><strong>' + t.count + '</strong> <span style="color:' + arrowColor + ';font-weight:700;">' + arrow + ' ' + (t.delta_pct || 0) + '%</span></span>'
+                    + '</div>';
+            });
+            html += '</div>';
+        }
+
+        // Sentiment Summary
+        if (digest.sentiment_summary) {
+            var ss = digest.sentiment_summary;
+            html += '<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Sentiment</div>';
+            html += '<div style="display:flex;gap:8px;font-size:12px;">'
+                + '<span style="color:#2ecc71;">😊 ' + (ss.positive_pct || 0) + '%</span>'
+                + '<span style="color:#95a5a6;">😐 ' + (ss.neutral_pct || 0) + '%</span>'
+                + '<span style="color:var(--coral);">😟 ' + (ss.negative_pct || 0) + '%</span>'
+                + '<span style="margin-left:auto;font-size:11px;color:var(--text-muted);">Trend: ' + (ss.trend || 'stable') + '</span>'
+                + '</div></div>';
+        }
+
+        // Content Gaps
+        if (digest.content_gaps && digest.content_gaps.length) {
+            html += '<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Content Gaps</div>';
+            digest.content_gaps.forEach(function(g) {
+                html += '<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--border-light);">'
+                    + '<span style="color:var(--coral);font-weight:600;">' + g.topic + '</span> (' + g.unanswered_count + ') — '
+                    + '<span style="color:var(--text-secondary);">' + g.suggested_content + '</span></div>';
+            });
+            html += '</div>';
+        }
+
+        // Notable Quotes
+        if (digest.notable_quotes && digest.notable_quotes.length) {
+            html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Notable Quotes</div>';
+            digest.notable_quotes.forEach(function(q) {
+                html += '<div style="font-size:12px;padding:6px 10px;margin-bottom:4px;background:var(--bg);border-radius:var(--radius-sm);border-left:3px solid var(--steel);font-style:italic;">"' + q.quote + '"'
+                    + '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">' + q.sentiment + ' · ' + q.topic + '</div></div>';
+            });
+            html += '</div>';
+        }
+
+        content.innerHTML = html || '<p style="color:var(--text-muted);">No digest data available.</p>';
+        content.innerHTML += '<div style="font-size:10px;color:var(--text-muted);margin-top:8px;text-align:right;">Generated ' + new Date(resp.generated_at).toLocaleString() + ' · ' + resp.conversation_count + ' conversations analyzed</div>';
+    } catch (e) {
+        content.innerHTML = '<p style="color:var(--coral);font-size:13px;">Failed to generate digest: ' + (e.message || 'API error') + '</p>';
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Generate Digest';
+    try { lucide.createIcons(); } catch(e) {}
 }

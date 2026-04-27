@@ -169,6 +169,10 @@
                             <i data-lucide="shield-check" class="nav-icon-lucide"></i>
                             <span class="nav-label">Compliance</span>
                         </a>
+                        <a href="#" class="nav-item" data-section="ops-chatbot" style="padding-left:40px;">
+                            <i data-lucide="message-circle" class="nav-icon-lucide"></i>
+                            <span class="nav-label">Chatbot Insights</span>
+                        </a>
                         <a href="#" class="nav-item" data-section="ops-documents" style="padding-left:40px;">
                             <i data-lucide="folder-open" class="nav-icon-lucide"></i>
                             <span class="nav-label">Documents</span>
@@ -1413,6 +1417,101 @@
                         </div>
                     </div>
                 </section>
+                <!-- Chatbot Insights -->
+                <section class="section hidden" id="section-ops-chatbot">
+                    <div class="section-toolbar" style="margin-bottom:16px;">
+                        <h2>Chatbot Insights</h2>
+                        <div class="toolbar-actions" style="display:flex;gap:8px;align-items:center;">
+                            <select id="chatbot-filter-days" class="form-input" style="width:140px;" onchange="loadChatbotInsights(getSelectedOrg())">
+                                <option value="7">Last 7 days</option>
+                                <option value="30" selected>Last 30 days</option>
+                                <option value="365">All time</option>
+                            </select>
+                            <select id="chatbot-filter-sentiment" class="form-input" style="width:130px;" onchange="filterChatbotConversations()">
+                                <option value="">All Sentiment</option>
+                                <option value="positive">Positive</option>
+                                <option value="neutral">Neutral</option>
+                                <option value="negative">Negative</option>
+                            </select>
+                            <select id="chatbot-filter-resolved" class="form-input" style="width:120px;" onchange="filterChatbotConversations()">
+                                <option value="">All Status</option>
+                                <option value="yes">Resolved</option>
+                                <option value="no">Unresolved</option>
+                            </select>
+                            <input type="text" id="chatbot-search" class="form-input" style="width:200px;" placeholder="Search messages..." oninput="filterChatbotConversations()">
+                        </div>
+                    </div>
+
+                    <!-- Stats Bar -->
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;" id="chatbot-stats-bar">
+                        <div class="stat-card">
+                            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Conversations</div>
+                            <div style="font-size:28px;font-weight:700;color:var(--text);" id="chatbot-stat-total">—</div>
+                        </div>
+                        <div class="stat-card steel">
+                            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Resolution Rate</div>
+                            <div style="font-size:28px;font-weight:700;color:var(--text);" id="chatbot-stat-resolution">—</div>
+                        </div>
+                        <div class="stat-card gold">
+                            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Avg Sentiment</div>
+                            <div style="font-size:28px;font-weight:700;color:var(--text);" id="chatbot-stat-sentiment">—</div>
+                        </div>
+                        <div class="stat-card coral">
+                            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Unanswered Questions</div>
+                            <div style="font-size:28px;font-weight:700;color:var(--text);" id="chatbot-stat-unanswered">—</div>
+                        </div>
+                    </div>
+
+                    <!-- Main Grid: Conversations + Sidebar -->
+                    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
+                        <!-- Conversation Log -->
+                        <div class="card">
+                            <div class="card-header"><h3>Conversation Log</h3></div>
+                            <div class="card-body" style="padding:0;max-height:600px;overflow-y:auto;">
+                                <table class="data-table" style="margin:0;">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Visitor</th>
+                                            <th>Msgs</th>
+                                            <th>Duration</th>
+                                            <th>Topics</th>
+                                            <th>Sentiment</th>
+                                            <th>Resolved</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="chatbot-conversations-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Right Sidebar: Digest + Content Gaps -->
+                        <div>
+                            <!-- Weekly Digest -->
+                            <div class="card" style="margin-bottom:16px;">
+                                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                                    <h3>Weekly Digest</h3>
+                                    <button class="btn btn-primary btn-sm" onclick="generateChatbotDigest(getSelectedOrg())" id="chatbot-digest-btn">
+                                        <i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Generate Digest
+                                    </button>
+                                </div>
+                                <div class="card-body" id="chatbot-digest-content">
+                                    <p style="color:var(--text-muted);font-size:13px;">Click "Generate Digest" to create an AI-powered weekly summary.</p>
+                                </div>
+                            </div>
+
+                            <!-- Content Gaps -->
+                            <div class="card">
+                                <div class="card-header"><h3>Content Gaps</h3></div>
+                                <div class="card-body" id="chatbot-content-gaps">
+                                    <p style="color:var(--text-muted);font-size:13px;">Loading unanswered questions...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Settings -->
                 <section class="section hidden" id="section-settings">
                     <div style="max-width:800px;">

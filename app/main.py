@@ -18,6 +18,7 @@ from app.routers import (
     # TBM Operations modules
     imports, fields, seasons, teams, schedules, ai_ops,
     communications, coaches, attendance, ops_analytics, documents,
+    chatbot_intel,
     intelligence,
     onboarding,
     # Tier 1+2 features
@@ -67,6 +68,7 @@ app.include_router(coaches.router)
 app.include_router(attendance.router)
 app.include_router(ops_analytics.router)
 app.include_router(documents.router)
+app.include_router(chatbot_intel.router)
 
 # Intelligence & Benchmarking
 app.include_router(intelligence.router)
