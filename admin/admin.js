@@ -1887,7 +1887,7 @@ function renderDraftState(eventId, state) {
                     '</div>';
             }).join('');
 
-            return '<div class="team-card">' +
+            return '<div class="team-card team-card-item">' +
                 '<div class="team-card-header">' +
                     '<span>' + (t.team_color ? '<span class="team-color-dot" style="background:' + esc(t.team_color) + '"></span>' : '') + '<strong>' + esc(t.team_name) + '</strong></span>' +
                     '<span class="team-avg">Avg: ' + (t.avg_score ? t.avg_score.toFixed(2) : '0.00') + ' | ' + (t.picks ? t.picks.length : 0) + ' players</span>' +
@@ -2360,7 +2360,7 @@ async function loadOpsTeams(orgId) {
                 var coachName = getCoachName(t);
                 var rosterCount = getRosterCount(t);
                 var practiceInfo = getPracticeInfo(t);
-                html += '<div class="team-card" onclick="openTeamDetail(\'' + t.id + '\')">' +
+                html += '<div class="team-card team-card-item" onclick="openTeamDetail(\'' + t.id + '\')">' +
                     '<div class="team-card-top">' +
                         '<div class="team-card-name">' + esc(t.name) + '</div>' +
                         getLevelBadgeHtml(t.team_level) +
@@ -6847,4 +6847,47 @@ async function sendAIChat() {
         messages.innerHTML += '<div style="background:#fde8e8;padding:10px 14px;border-radius:10px;border-bottom-left-radius:4px;font-size:13px;color:#FA6E82;max-width:85%;">Error: ' + (e.message || 'Something went wrong') + '</div>';
     }
     messages.scrollTop = messages.scrollHeight;
+}
+
+// Team filters
+var _allTeamsCache = [];
+function filterTeams() {
+    var gender = (document.getElementById('team-filter-gender') || {}).value || '';
+    var level = (document.getElementById('team-filter-level') || {}).value || '';
+    var age = (document.getElementById('team-filter-age') || {}).value || '';
+    var search = ((document.getElementById('team-filter-search') || {}).value || '').toLowerCase();
+    
+    document.querySelectorAll('.team-card-item').forEach(function(card) {
+        var name = (card.dataset.name || '').toLowerCase();
+        var teamLevel = (card.dataset.level || '').toLowerCase();
+        var teamGender = (card.dataset.gender || '').toLowerCase();
+        
+        var show = true;
+        if (gender && !teamGender.includes(gender.toLowerCase())) show = false;
+        if (level) {
+            if (level === 'Travel') {
+                if (!['blue','red','white','select','travel'].some(function(l){ return teamLevel.includes(l); })) show = false;
+            } else if (!teamLevel.includes(level.toLowerCase())) show = false;
+        }
+        if (age && !name.includes(age.toLowerCase())) show = false;
+        if (search && !name.includes(search)) show = false;
+        
+        card.style.display = show ? '' : 'none';
+    });
+    
+    // Update group counts and hide empty groups
+    document.querySelectorAll('.team-group-section').forEach(function(group) {
+        var visible = group.querySelectorAll('.team-card-item:not([style*="display: none"])').length;
+        var countBadge = group.querySelector('.team-group-count');
+        if (countBadge) countBadge.textContent = visible;
+        group.style.display = visible > 0 ? '' : 'none';
+    });
+}
+
+function clearTeamFilters() {
+    ['team-filter-gender','team-filter-level','team-filter-age','team-filter-search'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    filterTeams();
 }
