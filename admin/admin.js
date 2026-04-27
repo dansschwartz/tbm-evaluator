@@ -335,9 +335,10 @@ async function loadOrgSelector() {
             select.appendChild(opt);
         });
         // Auto-select first org
-        if (select.options.length > 0 && !select.value) {
-            select.selectedIndex = 0;
-            select.dispatchEvent(new Event('change'));
+        if (select.options.length > 0) {
+            if (!select.value) select.selectedIndex = 0;
+            // Force trigger change to load data
+            setTimeout(function() { select.dispatchEvent(new Event('change')); }, 100);
         }
     } catch (e) {
         // silent
