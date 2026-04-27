@@ -346,8 +346,7 @@ async function loadOrgSelector() {
         // Auto-select first org
         if (select.options.length > 0) {
             if (!select.value) select.selectedIndex = 0;
-            // Force trigger change to load data
-            setTimeout(function() { select.dispatchEvent(new Event('change')); }, 100);
+            // Org selected — init will handle navigation
         }
     } catch (e) {
         console.error('loadOrgSelector error:', e);
@@ -6276,6 +6275,10 @@ async function cancelBooking(bookingId) {
         await loadOrgSelector();
         var sel = document.getElementById('global-org-select');
         console.log('TBM Admin: Org selector loaded, options:', sel ? sel.options.length : 0);
+        // Ensure org is selected before navigating
+        if (sel && sel.value) {
+            console.log('TBM Admin: Org selected:', sel.value);
+        }
         // Hide all sections first, then show players
         document.querySelectorAll('.section').forEach(function(s) { s.classList.add('hidden'); });
         navigateTo('players'); document.getElementById('page-title').textContent = 'Players';
