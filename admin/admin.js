@@ -249,7 +249,7 @@ function navigateTo(section) {
     if (section === 'overview') _safe(function(){ loadOverview(orgId); });
     else if (section === 'organizations') loadOrganizations();
     else if (section === 'templates') _safe(function(){ loadTemplates(orgId); });
-    else if (section === 'events') _safe(function(){ loadEvents(orgId); });
+    else if (section === 'events') _safe(function(){ loadEvents(orgId); loadReportsSection(orgId); loadTemplates(orgId); });
     else if (section === 'players') _safe(function(){ loadPlayers(orgId); });
     else if (section === 'reports') _safe(function(){ loadReportsSection(orgId); });
     else if (section === 'draft') _safe(function(){ loadDraftSection(orgId); });
