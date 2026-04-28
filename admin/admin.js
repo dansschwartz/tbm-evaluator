@@ -6008,9 +6008,14 @@ async function showPlayerDetail(playerId) {
                 '<h4 style="margin:0 0 8px;font-size:14px;"><i data-lucide="trending-up" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Development Path</h4>' +
                 devHtml + '</div></div>' +
                 // Documents
-                '<div class="card" style="margin-bottom:0;"><div class="card-body" style="padding:12px;">' +
+                '<div class="card" style="margin-bottom:12px;"><div class="card-body" style="padding:12px;">' +
                 '<h4 style="margin:0 0 8px;font-size:14px;"><i data-lucide="folder-open" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Documents</h4>' +
                 docHtml + '</div></div>' +
+                // Training Programs
+                '<div class="card" style="margin-bottom:0;"><div class="card-body" style="padding:12px;">' +
+                '<h4 style="margin:0 0 8px;font-size:14px;"><i data-lucide="clipboard-list" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;color:#09A1A1;"></i> Training Programs</h4>' +
+                '<div id="player-detail-programs"><p class="text-muted">Loading...</p></div>' +
+                '</div></div>' +
             '</div>' +
         '</div>';
 
@@ -6018,9 +6023,63 @@ async function showPlayerDetail(playerId) {
         document.getElementById('modal-title').textContent = 'Player Card';
         document.getElementById('modal-footer').innerHTML = '<button class="btn btn-outline" onclick="closeModal()">Close</button>';
         if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        // Load training programs for this player
+        loadPlayerDetailPrograms(playerId);
     } catch (e) {
         toast('Error loading player details: ' + (e.message || e), 'error');
         closeModal();
+    }
+}
+
+async function loadPlayerDetailPrograms(playerId) {
+    var container = document.getElementById('player-detail-programs');
+    if (!container) return;
+    try {
+        var programs = await api('GET', '/api/players/' + playerId + '/training-programs');
+        if (!programs || !programs.length) {
+            container.innerHTML = '<p class="text-muted">No training programs assigned.</p>';
+            return;
+        }
+        var phtml = '';
+        programs.forEach(function(prog) {
+            var statusColor = prog.status === 'active' ? '#2d8a5e' : prog.status === 'completed' ? '#5484A4' : '#e8b06e';
+            phtml += '<div style="padding:10px;border-radius:8px;background:#f8f9fa;border:1px solid #e8ecf0;margin-bottom:8px;">';
+            phtml += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+            phtml += '<strong style="font-size:13px;">' + esc(prog.template_name || 'Training Program') + '</strong>';
+            phtml += '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:' + statusColor + '22;color:' + statusColor + ';">' + (prog.status || 'draft') + '</span>';
+            phtml += '</div>';
+            phtml += '<div style="font-size:12px;color:#666;margin-top:2px;">' + esc(prog.sport || '') + ' · ' + esc(prog.phase_name || '') + ' · ' + (prog.duration_weeks || 0) + ' weeks';
+            if (prog.ai_generated) phtml += ' · <span style="color:#09A1A1;"><i data-lucide="sparkles" style="width:10px;height:10px;display:inline;vertical-align:middle;"></i> AI</span>';
+            phtml += '</div>';
+
+            // Show current week summary (first week with sessions)
+            if (prog.weeks && prog.weeks.length) {
+                var currentWeek = prog.weeks[0]; // Show first week as current
+                phtml += '<details style="margin-top:6px;"><summary style="font-size:12px;color:#09A1A1;cursor:pointer;font-weight:600;">Week ' + currentWeek.week_number + ': ' + esc(currentWeek.focus || 'General') + ' (' + (currentWeek.sessions ? currentWeek.sessions.length : 0) + ' sessions)</summary>';
+                phtml += '<div style="margin-top:6px;">';
+                if (currentWeek.sessions) {
+                    currentWeek.sessions.forEach(function(s) {
+                        phtml += '<div style="font-size:11px;padding:4px 8px;margin:3px 0;background:#fff;border-radius:4px;border-left:2px solid #09A1A1;">';
+                        phtml += '<strong>' + esc(s.day_of_week || '') + '</strong>';
+                        if (s.exercises && s.exercises.length) {
+                            phtml += ' — ' + s.exercises.map(function(ex) { return esc(ex.name || ''); }).join(', ');
+                        }
+                        phtml += '</div>';
+                    });
+                }
+                // Show remaining weeks collapsed
+                if (prog.weeks.length > 1) {
+                    phtml += '<div style="font-size:11px;color:#888;margin-top:4px;">+ ' + (prog.weeks.length - 1) + ' more week(s)</div>';
+                }
+                phtml += '</div></details>';
+            }
+            phtml += '</div>';
+        });
+        container.innerHTML = phtml;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    } catch(e) {
+        container.innerHTML = '<p class="text-muted">Could not load programs.</p>';
     }
 }
 
@@ -6111,8 +6170,51 @@ document.getElementById('modal-overlay').addEventListener('keydown', function(e)
 // ===================================================================
 // TIER 2: TRAINING PROGRAMS
 // ===================================================================
+// ── Category colors for exercises ──
+var CATEGORY_COLORS = {'warm-up':'#22c55e','technical':'#09A1A1','tactical':'#5484A4','physical':'#FA6E82','cool-down':'#ACC0D3'};
+var CATEGORIES = ['warm-up','technical','tactical','physical','cool-down'];
+
+// ── Preset templates ──
+var PRESET_TEMPLATES = {
+    'Pre-Season Strength': {weeks:6,phase:'Pre-Season',sport:'soccer',sessions_per_week:3,exercises:[
+        {name:'Dynamic Stretching Circuit',description:'Leg swings, arm circles, hip openers',sets:1,reps_or_duration:'10 min',intensity:'low',category:'warm-up',rest_seconds:0},
+        {name:'Passing Triangles',description:'Groups of 3, two-touch passing in triangle',sets:4,reps_or_duration:'3 min',intensity:'moderate',category:'technical',rest_seconds:60},
+        {name:'Defensive Shape Drill',description:'4v4 pressing & shifting as a unit',sets:3,reps_or_duration:'5 min',intensity:'high',category:'tactical',rest_seconds:90},
+        {name:'Box-to-Box Runs',description:'Full-field shuttle runs with ball',sets:6,reps_or_duration:'1 min',intensity:'high',category:'physical',rest_seconds:60},
+        {name:'Static Stretching',description:'Hamstrings, quads, hip flexors hold 30s each',sets:1,reps_or_duration:'10 min',intensity:'low',category:'cool-down',rest_seconds:0}
+    ]},
+    'In-Season Maintenance': {weeks:4,phase:'In-Season',sport:'soccer',sessions_per_week:3,exercises:[
+        {name:'Jog with Ball',description:'Light dribbling warm-up around pitch',sets:1,reps_or_duration:'8 min',intensity:'low',category:'warm-up',rest_seconds:0},
+        {name:'First Touch Wall Passes',description:'Receive and return against wall, alternate feet',sets:3,reps_or_duration:'2 min',intensity:'moderate',category:'technical',rest_seconds:45},
+        {name:'Small-Sided Game 4v4',description:'Possession-based game in tight space',sets:4,reps_or_duration:'4 min',intensity:'high',category:'tactical',rest_seconds:60},
+        {name:'Agility Ladder Drills',description:'In-out, lateral, icky shuffle patterns',sets:4,reps_or_duration:'30 sec',intensity:'moderate',category:'physical',rest_seconds:30},
+        {name:'Foam Rolling',description:'Calves, quads, IT band, glutes',sets:1,reps_or_duration:'8 min',intensity:'low',category:'cool-down',rest_seconds:0}
+    ]},
+    'Speed & Agility': {weeks:4,phase:'Pre-Season',sport:'soccer',sessions_per_week:3,exercises:[
+        {name:'High Knees & Butt Kicks',description:'Dynamic running drills',sets:2,reps_or_duration:'30 sec each',intensity:'moderate',category:'warm-up',rest_seconds:15},
+        {name:'Dribbling Through Cones',description:'Tight slalom dribble with inside/outside foot',sets:4,reps_or_duration:'45 sec',intensity:'moderate',category:'technical',rest_seconds:30},
+        {name:'Counter-Attack Patterns',description:'3v2 fast break finishing drills',sets:5,reps_or_duration:'2 min',intensity:'high',category:'tactical',rest_seconds:60},
+        {name:'Sprint Intervals',description:'10m, 20m, 30m sprints with walk-back recovery',sets:6,reps_or_duration:'1 rep',intensity:'max',category:'physical',rest_seconds:45},
+        {name:'Light Jog & Stretch',description:'Easy jog then full-body stretch',sets:1,reps_or_duration:'8 min',intensity:'low',category:'cool-down',rest_seconds:0}
+    ]},
+    'Technical Skills': {weeks:8,phase:'Off-Season',sport:'soccer',sessions_per_week:4,exercises:[
+        {name:'Rondo 4v1',description:'Keep-away in small circle, one touch',sets:3,reps_or_duration:'3 min',intensity:'moderate',category:'warm-up',rest_seconds:30},
+        {name:'Shooting Drills',description:'Strikes from edge of box, inside/outside foot',sets:5,reps_or_duration:'5 reps',intensity:'high',category:'technical',rest_seconds:45},
+        {name:'Juggling Challenge',description:'Keep-ups with feet, thighs, head',sets:3,reps_or_duration:'2 min',intensity:'moderate',category:'technical',rest_seconds:30},
+        {name:'Positional Play Exercise',description:'6v4 positional game maintaining shape',sets:4,reps_or_duration:'5 min',intensity:'high',category:'tactical',rest_seconds:60},
+        {name:'Core Circuit',description:'Planks, russian twists, bicycle crunches',sets:3,reps_or_duration:'12 reps',intensity:'moderate',category:'physical',rest_seconds:30},
+        {name:'Hip Flexor Stretch',description:'Kneeling hip flexor, pigeon pose',sets:1,reps_or_duration:'6 min',intensity:'low',category:'cool-down',rest_seconds:0}
+    ]},
+    'Recovery & Flexibility': {weeks:2,phase:'Post-Season',sport:'soccer',sessions_per_week:3,exercises:[
+        {name:'Light Jog',description:'Easy pace around field',sets:1,reps_or_duration:'10 min',intensity:'low',category:'warm-up',rest_seconds:0},
+        {name:'Ball Mastery Touches',description:'Soft touches, rolls, drags at walking pace',sets:2,reps_or_duration:'5 min',intensity:'low',category:'technical',rest_seconds:30},
+        {name:'Yoga Flow',description:'Sun salutations, warriors, downward dog',sets:1,reps_or_duration:'15 min',intensity:'low',category:'physical',rest_seconds:0},
+        {name:'Foam Rolling Full Body',description:'Calves, quads, IT band, back, glutes',sets:1,reps_or_duration:'10 min',intensity:'low',category:'cool-down',rest_seconds:0}
+    ]}
+};
+
 async function loadPrograms(orgId) {
-    if (!orgId) { document.getElementById('training-programs-table-body').innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;">Select an organization</td></tr>'; return; }
+    if (!orgId) { document.getElementById('training-programs-table-body').innerHTML = '<tr><td colspan="9" style="text-align:center;color:#888;">Select an organization</td></tr>'; return; }
     try {
         var programs = await api('GET', '/api/organizations/' + orgId + '/training-programs');
         var stats = document.getElementById('training-programs-stats');
@@ -6126,28 +6228,39 @@ async function loadPrograms(orgId) {
             '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#5484A4;">' + aiGen + '</div><div style="font-size:12px;color:#888;">AI Generated</div></div>' +
             '<div class="stat-card" style="background:#fff;padding:16px;border-radius:10px;border:1px solid #e8ecf0;"><div style="font-size:24px;font-weight:700;color:#e8b06e;">' + drafts + '</div><div style="font-size:12px;color:#888;">Drafts</div></div>';
         var tbody = document.getElementById('training-programs-table-body');
-        if (!programs.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;">No programs yet</td></tr>'; return; }
+        if (!programs.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#888;">No programs yet</td></tr>'; return; }
         tbody.innerHTML = programs.map(function(p) {
             var statusColor = p.status === 'active' ? '#2d8a5e' : p.status === 'completed' ? '#5484A4' : '#e8b06e';
+            var assignedCount = p.assigned_count || 0;
             return '<tr>' +
-                '<td><strong>' + (p.template_name || 'Untitled') + '</strong></td>' +
-                '<td>' + (p.sport || '-') + '</td>' +
-                '<td>' + (p.phase_name || '-') + '</td>' +
-                '<td>' + (p.duration_weeks || '-') + '</td>' +
-                '<td>' + (p.player_id ? '<span style="color:#09A1A1;">Assigned</span>' : '<span style="color:#888;">Template</span>') + '</td>' +
+                '<td><strong>' + esc(p.template_name || 'Untitled') + '</strong></td>' +
+                '<td>' + esc(p.sport || '-') + '</td>' +
+                '<td>' + esc(p.phase_name || '-') + '</td>' +
+                '<td>' + (p.duration_weeks || '-') + ' wks</td>' +
                 '<td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;background:' + statusColor + '22;color:' + statusColor + ';">' + (p.status || 'draft') + '</span></td>' +
-                '<td>' + (p.ai_generated ? '<i data-lucide="sparkles" style="width:14px;height:14px;color:#09A1A1;"></i>' : '-') + '</td>' +
-                '<td><button class="btn btn-sm btn-outline" onclick="viewProgram(\'' + p.id + '\')">View</button> <button class="btn btn-sm btn-outline" style="color:#FA6E82;border-color:#FA6E82;" onclick="deleteProgram(\'' + p.id + '\')">Delete</button></td>' +
+                '<td>' + (assignedCount > 0 ? '<span style="color:#09A1A1;font-weight:600;">' + assignedCount + ' player' + (assignedCount !== 1 ? 's' : '') + '</span>' : '<span style="color:#888;">—</span>') + '</td>' +
+                '<td>' + (p.ai_generated ? '<i data-lucide="sparkles" style="width:14px;height:14px;color:#09A1A1;"></i> <span style="font-size:11px;color:#09A1A1;">AI</span>' : '-') + '</td>' +
+                '<td style="white-space:nowrap;">' +
+                    '<button class="btn btn-sm btn-outline" onclick="viewProgram(\'' + p.id + '\')" title="View/Edit"><i data-lucide="pencil" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> Edit</button> ' +
+                    '<button class="btn btn-sm btn-outline" style="color:#09A1A1;border-color:#09A1A1;" onclick="showAssignProgramModal(\'' + p.id + '\')" title="Assign"><i data-lucide="user-plus" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i></button> ' +
+                    '<button class="btn btn-sm btn-outline" style="color:#FA6E82;border-color:#FA6E82;" onclick="deleteProgram(\'' + p.id + '\')" title="Delete"><i data-lucide="trash-2" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i></button>' +
+                '</td>' +
                 '</tr>';
         }).join('');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     } catch(e) { console.error('Load programs error:', e); }
 }
 
 function showCreateProgramModal() {
     var orgId = getSelectedOrg();
-    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) { toast('Select an organization first', 'warning'); return; }
+    var templateOpts = '<option value="">— Blank Program —</option>';
+    Object.keys(PRESET_TEMPLATES).forEach(function(k) {
+        var t = PRESET_TEMPLATES[k];
+        templateOpts += '<option value="' + k + '">' + k + ' (' + t.weeks + ' wks)</option>';
+    });
     openModal('Create Training Program',
+        '<div style="margin-bottom:12px;"><label style="font-weight:600;font-size:13px;">Create from Template</label><select id="prog-template" class="form-select" onchange="fillProgramTemplate()">' + templateOpts + '</select></div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
         '<div><label style="font-weight:600;font-size:13px;">Program Name</label><input type="text" id="prog-name" class="form-input" placeholder="e.g. Pre-Season Strength"></div>' +
         '<div><label style="font-weight:600;font-size:13px;">Sport</label><input type="text" id="prog-sport" class="form-input" value="soccer"></div>' +
@@ -6161,18 +6274,47 @@ function showCreateProgramModal() {
     );
 }
 
+function fillProgramTemplate() {
+    var sel = document.getElementById('prog-template').value;
+    if (!sel || !PRESET_TEMPLATES[sel]) return;
+    var t = PRESET_TEMPLATES[sel];
+    document.getElementById('prog-name').value = sel;
+    document.getElementById('prog-sport').value = t.sport;
+    document.getElementById('prog-weeks').value = t.weeks;
+    // Set phase dropdown
+    var phaseSelect = document.getElementById('prog-phase');
+    for (var i = 0; i < phaseSelect.options.length; i++) {
+        if (phaseSelect.options[i].value === t.phase || phaseSelect.options[i].text === t.phase) { phaseSelect.selectedIndex = i; break; }
+    }
+}
+
 async function createProgram() {
     var orgId = getSelectedOrg();
-    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     try {
+        var templateKey = document.getElementById('prog-template') ? document.getElementById('prog-template').value : '';
+        var weeks = parseInt(document.getElementById('prog-weeks').value) || 4;
+        var weeksData = [];
+        if (templateKey && PRESET_TEMPLATES[templateKey]) {
+            var tmpl = PRESET_TEMPLATES[templateKey];
+            var days = ['Monday','Wednesday','Friday','Saturday'];
+            for (var wi = 1; wi <= weeks; wi++) {
+                var sessionsForWeek = [];
+                var sessCount = tmpl.sessions_per_week || 3;
+                for (var si = 0; si < sessCount && si < days.length; si++) {
+                    sessionsForWeek.push({day_of_week: days[si], session_type: 'training', exercises: JSON.parse(JSON.stringify(tmpl.exercises))});
+                }
+                weeksData.push({week_number: wi, focus: 'Week ' + wi + ' — ' + templateKey, notes: '', sessions: sessionsForWeek});
+            }
+        }
         await api('POST', '/api/organizations/' + orgId + '/training-programs', {
             template_name: document.getElementById('prog-name').value,
             sport: document.getElementById('prog-sport').value,
             phase_name: document.getElementById('prog-phase').value,
-            duration_weeks: parseInt(document.getElementById('prog-weeks').value) || 4,
+            duration_weeks: weeks,
             created_by: document.getElementById('prog-creator').value,
             status: document.getElementById('prog-status').value,
             notes: document.getElementById('prog-notes').value,
+            weeks: weeksData,
         });
         closeModal(); toast('Program created!'); loadPrograms(orgId);
     } catch(e) { toast('Error: ' + e.message, 'error'); }
@@ -6180,79 +6322,293 @@ async function createProgram() {
 
 function showAIGenerateProgramModal() {
     var orgId = getSelectedOrg();
-    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     if (!orgId) { toast('Select an organization first', 'warning'); return; }
     openModal('AI Generate Program',
-        '<p style="margin-bottom:12px;color:#666;">Create a program first, then use AI to generate the weekly plan. Optionally assign a player so AI can tailor exercises to their evaluation data.</p>' +
+        '<p style="margin-bottom:12px;color:#666;">AI will generate a complete multi-week program with real soccer exercises, categorized by warm-up, technical, tactical, physical, and cool-down.</p>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
         '<div><label style="font-weight:600;font-size:13px;">Program Name</label><input type="text" id="aiprog-name" class="form-input" value="AI Training Plan"></div>' +
         '<div><label style="font-weight:600;font-size:13px;">Sport</label><input type="text" id="aiprog-sport" class="form-input" value="soccer"></div>' +
-        '<div><label style="font-weight:600;font-size:13px;">Phase</label><select id="aiprog-phase" class="form-select"><option>Pre-Season</option><option>Off-Season</option><option>In-Season</option></select></div>' +
-        '<div><label style="font-weight:600;font-size:13px;">Weeks</label><input type="number" id="aiprog-weeks" class="form-input" value="4"></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Phase</label><select id="aiprog-phase" class="form-select"><option>Pre-Season</option><option>Off-Season</option><option>In-Season</option><option>Post-Season</option></select></div>' +
+        '<div><label style="font-weight:600;font-size:13px;">Weeks (4-8)</label><input type="number" id="aiprog-weeks" class="form-input" value="6" min="4" max="8"></div>' +
         '</div>',
         '<button class="btn btn-primary" onclick="aiGenerateProgram()"><i data-lucide="sparkles" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:4px;"></i> Generate with AI</button>'
     );
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function aiGenerateProgram() {
     var orgId = getSelectedOrg();
-    function _safe(fn) { try { fn(); } catch(e) { console.error('Tab error:', e); } }
     showLoading();
     try {
         var prog = await api('POST', '/api/organizations/' + orgId + '/training-programs', {
             template_name: document.getElementById('aiprog-name').value,
             sport: document.getElementById('aiprog-sport').value,
             phase_name: document.getElementById('aiprog-phase').value,
-            duration_weeks: parseInt(document.getElementById('aiprog-weeks').value) || 4,
+            duration_weeks: parseInt(document.getElementById('aiprog-weeks').value) || 6,
             status: 'draft',
         });
         var result = await api('POST', '/api/training-programs/' + prog.id + '/ai-generate');
         closeModal(); hideLoading(); toast('AI program generated with ' + (result.weeks ? result.weeks.length : 0) + ' weeks!');
         loadPrograms(orgId);
+        viewProgram(prog.id);
     } catch(e) { hideLoading(); toast('AI generation error: ' + e.message, 'error'); }
 }
+
+// ── Current editor state ──
+var _editingProgram = null;
+var _editingWeekIdx = 0;
 
 async function viewProgram(progId) {
     try {
         var p = await api('GET', '/api/training-programs/' + progId);
-        var html = '<div class="card" style="margin-bottom:12px;"><div class="card-header"><h3>' + (p.template_name || 'Program') + ' — ' + (p.phase_name || '') + ' (' + (p.duration_weeks || 0) + ' weeks)</h3></div><div class="card-body">';
-        if (p.weeks && p.weeks.length) {
-            p.weeks.forEach(function(w) {
-                html += '<div style="margin-bottom:16px;padding:12px;background:#f8f9fa;border-radius:8px;border-left:4px solid #09A1A1;">';
-                html += '<h4 style="margin:0 0 8px;color:#333;">Week ' + w.week_number + ': ' + (w.focus || 'General') + '</h4>';
-                if (w.notes) html += '<p style="color:#666;font-size:13px;margin:0 0 8px;">' + w.notes + '</p>';
-                if (w.sessions && w.sessions.length) {
-                    w.sessions.forEach(function(s) {
-                        html += '<div style="margin:8px 0;padding:8px 12px;background:#fff;border-radius:6px;border:1px solid #e8ecf0;">';
-                        html += '<strong style="color:#5484A4;">' + (s.day_of_week || 'TBD') + '</strong> — <span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#09A1A122;color:#09A1A1;">' + (s.session_type || 'general') + '</span>';
-                        if (s.exercises && s.exercises.length) {
-                            html += '<ul style="margin:4px 0 0 16px;font-size:13px;">';
-                            s.exercises.forEach(function(ex) {
-                                html += '<li><strong>' + (ex.name || 'Exercise') + '</strong>';
-                                if (ex.sets) html += ' — ' + ex.sets + ' x ' + (ex.reps || '');
-                                if (ex.intensity) html += ' @ ' + ex.intensity;
-                                if (ex.notes) html += ' <span style="color:#888;">(' + ex.notes + ')</span>';
-                                html += '</li>';
-                            });
-                            html += '</ul>';
-                        }
-                        html += '</div>';
-                    });
-                }
+        _editingProgram = p;
+        _editingWeekIdx = 0;
+        renderProgramEditor();
+    } catch(e) { toast('Error loading program: ' + e.message, 'error'); }
+}
+
+function renderProgramEditor() {
+    var p = _editingProgram;
+    if (!p) return;
+    var panel = document.getElementById('program-detail-panel');
+    panel.style.display = 'block';
+
+    // Assigned players
+    var assignedHtml = '';
+    if (p.assigned_players && p.assigned_players.length) {
+        assignedHtml = '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">';
+        p.assigned_players.forEach(function(ap) {
+            assignedHtml += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:600;background:#09A1A122;color:#09A1A1;"><i data-lucide="user" style="width:10px;height:10px;display:inline;"></i> ' + esc(ap.name) + '</span>';
+        });
+        assignedHtml += '</div>';
+    }
+
+    // Header (editable)
+    var html = '<div class="card" style="margin-bottom:12px;">' +
+        '<div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">' +
+            '<h3 style="margin:0;"><i data-lucide="clipboard-list" style="width:18px;height:18px;display:inline;vertical-align:middle;margin-right:6px;color:#09A1A1;"></i> Program Editor</h3>' +
+            '<div style="display:flex;gap:6px;">' +
+                '<button class="btn btn-sm btn-outline" style="color:#09A1A1;border-color:#09A1A1;" onclick="showAssignProgramModal(\'' + p.id + '\')"><i data-lucide="user-plus" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:3px;"></i> Assign</button>' +
+                '<button class="btn btn-sm btn-primary" onclick="saveProgramEdits()"><i data-lucide="save" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:3px;"></i> Save Program</button>' +
+                '<button class="btn btn-sm btn-outline" onclick="document.getElementById(\'program-detail-panel\').style.display=\'none\'">Close</button>' +
+            '</div>' +
+        '</div>' +
+        '<div class="card-body" style="padding:16px;">' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px;">' +
+                '<div><label style="font-weight:600;font-size:11px;color:#888;">NAME</label><input type="text" id="edit-prog-name" class="form-input" value="' + esc(p.template_name || '') + '" style="font-size:13px;"></div>' +
+                '<div><label style="font-weight:600;font-size:11px;color:#888;">SPORT</label><input type="text" id="edit-prog-sport" class="form-input" value="' + esc(p.sport || 'soccer') + '" style="font-size:13px;"></div>' +
+                '<div><label style="font-weight:600;font-size:11px;color:#888;">PHASE</label><select id="edit-prog-phase" class="form-select" style="font-size:13px;"><option' + (p.phase_name==='Off-Season'?' selected':'') + '>Off-Season</option><option' + (p.phase_name==='Pre-Season'?' selected':'') + '>Pre-Season</option><option' + (p.phase_name==='In-Season'?' selected':'') + '>In-Season</option><option' + (p.phase_name==='Post-Season'?' selected':'') + '>Post-Season</option></select></div>' +
+                '<div><label style="font-weight:600;font-size:11px;color:#888;">WEEKS</label><input type="number" id="edit-prog-weeks" class="form-input" value="' + (p.duration_weeks || 4) + '" style="font-size:13px;" readonly></div>' +
+                '<div><label style="font-weight:600;font-size:11px;color:#888;">STATUS</label><select id="edit-prog-status" class="form-select" style="font-size:13px;"><option value="draft"' + (p.status==='draft'?' selected':'') + '>Draft</option><option value="active"' + (p.status==='active'?' selected':'') + '>Active</option><option value="completed"' + (p.status==='completed'?' selected':'') + '>Completed</option></select></div>' +
+            '</div>' +
+            assignedHtml;
+
+    // Week tabs
+    var weeks = p.weeks || [];
+    if (weeks.length) {
+        html += '<div style="display:flex;gap:4px;margin:16px 0 12px;flex-wrap:wrap;">';
+        weeks.forEach(function(w, wi) {
+            var isActive = wi === _editingWeekIdx;
+            html += '<button class="btn btn-sm ' + (isActive ? 'btn-primary' : 'btn-outline') + '" onclick="_editingWeekIdx=' + wi + ';renderProgramEditor();" style="' + (isActive ? '' : 'color:#5484A4;border-color:#e8ecf0;') + '">Week ' + w.week_number + '</button>';
+        });
+        html += '<button class="btn btn-sm btn-outline" onclick="addWeekToProgram()" style="color:#22c55e;border-color:#22c55e;"><i data-lucide="plus" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> Add Week</button>';
+        html += '</div>';
+
+        // Current week
+        if (_editingWeekIdx < weeks.length) {
+            var week = weeks[_editingWeekIdx];
+            html += '<div style="background:#f8f9fa;border-radius:10px;padding:12px;border:1px solid #e8ecf0;">';
+            html += '<div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;">';
+            html += '<input type="text" class="form-input" value="' + esc(week.focus || '') + '" placeholder="Week focus (e.g. Foundation)" oninput="_editingProgram.weeks[' + _editingWeekIdx + '].focus=this.value" style="flex:1;font-size:13px;font-weight:600;">';
+            html += '<input type="text" class="form-input" value="' + esc(week.notes || '') + '" placeholder="Week notes" oninput="_editingProgram.weeks[' + _editingWeekIdx + '].notes=this.value" style="flex:1;font-size:13px;">';
+            html += '</div>';
+
+            // Sessions
+            var sessions = week.sessions || [];
+            sessions.forEach(function(sess, si) {
+                html += '<div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid #e8ecf0;">';
+                html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
+                html += '<select class="form-select" style="width:130px;font-size:13px;font-weight:600;" onchange="_editingProgram.weeks[' + _editingWeekIdx + '].sessions[' + si + '].day_of_week=this.value">';
+                ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].forEach(function(d) {
+                    html += '<option' + (sess.day_of_week === d ? ' selected' : '') + '>' + d + '</option>';
+                });
+                html += '</select>';
+                html += '<select class="form-select" style="width:120px;font-size:12px;" onchange="_editingProgram.weeks[' + _editingWeekIdx + '].sessions[' + si + '].session_type=this.value">';
+                ['technical','tactical','physical','recovery','match-prep','training'].forEach(function(st) {
+                    html += '<option' + (sess.session_type === st ? ' selected' : '') + '>' + st + '</option>';
+                });
+                html += '</select>';
+                html += '<div style="flex:1;"></div>';
+                html += '<button class="btn btn-xs btn-outline" style="color:#FA6E82;border-color:#FA6E82;font-size:11px;" onclick="removeSession(' + _editingWeekIdx + ',' + si + ')"><i data-lucide="x" style="width:10px;height:10px;display:inline;vertical-align:middle;"></i></button>';
+                html += '</div>';
+
+                // Exercises
+                var exercises = sess.exercises || [];
+                exercises.forEach(function(ex, ei) {
+                    var catColor = CATEGORY_COLORS[ex.category] || '#888';
+                    html += '<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:6px;padding:6px 8px;border-radius:6px;border-left:3px solid ' + catColor + ';background:#fafbfc;">';
+                    html += '<div style="flex:2;"><input type="text" class="form-input" value="' + esc(ex.name || '') + '" placeholder="Exercise name" oninput="_editingProgram.weeks[' + _editingWeekIdx + '].sessions[' + si + '].exercises[' + ei + '].name=this.value" style="font-size:12px;font-weight:600;padding:4px 6px;"></div>';
+                    html += '<div style="flex:2;"><textarea class="form-input" rows="2" placeholder="Description" oninput="_editingProgram.weeks[' + _editingWeekIdx + '].sessions[' + si + '].exercises[' + ei + '].description=this.value" style="font-size:11px;padding:4px 6px;resize:none;">' + esc(ex.description || '') + '</textarea></div>';
+                    html += '<div style="flex:0 0 80px;"><input type="text" class="form-input" value="' + esc((ex.sets || '') + 'x' + (ex.reps_or_duration || ex.reps || '')) + '" placeholder="3x10" oninput="parseExSetsReps(' + _editingWeekIdx + ',' + si + ',' + ei + ',this.value)" style="font-size:11px;padding:4px 6px;" title="Sets x Reps/Duration"></div>';
+                    html += '<div style="flex:0 0 90px;"><select class="form-select" style="font-size:11px;padding:4px 4px;" onchange="_editingProgram.weeks[' + _editingWeekIdx + '].sessions[' + si + '].exercises[' + ei + '].category=this.value;renderProgramEditor();">';
+                    CATEGORIES.forEach(function(c) { html += '<option value="' + c + '"' + (ex.category === c ? ' selected' : '') + '>' + c + '</option>'; });
+                    html += '</select></div>';
+                    html += '<button class="btn btn-xs" style="color:#FA6E82;padding:2px 4px;background:none;border:none;" onclick="removeExercise(' + _editingWeekIdx + ',' + si + ',' + ei + ')" title="Delete exercise"><i data-lucide="x" style="width:10px;height:10px;display:inline;"></i></button>';
+                    html += '</div>';
+                });
+                html += '<button class="btn btn-xs btn-outline" style="color:#09A1A1;border-color:#09A1A122;font-size:11px;margin-top:4px;" onclick="addExercise(' + _editingWeekIdx + ',' + si + ')"><i data-lucide="plus" style="width:10px;height:10px;display:inline;vertical-align:middle;"></i> Add Exercise</button>';
                 html += '</div>';
             });
-        } else {
-            html += '<p style="color:#888;">No weeks defined. Use AI Generate to create a training plan.</p>';
+            html += '<button class="btn btn-sm btn-outline" style="color:#5484A4;border-color:#5484A422;margin-top:6px;" onclick="addSession(' + _editingWeekIdx + ')"><i data-lucide="plus" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:3px;"></i> Add Session</button>';
+            html += '</div>';
         }
-        html += '</div></div>';
-        document.getElementById('program-detail-panel').innerHTML = html;
-        document.getElementById('program-detail-panel').style.display = 'block';
-    } catch(e) { toast('Error loading program: ' + e.message, 'error'); }
+    } else {
+        html += '<p style="color:#888;margin-top:12px;">No weeks defined. <button class="btn btn-sm btn-outline" style="color:#22c55e;border-color:#22c55e;" onclick="addWeekToProgram()"><i data-lucide="plus" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> Add Week</button></p>';
+    }
+
+    html += '</div></div>';
+    panel.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function parseExSetsReps(wi, si, ei, val) {
+    var ex = _editingProgram.weeks[wi].sessions[si].exercises[ei];
+    var parts = val.split('x');
+    if (parts.length === 2) {
+        ex.sets = parseInt(parts[0]) || 1;
+        ex.reps_or_duration = parts[1].trim();
+    } else {
+        ex.reps_or_duration = val;
+    }
+}
+
+function addWeekToProgram() {
+    if (!_editingProgram) return;
+    if (!_editingProgram.weeks) _editingProgram.weeks = [];
+    var nextNum = _editingProgram.weeks.length + 1;
+    _editingProgram.weeks.push({week_number: nextNum, focus: '', notes: '', sessions: [{day_of_week:'Monday',session_type:'training',exercises:[]}]});
+    _editingWeekIdx = _editingProgram.weeks.length - 1;
+    renderProgramEditor();
+}
+
+function addSession(wi) {
+    if (!_editingProgram || !_editingProgram.weeks[wi]) return;
+    var days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    var usedDays = (_editingProgram.weeks[wi].sessions || []).map(function(s){return s.day_of_week;});
+    var nextDay = days.find(function(d){return usedDays.indexOf(d)===-1;}) || 'Monday';
+    _editingProgram.weeks[wi].sessions.push({day_of_week:nextDay,session_type:'training',exercises:[]});
+    renderProgramEditor();
+}
+
+function removeSession(wi, si) {
+    if (!_editingProgram || !_editingProgram.weeks[wi]) return;
+    _editingProgram.weeks[wi].sessions.splice(si, 1);
+    renderProgramEditor();
+}
+
+function addExercise(wi, si) {
+    if (!_editingProgram || !_editingProgram.weeks[wi] || !_editingProgram.weeks[wi].sessions[si]) return;
+    _editingProgram.weeks[wi].sessions[si].exercises.push({name:'',description:'',sets:3,reps_or_duration:'10',intensity:'moderate',category:'technical',rest_seconds:60});
+    renderProgramEditor();
+}
+
+function removeExercise(wi, si, ei) {
+    if (!_editingProgram || !_editingProgram.weeks[wi] || !_editingProgram.weeks[wi].sessions[si]) return;
+    _editingProgram.weeks[wi].sessions[si].exercises.splice(ei, 1);
+    renderProgramEditor();
+}
+
+async function saveProgramEdits() {
+    if (!_editingProgram) return;
+    showLoading();
+    try {
+        var payload = {
+            template_name: document.getElementById('edit-prog-name').value,
+            sport: document.getElementById('edit-prog-sport').value,
+            phase_name: document.getElementById('edit-prog-phase').value,
+            status: document.getElementById('edit-prog-status').value,
+            weeks: (_editingProgram.weeks || []).map(function(w) {
+                return {
+                    week_number: w.week_number,
+                    focus: w.focus || '',
+                    notes: w.notes || '',
+                    sessions: (w.sessions || []).map(function(s) {
+                        return {
+                            day_of_week: s.day_of_week,
+                            session_type: s.session_type,
+                            exercises: (s.exercises || []).map(function(ex) {
+                                return {name:ex.name||'',description:ex.description||'',sets:ex.sets||1,reps_or_duration:ex.reps_or_duration||ex.reps||'',intensity:ex.intensity||'moderate',category:ex.category||'technical',rest_seconds:ex.rest_seconds||0};
+                            }),
+                        };
+                    }),
+                };
+            }),
+        };
+        var updated = await api('PATCH', '/api/training-programs/' + _editingProgram.id, payload);
+        _editingProgram = updated;
+        hideLoading();
+        toast('Program saved!');
+        loadPrograms(getSelectedOrg());
+        renderProgramEditor();
+    } catch(e) { hideLoading(); toast('Save error: ' + e.message, 'error'); }
+}
+
+// ── Assign to Player Modal ──
+async function showAssignProgramModal(progId) {
+    var orgId = getSelectedOrg();
+    if (!orgId) { toast('Select an organization first', 'warning'); return; }
+    openModal('Assign Program to Players',
+        '<div style="text-align:center;padding:20px;"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>',
+        '<button class="btn btn-primary" id="btn-assign-players" onclick="assignProgramToPlayers(\'' + progId + '\')" disabled>Assign Selected</button>'
+    );
+    try {
+        var players = await api('GET', '/api/organizations/' + orgId + '/players');
+        if (!players || !players.length) {
+            document.getElementById('modal-body').innerHTML = '<p style="text-align:center;color:#888;">No players found in this organization.</p>';
+            return;
+        }
+        var html = '<div style="margin-bottom:10px;"><input type="text" id="assign-player-search" class="form-input" placeholder="Search players..." oninput="filterAssignPlayers()" style="width:100%;"></div>';
+        html += '<div id="assign-player-list" style="max-height:340px;overflow-y:auto;">';
+        players.forEach(function(pl) {
+            var name = (pl.first_name || '') + ' ' + (pl.last_name || '');
+            html += '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;border-bottom:1px solid #f0f0f0;" class="assign-player-row" data-name="' + esc(name.toLowerCase()) + '">' +
+                '<input type="checkbox" value="' + pl.id + '" class="assign-player-cb" style="width:16px;height:16px;accent-color:#09A1A1;">' +
+                '<div style="flex:1;"><strong style="font-size:13px;">' + esc(name) + '</strong><div style="font-size:11px;color:#888;">' + esc(pl.position || '') + ' · ' + esc(pl.age_group || '') + '</div></div>' +
+            '</label>';
+        });
+        html += '</div>';
+        document.getElementById('modal-body').innerHTML = html;
+        document.getElementById('btn-assign-players').disabled = false;
+    } catch(e) { toast('Error loading players: ' + e.message, 'error'); }
+}
+
+function filterAssignPlayers() {
+    var q = (document.getElementById('assign-player-search').value || '').toLowerCase();
+    var rows = document.querySelectorAll('.assign-player-row');
+    rows.forEach(function(row) {
+        row.style.display = row.getAttribute('data-name').indexOf(q) >= 0 ? '' : 'none';
+    });
+}
+
+async function assignProgramToPlayers(progId) {
+    var cbs = document.querySelectorAll('.assign-player-cb:checked');
+    if (!cbs.length) { toast('Select at least one player', 'warning'); return; }
+    var ids = [];
+    cbs.forEach(function(cb) { ids.push(cb.value); });
+    showLoading();
+    try {
+        var result = await api('POST', '/api/training-programs/' + progId + '/assign', {player_ids: ids});
+        hideLoading();
+        closeModal();
+        toast('Assigned to ' + (result.assigned || ids.length) + ' player(s)!');
+        loadPrograms(getSelectedOrg());
+        if (_editingProgram && _editingProgram.id === progId) viewProgram(progId);
+    } catch(e) { hideLoading(); toast('Assign error: ' + e.message, 'error'); }
 }
 
 async function deleteProgram(progId) {
     if (!confirm('Delete this program?')) return;
-    try { await api('DELETE', '/api/training-programs/' + progId); toast('Deleted'); loadPrograms(getSelectedOrg()); } catch(e) { toast(e.message, 'error'); }
+    try { await api('DELETE', '/api/training-programs/' + progId); toast('Deleted'); document.getElementById('program-detail-panel').style.display = 'none'; loadPrograms(getSelectedOrg()); } catch(e) { toast(e.message, 'error'); }
 }
 
 // ===================================================================

@@ -106,7 +106,25 @@ async def list_programs(org_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
         .where(TrainingProgram.org_id == org_id)
         .order_by(TrainingProgram.created_at.desc())
     )
-    return [_program_dict(p) for p in result.scalars().all()]
+    programs = result.scalars().all()
+    items = []
+    for p in programs:
+        d = _program_dict(p)
+        # Count how many player-assigned clones share this template name
+        if not p.player_id and p.template_name:
+            count_result = await db.execute(
+                select(TrainingProgram)
+                .where(
+                    TrainingProgram.org_id == org_id,
+                    TrainingProgram.template_name == p.template_name,
+                    TrainingProgram.player_id.isnot(None),
+                )
+            )
+            d["assigned_count"] = len(count_result.scalars().all())
+        else:
+            d["assigned_count"] = 1 if p.player_id else 0
+        items.append(d)
+    return items
 
 
 @router.get("/api/training-programs/{program_id}", dependencies=[Depends(verify_admin_key)])
@@ -119,20 +137,91 @@ async def get_program(program_id: uuid.UUID, db: AsyncSession = Depends(get_db))
     prog = result.scalars().first()
     if not prog:
         raise HTTPException(status_code=404, detail="Program not found")
-    return _program_dict(prog, include_weeks=True)
+    d = _program_dict(prog, include_weeks=True)
+
+    # Include assigned players list (clones sharing this template name)
+    assigned_players = []
+    if prog.template_name:
+        clones_result = await db.execute(
+            select(TrainingProgram)
+            .where(
+                TrainingProgram.org_id == prog.org_id,
+                TrainingProgram.template_name == prog.template_name,
+                TrainingProgram.player_id.isnot(None),
+            )
+        )
+        for clone in clones_result.scalars().all():
+            player = await db.get(Player, clone.player_id)
+            if player:
+                assigned_players.append({
+                    "player_id": str(player.id),
+                    "name": f"{player.first_name} {player.last_name}",
+                    "position": player.position,
+                    "age_group": player.age_group,
+                })
+    # Also include self if assigned
+    if prog.player_id:
+        player = await db.get(Player, prog.player_id)
+        if player and not any(ap["player_id"] == str(prog.player_id) for ap in assigned_players):
+            assigned_players.append({
+                "player_id": str(player.id),
+                "name": f"{player.first_name} {player.last_name}",
+                "position": player.position,
+                "age_group": player.age_group,
+            })
+    d["assigned_players"] = assigned_players
+    return d
 
 
 @router.patch("/api/training-programs/{program_id}", dependencies=[Depends(verify_admin_key)])
-async def update_program(program_id: uuid.UUID, data: dict, db: AsyncSession = Depends(get_db)):
+async def update_program(program_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db)):
+    data = await request.json()
     prog = await db.get(TrainingProgram, program_id)
     if not prog:
         raise HTTPException(status_code=404, detail="Program not found")
     for key in ("template_name", "sport", "duration_weeks", "phase_name", "status", "notes", "created_by"):
         if key in data:
             setattr(prog, key, data[key])
+
+    # If weeks data is provided, replace all weeks/sessions
+    if "weeks" in data:
+        existing_weeks = await db.execute(
+            select(ProgramWeek).where(ProgramWeek.program_id == program_id)
+        )
+        for w in existing_weeks.scalars().all():
+            await db.delete(w)
+        await db.flush()
+
+        for w_data in data["weeks"]:
+            week = ProgramWeek(
+                id=uuid.uuid4(),
+                program_id=program_id,
+                week_number=w_data.get("week_number", 1),
+                focus=w_data.get("focus"),
+                notes=w_data.get("notes"),
+            )
+            db.add(week)
+            for s_data in w_data.get("sessions", []):
+                sess = ProgramSession(
+                    id=uuid.uuid4(),
+                    week_id=week.id,
+                    day_of_week=s_data.get("day_of_week"),
+                    session_type=s_data.get("session_type"),
+                    exercises=s_data.get("exercises", []),
+                )
+                db.add(sess)
+        prog.duration_weeks = len(data["weeks"])
+
     await db.flush()
-    await db.refresh(prog)
-    return _program_dict(prog)
+
+    # Reload with weeks
+    result = await db.execute(
+        select(TrainingProgram)
+        .options(selectinload(TrainingProgram.weeks).selectinload(ProgramWeek.sessions))
+        .where(TrainingProgram.id == program_id)
+    )
+    prog = result.scalars().first()
+    return _program_dict(prog, include_weeks=True)
 
 
 @router.delete("/api/training-programs/{program_id}", dependencies=[Depends(verify_admin_key)])
@@ -157,6 +246,72 @@ async def assign_program(program_id: uuid.UUID, player_id: uuid.UUID, db: AsyncS
     await db.flush()
     await db.refresh(prog)
     return _program_dict(prog)
+
+
+@router.post("/api/training-programs/{program_id}/assign", dependencies=[Depends(verify_admin_key)])
+async def bulk_assign_program(program_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db)):
+    """Clone a program template for each player in player_ids list."""
+    data = await request.json()
+    player_ids = data.get("player_ids", [])
+    if not player_ids:
+        raise HTTPException(status_code=400, detail="No player_ids provided")
+
+    # Load source program with weeks
+    result = await db.execute(
+        select(TrainingProgram)
+        .options(selectinload(TrainingProgram.weeks).selectinload(ProgramWeek.sessions))
+        .where(TrainingProgram.id == program_id)
+    )
+    source = result.scalars().first()
+    if not source:
+        raise HTTPException(status_code=404, detail="Program not found")
+
+    cloned = []
+    for pid_str in player_ids:
+        pid = uuid.UUID(pid_str) if isinstance(pid_str, str) else pid_str
+        player = await db.get(Player, pid)
+        if not player:
+            continue
+
+        clone = TrainingProgram(
+            id=uuid.uuid4(),
+            org_id=source.org_id,
+            player_id=pid,
+            template_name=source.template_name,
+            sport=source.sport,
+            duration_weeks=source.duration_weeks,
+            phase_name=source.phase_name,
+            status="active",
+            created_by=source.created_by,
+            ai_generated=source.ai_generated,
+            notes=source.notes,
+        )
+        db.add(clone)
+
+        if hasattr(source, "weeks") and source.weeks:
+            for w in source.weeks:
+                week = ProgramWeek(
+                    id=uuid.uuid4(),
+                    program_id=clone.id,
+                    week_number=w.week_number,
+                    focus=w.focus,
+                    notes=w.notes,
+                )
+                db.add(week)
+                if hasattr(w, "sessions") and w.sessions:
+                    for s in w.sessions:
+                        sess = ProgramSession(
+                            id=uuid.uuid4(),
+                            week_id=week.id,
+                            day_of_week=s.day_of_week,
+                            session_type=s.session_type,
+                            exercises=s.exercises or [],
+                        )
+                        db.add(sess)
+        cloned.append({"id": str(clone.id), "player_id": str(pid)})
+
+    await db.flush()
+    return {"assigned": len(cloned), "programs": cloned}
 
 
 @router.get("/api/players/{player_id}/training-programs", dependencies=[Depends(verify_admin_key)])
@@ -206,6 +361,10 @@ async def ai_generate_program(program_id: uuid.UUID, db: AsyncSession = Depends(
 
     sport = prog.sport or "soccer"
     weeks = prog.duration_weeks or 4
+    if weeks < 4:
+        weeks = 4
+    if weeks > 8:
+        weeks = 8
     phase = prog.phase_name or "Pre-Season"
 
     prompt = f"""You are an expert youth {sport} training program designer.
@@ -213,11 +372,17 @@ Create a detailed {weeks}-week {phase} training program.
 
 {player_context}
 
-Design a program with specific exercises for each session. Include:
-- Technical drills (ball control, passing, shooting for soccer)
-- Tactical exercises (positioning, decision-making)
-- Physical conditioning (speed, agility, strength)
-- Recovery sessions
+IMPORTANT: Use REAL {sport} training exercises. Each session must have 4-6 exercises.
+Each exercise must include a "category" field from: warm-up, technical, tactical, physical, cool-down.
+
+Exercise examples by category:
+- warm-up: Dynamic stretching, Jog with ball, Rondo (4v1), High knees, Butt kicks, Lateral shuffles
+- technical: Passing triangles, First touch wall passes, Shooting drills (inside/outside foot), Dribbling through cones, Juggling, Volleys, Headers, 1v1 finishing
+- tactical: Small-sided games (4v4), Positional play exercises, Defensive shape drill, Pressing triggers, Overlapping runs, Counter-attack patterns, Set piece rehearsal
+- physical: Agility ladder drills, Sprint intervals (10/20/30m), Box-to-box runs, Plyometric jumps, Core circuit, Single-leg squats, Resistance band work
+- cool-down: Static stretching, Light jog, Foam rolling, Hip flexor stretch, Hamstring stretch
+
+Each session should follow this structure: 1 warm-up, 2-3 technical/tactical, 1 physical, 1 cool-down.
 
 Respond in this exact JSON format:
 {{
@@ -229,9 +394,26 @@ Respond in this exact JSON format:
             "sessions": [
                 {{
                     "day_of_week": "Monday",
-                    "session_type": "strength",
+                    "session_type": "technical",
                     "exercises": [
-                        {{"name": "Exercise Name", "sets": 3, "reps": "10", "intensity": "moderate", "notes": "Form focus"}}
+                        {{
+                            "name": "Dynamic Stretching Circuit",
+                            "description": "Leg swings, arm circles, hip openers, walking lunges",
+                            "sets": 1,
+                            "reps_or_duration": "10 min",
+                            "intensity": "low",
+                            "category": "warm-up",
+                            "rest_seconds": 0
+                        }},
+                        {{
+                            "name": "Passing Triangles",
+                            "description": "Groups of 3, two-touch passing in triangle formation, rotate positions",
+                            "sets": 4,
+                            "reps_or_duration": "3 min each",
+                            "intensity": "moderate",
+                            "category": "technical",
+                            "rest_seconds": 60
+                        }}
                     ]
                 }}
             ]
@@ -239,12 +421,15 @@ Respond in this exact JSON format:
     ]
 }}
 
-Create {weeks} weeks with 4-5 sessions per week. Include strength, speed, skill, recovery, and game sessions.
-Tailor exercises to the player's position and development needs if player data is provided."""
+Create exactly {weeks} weeks with 3-4 sessions per week (e.g. Monday, Wednesday, Friday, optionally Saturday).
+Session types should vary: technical, tactical, physical, recovery, match-prep.
+Each session must have 4-6 exercises with real {sport}-specific drill names.
+Progressive overload: increase intensity/complexity each week.
+Tailor exercises to the player's age group, position, and development needs if player data is provided."""
 
     response_text = await call_openai(
         [{"role": "user", "content": prompt}],
-        max_tokens=4000,
+        max_tokens=8000,
     )
 
     # Parse JSON

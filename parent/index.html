@@ -869,8 +869,9 @@
   async function loadParentPrograms(playerId) {
     var section = document.getElementById('parentProgramsSection');
     var list = document.getElementById('parentProgramsList');
+    var catColors = {'warm-up':'#22c55e','technical':'#09A1A1','tactical':'#5484A4','physical':'#FA6E82','cool-down':'#ACC0D3'};
     try {
-      var resp = await fetch(API + '/api/players/' + playerId + '/programs', {headers:{'X-Admin-Key':'parent-access'}});
+      var resp = await fetch(API + '/api/players/' + playerId + '/training-programs', {headers:{'X-Admin-Key':'parent-access'}});
       if (!resp.ok) { section.style.display = 'none'; return; }
       var programs = await resp.json();
       if (!programs.length) { section.style.display = 'none'; return; }
@@ -882,16 +883,34 @@
         html += '<strong style="font-size:15px;color:#333;">' + (p.template_name || 'Training Program') + '</strong>';
         html += '<span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:' + statusColor + '22;color:' + statusColor + ';">' + (p.status || 'draft') + '</span>';
         html += '</div>';
-        html += '<div style="font-size:13px;color:#666;">' + (p.sport || '') + ' · ' + (p.phase_name || '') + ' · ' + (p.duration_weeks || 0) + ' weeks' + (p.ai_generated ? ' · <span style="color:#09A1A1;">AI Generated</span>' : '') + '</div>';
+        html += '<div style="font-size:13px;color:#666;">' + (p.sport || '') + ' &middot; ' + (p.phase_name || '') + ' &middot; ' + (p.duration_weeks || 0) + ' weeks' + (p.ai_generated ? ' &middot; <span style="color:#09A1A1;">&#10024; AI Generated</span>' : '') + '</div>';
         if (p.weeks && p.weeks.length) {
           html += '<div style="margin-top:10px;">';
           p.weeks.forEach(function(w) {
-            html += '<div style="padding:8px 12px;margin:4px 0;background:#f8f9fa;border-radius:8px;border-left:3px solid #09A1A1;">';
-            html += '<strong style="font-size:13px;">Week ' + w.week_number + ':</strong> ' + (w.focus || 'General');
+            html += '<details style="margin:6px 0;"><summary style="padding:8px 12px;background:#f8f9fa;border-radius:8px;border-left:3px solid #09A1A1;cursor:pointer;font-size:13px;">';
+            html += '<strong>Week ' + w.week_number + ':</strong> ' + (w.focus || 'General');
+            if (w.sessions && w.sessions.length) html += ' <span style="color:#888;">(' + w.sessions.length + ' sessions)</span>';
+            html += '</summary>';
+            html += '<div style="padding:8px 0 0 12px;">';
             if (w.sessions && w.sessions.length) {
-              html += '<div style="margin-top:4px;font-size:12px;color:#666;">' + w.sessions.length + ' session(s): ' + w.sessions.map(function(s){return s.day_of_week;}).join(', ') + '</div>';
+              w.sessions.forEach(function(s) {
+                html += '<div style="margin:6px 0;padding:8px 12px;background:#fff;border-radius:6px;border:1px solid #e8ecf0;">';
+                html += '<strong style="color:#5484A4;font-size:13px;">' + (s.day_of_week || '') + '</strong>';
+                if (s.session_type) html += ' <span style="font-size:11px;padding:1px 6px;border-radius:8px;background:#09A1A122;color:#09A1A1;">' + s.session_type + '</span>';
+                if (s.exercises && s.exercises.length) {
+                  s.exercises.forEach(function(ex) {
+                    var cc = catColors[ex.category] || '#888';
+                    html += '<div style="display:flex;align-items:center;gap:6px;margin:4px 0 0 8px;padding:4px 8px;border-left:2px solid ' + cc + ';font-size:12px;">';
+                    html += '<strong>' + (ex.name || '') + '</strong>';
+                    if (ex.sets) html += ' <span style="color:#888;">' + ex.sets + 'x' + (ex.reps_or_duration || ex.reps || '') + '</span>';
+                    if (ex.category) html += ' <span style="font-size:10px;padding:1px 5px;border-radius:6px;background:' + cc + '22;color:' + cc + ';">' + ex.category + '</span>';
+                    html += '</div>';
+                  });
+                }
+                html += '</div>';
+              });
             }
-            html += '</div>';
+            html += '</div></details>';
           });
           html += '</div>';
         }

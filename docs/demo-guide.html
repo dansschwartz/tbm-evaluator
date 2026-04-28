@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TBM Platform — Live Demo Guide</title>
+<style>
+  @page { size: letter; margin: 0; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',system-ui,sans-serif;color:#333;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  :root{--teal:#09A1A1;--steel:#5484A4;--coral:#FA6E82;--gold:#F6C992;--blue-gray:#ACC0D3;--dark:#3d6882;--light:#f2f5f8}
+  .page{width:8.5in;min-height:11in;padding:0.55in;page-break-after:always;position:relative;overflow:hidden}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:32pt;font-weight:900;color:var(--dark);line-height:1.1}
+  h2{font-size:18pt;font-weight:800;color:var(--dark);margin-bottom:10px}
+  h3{font-size:12pt;font-weight:700;color:var(--dark);margin-bottom:6px}
+  h4{font-size:10pt;font-weight:700;color:var(--teal);margin-bottom:4px}
+  p{font-size:9.5pt;line-height:1.5;color:#555;margin-bottom:6px}
+  code{background:#f0f2f5;padding:2px 6px;border-radius:4px;font-size:8.5pt;font-family:'SF Mono',monospace;color:var(--dark)}
+  .footer{position:absolute;bottom:0.3in;left:0.55in;right:0.55in;text-align:center;font-size:6.5pt;color:#aaa}
+  .cover{background:var(--dark);color:#fff;display:flex;flex-direction:column;justify-content:center}
+  .cover h1{color:#fff;font-size:36pt;margin-bottom:10px}
+  .cover h1 span{color:var(--gold)}
+  .cover .sub{font-size:12pt;color:var(--blue-gray);margin-bottom:24px;line-height:1.5}
+  .badge{display:inline-block;background:rgba(246,201,146,0.2);border:1px solid var(--gold);border-radius:14px;padding:4px 14px;font-size:8pt;color:var(--gold);font-weight:600;letter-spacing:1px;text-transform:uppercase}
+  
+  /* Tables */
+  table{width:100%;border-collapse:collapse;font-size:8.5pt;margin:8px 0}
+  th{background:var(--dark);color:#fff;padding:6px 8px;text-align:left;font-size:7.5pt;text-transform:uppercase;letter-spacing:0.3px}
+  td{padding:5px 8px;border-bottom:1px solid #eee}
+  tr:nth-child(even){background:#fafbfc}
+  
+  /* Steps */
+  .step{display:flex;gap:12px;margin:10px 0;align-items:flex-start}
+  .step-num{width:28px;height:28px;background:var(--teal);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12pt;flex-shrink:0}
+  .step-content{flex:1}
+  .step-content h4{margin-bottom:2px}
+  .step-content p{margin-bottom:0}
+  
+  /* Code block */
+  .code-block{background:#1a1f2e;color:#e0e8f0;padding:14px 16px;border-radius:8px;font-family:'SF Mono',monospace;font-size:8.5pt;line-height:1.6;margin:8px 0;overflow-x:auto}
+  .code-block .comment{color:#6b7280}
+  .code-block .highlight{color:var(--gold)}
+  
+  /* Cards */
+  .card-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+  .card{padding:12px;border-radius:8px;border:1px solid #e8ecf0;background:var(--light)}
+  .card h4{margin-bottom:3px}
+  .card p{font-size:8pt;margin:0;color:#666}
+  
+  /* URL highlight */
+  .url{background:var(--light);padding:6px 12px;border-radius:6px;font-family:'SF Mono',monospace;font-size:9pt;color:var(--teal);font-weight:600;display:block;margin:4px 0}
+  
+  /* Checklist */
+  .check{list-style:none;padding:0}
+  .check li{padding:4px 0;font-size:9pt;display:flex;align-items:center;gap:6px}
+  .check li::before{content:"✓";color:var(--teal);font-weight:700;font-size:12pt}
+  
+  /* Script item */
+  .script{background:var(--light);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;margin:8px 0}
+  .script .say{font-style:italic;color:#555;font-size:9pt}
+  .script .do{font-weight:600;color:var(--dark);font-size:9pt}
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: COVER -->
+<div class="page cover">
+  <div class="badge">LIVE DEMO GUIDE — CONFIDENTIAL</div>
+  <div style="height:16px"></div>
+  <h1>TBM Platform<br><span>Live Demo Plan</span></h1>
+  <p class="sub">Complete walkthrough guide for demonstrating the AI-native youth sports operating system to DC Soccer Club and prospective clients.</p>
+  <div style="margin-top:20px;">
+    <p style="color:#fff;font-size:10pt;font-weight:600;">Prepared for: Client Demo</p>
+    <p style="color:var(--blue-gray);font-size:9pt;">Date: April 2026</p>
+    <p style="color:var(--blue-gray);font-size:9pt;">Duration: 30-40 minutes</p>
+  </div>
+  <div style="margin-top:30px;padding:16px;background:rgba(255,255,255,0.08);border-radius:10px;">
+    <p style="color:#fff;font-size:10pt;font-weight:700;margin-bottom:6px;">Quick Access URLs</p>
+    <p style="color:var(--blue-gray);font-size:9pt;margin-bottom:2px;">App Launcher: tbm-evaluator-production.up.railway.app</p>
+    <p style="color:var(--blue-gray);font-size:9pt;margin-bottom:2px;">Chatbot Demo: tbm-chatbot-production.up.railway.app/demo</p>
+    <p style="color:var(--blue-gray);font-size:9pt;">Admin Key: tbm-eval-2026-secure</p>
+  </div>
+  <div class="footer" style="color:rgba(255,255,255,0.3)">Tiny But Mighty — Confidential Demo Guide</div>
+</div>
+
+<!-- PAGE 2: URLS & CREDENTIALS -->
+<div class="page">
+  <h2>Access Points & Credentials</h2>
+  
+  <table>
+    <thead><tr><th>Page</th><th>URL</th><th>Credentials</th></tr></thead>
+    <tbody>
+      <tr><td><strong>App Launcher</strong></td><td><code>tbm-evaluator-production.up.railway.app/</code></td><td>—</td></tr>
+      <tr><td><strong>Operations Admin</strong></td><td><code>tbm-evaluator-production.up.railway.app/admin</code></td><td>Key: <code>tbm-eval-2026-secure</code></td></tr>
+      <tr><td><strong>Mobile Scoring</strong></td><td><code>tbm-evaluator-production.up.railway.app/score</code></td><td>Coach access codes</td></tr>
+      <tr><td><strong>Parent Portal</strong></td><td><code>tbm-evaluator-production.up.railway.app/parent</code></td><td>Email: <code>sarah.johnson@example.com</code></td></tr>
+      <tr><td><strong>Chatbot Demo</strong></td><td><code>tbm-chatbot-production.up.railway.app/demo</code></td><td>—</td></tr>
+      <tr><td><strong>Onboarding Wizard</strong></td><td><code>tbm-evaluator-production.up.railway.app/onboard</code></td><td>—</td></tr>
+      <tr><td><strong>Marketing Site</strong></td><td><code>tbm-evaluator-production.up.railway.app/marketing</code></td><td>—</td></tr>
+    </tbody>
+  </table>
+  
+  <h3 style="margin-top:16px;">Demo Data Loaded</h3>
+  <div class="card-grid">
+    <div class="card"><h4>DC Soccer Club</h4><p>25 players, 20 teams, 87 fields, 50 match results, 2 seasons, 25 AI reports</p></div>
+    <div class="card"><h4>Arlington SA</h4><p>15 players (second club for multi-tenant demo)</p></div>
+    <div class="card"><h4>Evaluations</h4><p>900 scores from 3 coaches, AI-generated development plans</p></div>
+    <div class="card"><h4>Competition</h4><p>6 DMV leagues: MLS NEXT, NCSL, CPSL, EDP, MDSL, GA ASPIRE</p></div>
+  </div>
+
+  <h3 style="margin-top:16px;">Pre-Demo Checklist</h3>
+  <ul class="check">
+    <li>Open App Launcher in browser — confirm it loads</li>
+    <li>Open Admin Dashboard — confirm DC Soccer Club is selected</li>
+    <li>Open Chatbot Demo on phone or second tab — confirm chat works</li>
+    <li>Open Scoring App on phone — confirm access code works</li>
+    <li>Clear browser cache if any page looks stale (Cmd+Shift+R)</li>
+    <li>Have this guide open on a second screen for reference</li>
+  </ul>
+  <div class="footer">TBM Platform — Demo Guide | Page 2</div>
+</div>
+
+<!-- PAGE 3: DEMO SCRIPT PART 1 -->
+<div class="page">
+  <h2>Demo Script — Part 1: Platform Overview</h2>
+  
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <h4>App Launcher (2 min)</h4>
+      <div class="url">tbm-evaluator-production.up.railway.app/</div>
+      <div class="script">
+        <p class="say">"This is the TBM platform — a complete AI-native operating system for youth sports organizations. Everything a club needs is organized into purpose-built applications."</p>
+        <p class="do">→ Point out the 6 app tiles. Click <strong>Operations</strong>.</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <h4>Players (3 min)</h4>
+      <div class="script">
+        <p class="say">"Here's the player roster. Every player has a complete profile with evaluations, development plans, and team assignments."</p>
+        <p class="do">→ Show 25 players. Click a player name to open detail modal. Show bio, evaluation history, development path.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <h4>Teams (5 min)</h4>
+      <div class="script">
+        <p class="say">"Teams are organized by level — Recreational, Pre-Travel, Competitive, Academy. Each team has a complete dashboard."</p>
+        <p class="do">→ Show grouped team cards. Click <strong>U12 Blue</strong>. Walk through sub-tabs:</p>
+        <p class="do" style="padding-left:16px;">• Summary: stats, upcoming events, game results</p>
+        <p class="do" style="padding-left:16px;">• Roster: player cards with scores</p>
+        <p class="do" style="padding-left:16px;">• Lineup: show the visual soccer field, change formation</p>
+        <p class="do" style="padding-left:16px;">• Schedule: practice and game calendar</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <h4>Fields — The Map (3 min)</h4>
+      <div class="script">
+        <p class="say">"We loaded all 87 DC-area fields with real coordinates. The map shows every field the club uses or could use."</p>
+        <p class="do">→ Show the interactive Leaflet map. Click a field to see detail panel (surface, lights, size, cost). Show the <strong>Field Optimizer</strong> — run allocation. Show <strong>Weather Reassignment</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-content">
+      <h4>Competition (2 min)</h4>
+      <div class="script">
+        <p class="say">"We track results across all DMV leagues — MLS NEXT, NCSL, CPSL, EDP, MDSL. Standings, stats, and results in one place."</p>
+        <p class="do">→ Show league standings table, top scorers, recent match results with real opponent names (Bethesda SC, McLean, Arlington SA).</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer">TBM Platform — Demo Guide | Page 3</div>
+</div>
+
+<!-- PAGE 4: DEMO SCRIPT PART 2 -->
+<div class="page">
+  <h2>Demo Script — Part 2: AI & Evaluations</h2>
+
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-content">
+      <h4>Mobile Scoring (5 min) — Open on Phone</h4>
+      <div class="url">tbm-evaluator-production.up.railway.app/score</div>
+      <div class="script">
+        <p class="say">"Coaches score players on their phones during tryouts. No paper, no spreadsheets."</p>
+        <p class="do">→ Enter access code. Select event. Select a player. Score skills using sliders. Add a comment. Click <strong>Generate AI Summary</strong> to show the AI narrative.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">7</div>
+    <div class="step-content">
+      <h4>Parent Report Card (3 min)</h4>
+      <div class="url">tbm-evaluator-production.up.railway.app/parent</div>
+      <div class="script">
+        <p class="say">"Parents enter their email and instantly see their child's report card — AI-written narrative, strengths, improvements, and a custom development plan."</p>
+        <p class="do">→ Enter <code>sarah.johnson@example.com</code>. Show Marcus Johnson's report. Highlight: AI summary, position-specific development plan with drills, skill scores.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">8</div>
+    <div class="step-content">
+      <h4>Club Intelligence (5 min)</h4>
+      <div class="script">
+        <p class="say">"This is what sets us apart from PlayMetrics or any other platform. AI-powered club intelligence."</p>
+        <p class="do">→ Intelligence section:</p>
+        <p class="do" style="padding-left:16px;">• <strong>Health Score</strong>: Generate → show 0-100 with AI analysis</p>
+        <p class="do" style="padding-left:16px;">• <strong>Best Practices</strong>: Show IYSL 60-question assessment benchmarked against 2,500+ real clubs</p>
+        <p class="do" style="padding-left:16px;">• <strong>Development Pathways</strong>: Show 25 players across Rec → Academy columns</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">9</div>
+    <div class="step-content">
+      <h4>AI Assistant (2 min)</h4>
+      <div class="script">
+        <p class="say">"You can ask the AI anything about your club data in plain English."</p>
+        <p class="do">→ Click the floating bot icon (bottom-right). Type: "Which teams don't have coaches?" Then: "How many U12 players do we have?" Show instant answers.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer">TBM Platform — Demo Guide | Page 4</div>
+</div>
+
+<!-- PAGE 5: DEMO SCRIPT PART 3 -->
+<div class="page">
+  <h2>Demo Script — Part 3: Chatbot & Integration</h2>
+
+  <div class="step">
+    <div class="step-num">10</div>
+    <div class="step-content">
+      <h4>AI Chatbot on Website (5 min)</h4>
+      <div class="url">tbm-chatbot-production.up.railway.app/demo</div>
+      <div class="script">
+        <p class="say">"This is what parents see on your website. An AI chatbot that answers questions 24/7 using your actual website content."</p>
+        <p class="do">→ Click chat bubble. Ask:</p>
+        <p class="do" style="padding-left:16px;">• "How do I register for rec league?"</p>
+        <p class="do" style="padding-left:16px;">• "Do you offer financial aid?"</p>
+        <p class="do" style="padding-left:16px;">• "When are travel tryouts?"</p>
+        <p class="say" style="margin-top:6px;">"Every answer comes from your website content. It never makes things up. And if it can't answer, it connects them to your staff."</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">11</div>
+    <div class="step-content">
+      <h4>Chatbot Intelligence (2 min)</h4>
+      <div class="script">
+        <p class="say">"The chatbot doesn't just answer questions — it gives you intelligence about what parents are asking."</p>
+        <p class="do">→ Back in Operations → Club Operations → <strong>Chatbot Insights</strong>. Show conversation log with sentiment, resolution status. Click <strong>Generate Digest</strong> for the weekly AI brief.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">12</div>
+    <div class="step-content">
+      <h4>Onboarding — "How fast can we get started?" (2 min)</h4>
+      <div class="url">tbm-evaluator-production.up.railway.app/onboard</div>
+      <div class="script">
+        <p class="say">"Setting up a new club takes 5 minutes. One wizard, and you're ready to go."</p>
+        <p class="do">→ Walk through steps (don't create). Show that it sets up org + template + season + programs + fields in one click.</p>
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:20px;">Squarespace Integration</h2>
+  <p style="font-size:10pt;margin-bottom:8px;">Adding the chatbot to any Squarespace website takes 60 seconds:</p>
+  
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content"><p>Log into Squarespace → <strong>Settings</strong> → <strong>Advanced</strong> → <strong>Code Injection</strong></p></div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content"><p>Paste these two lines in the <strong>Footer</strong> section:</p></div>
+  </div>
+
+  <div class="code-block">
+<span class="comment">&lt;!-- TBM AI Chatbot --&gt;</span>
+&lt;script src="<span class="highlight">https://tbm-chatbot-production.up.railway.app/widget/chat-widget.js</span>"
+  data-org="<span class="highlight">dcsc</span>"&gt;&lt;/script&gt;
+&lt;link rel="stylesheet"
+  href="<span class="highlight">https://tbm-chatbot-production.up.railway.app/widget/chat-widget.css</span>"&gt;
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content"><p>Click <strong>Save</strong>. The chat bubble appears immediately on every page.</p></div>
+  </div>
+
+  <p style="font-size:9pt;margin-top:8px;color:#888;">Works on Squarespace, WordPress, Wix, Webflow — any website. Just two lines of code.</p>
+  <div class="footer">TBM Platform — Demo Guide | Page 5</div>
+</div>
+
+<!-- PAGE 6: CLOSING -->
+<div class="page">
+  <h2>Closing — Key Differentiators</h2>
+  
+  <h3>What We Have That Nobody Else Does</h3>
+  <table>
+    <thead><tr><th>Feature</th><th>TBM</th><th>PlayMetrics</th><th>SkillShark</th></tr></thead>
+    <tbody>
+      <tr><td>AI player report cards</td><td style="color:var(--teal);font-weight:700;">✓</td><td>✗</td><td>✗</td></tr>
+      <tr><td>AI development plans with drills</td><td style="color:var(--teal);font-weight:700;">✓</td><td>✗</td><td>✗</td></tr>
+      <tr><td>AI team balancing</td><td style="color:var(--teal);font-weight:700;">✓</td><td>✗</td><td>✗</td></tr>
+      <tr><td>AI chatbot on website</td><td style="color:var(--teal);font-weight:700;">✓</td><td>✗</td><td>✗</td></tr>
+      <tr><td>Club Health Score (0-100)</td><td style="color:var(--teal);font-weight:700;">✓</td><td>✗</td><td>✗</td></tr>
+      <tr><td>IYSL benchmarking (2,500+ clubs)</td><td style="color:var(--teal);font-weight:700;">✓</td><td>✗</td><td>✗</td></tr>
+      <tr><td>Interactive field map (87 DC fields)</td><td style="color:var(--teal);font-weight:700;">✓</td><td>✗</td><td>✗</td></tr>
+      <tr><td>AI field optimization</td><td style="color:var(--teal);font-weight:700;">✓</td><td>✗</td><td>✗</td></tr>
+      <tr><td>Competition league tracking</td><td style="color:var(--teal);font-weight:700;">✓ 6 leagues</td><td>Basic</td><td>✗</td></tr>
+      <tr><td>AI operations assistant</td><td style="color:var(--teal);font-weight:700;">✓</td><td>✗</td><td>✗</td></tr>
+      <tr><td>Lineup builder (formations)</td><td style="color:var(--teal);font-weight:700;">✓</td><td>✗</td><td>✗</td></tr>
+      <tr><td>Multi-club platform</td><td style="color:var(--teal);font-weight:700;">✓</td><td>Separate</td><td>Separate</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:16px;">Pricing Comparison</h3>
+  <table>
+    <thead><tr><th>Platform</th><th>Annual Cost (500 players)</th><th>AI Features</th><th>Evaluations</th></tr></thead>
+    <tbody>
+      <tr style="background:#f0f8f8;"><td style="font-weight:700;color:var(--teal);">TBM Platform</td><td style="font-weight:700;">~$336/year</td><td>25+ AI features</td><td>Unlimited</td></tr>
+      <tr><td>PlayMetrics + SkillShark</td><td>$7,500+/year</td><td>None</td><td>$5-15/player</td></tr>
+      <tr><td>SportsEngine</td><td>$2,199+/year</td><td>None</td><td>None</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:16px;">Next Steps</h3>
+  <ul class="check">
+    <li>Set up the chatbot on the club website (5 minutes — Squarespace Code Injection)</li>
+    <li>Import player roster from PlayMetrics CSV export</li>
+    <li>Run first evaluation at upcoming tryouts</li>
+    <li>Generate AI reports and email to parents same day</li>
+    <li>Complete IYSL Best Practice assessment for benchmarking</li>
+  </ul>
+
+  <div style="margin-top:20px;padding:20px;background:var(--dark);border-radius:12px;text-align:center;color:#fff;">
+    <h3 style="color:#fff;font-size:14pt;margin-bottom:4px;">Ready to get started?</h3>
+    <p style="color:var(--blue-gray);font-size:9pt;margin-bottom:0;">tbm-evaluator-production.up.railway.app/onboard</p>
+  </div>
+  <div class="footer">Tiny But Mighty — AI-native tools for not-for-profit youth sports. © 2026 TBM.</div>
+</div>
+
+</body>
+</html>
